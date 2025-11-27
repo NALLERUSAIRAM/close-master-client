@@ -3,7 +3,7 @@ import { io } from "socket.io-client";
 
 const SERVER_URL = "https://close-master-server-production.up.railway.app";
 
-// Text color helper for card faces
+// text color helper for card faces
 function cardTextColor(card) {
   if (!card) return "text-black";
   if (card.rank === "JOKER") return "text-purple-700";
@@ -36,10 +36,15 @@ export default function CloseMasterGame() {
       setSelectedIds([]);
     });
 
-    return () => {
-      s.disconnect();
-    };
+    return () => s.disconnect();
   }, []);
+
+  // 🔔 AUTO OPEN POINTS POPUP WHEN CLOSE HAPPENS
+  useEffect(() => {
+    if (game?.closeCalled) {
+      setShowPoints(true);
+    }
+  }, [game?.closeCalled]);
 
   // ---------- DERIVED STATE ----------
   const roomId = game?.roomId;
@@ -50,6 +55,7 @@ export default function CloseMasterGame() {
   const started = game?.started;
   const pendingDraw = game?.pendingDraw || 0;
   const pendingSkips = game?.pendingSkips || 0;
+  const closeCalled = game?.closeCalled;
 
   const currentPlayer = players[currentIndex];
   const myTurn = started && currentPlayer?.id === youId;
@@ -59,9 +65,7 @@ export default function CloseMasterGame() {
   function createRoom() {
     if (!socket || !playerName.trim()) return;
     socket.emit("create_room", { name: playerName }, (res) => {
-      if (res?.roomId) {
-        setScreen("game");
-      }
+      if (res?.roomId) setScreen("game");
     });
   }
 
@@ -83,6 +87,10 @@ export default function CloseMasterGame() {
 
   function startRound() {
     if (!socket || !game?.roomId || !isHost) return;
+    if (players.length < 2) {
+      alert("Minimum 2 players tarvata start cheyali.");
+      return;
+    }
     socket.emit("start_round", { roomId: game.roomId });
   }
 
@@ -201,6 +209,23 @@ export default function CloseMasterGame() {
         </div>
 
         <div className="flex gap-2 items-center">
+          {/* Start Game button for host */}
+          {isHost && (
+            <button
+              onClick={startRound}
+              disabled={started || players.length < 2}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
+                started
+                  ? "bg-emerald-900 text-emerald-300 opacity-60 cursor-not-allowed"
+                  : players.length < 2
+                  ? "bg-gray-700 opacity-60 cursor-not-allowed"
+                  : "bg-emerald-600 hover:bg-emerald-500"
+              }`}
+            >
+              {started ? "Game Running" : "Start Game"}
+            </button>
+          )}
+
           <button
             onClick={() => setShowPoints(true)}
             className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 rounded-lg text-xs font-semibold"
@@ -232,9 +257,13 @@ export default function CloseMasterGame() {
                 </span>
               )}
             </>
+          ) : closeCalled ? (
+            <span className="text-red-300">
+              Round ended (CLOSE called)
+            </span>
           ) : (
             <span className="text-gray-300">
-              Waiting for Game Start
+              Waiting for Start Game (Host)
             </span>
           )}
         </div>
@@ -389,44 +418,33 @@ export default function CloseMasterGame() {
       )}
 
       {/* ACTION BUTTONS */}
-      <div className="mt-3 flex flex-wrap gap-3 justify-center w-full max-w-6xl">
-        {!started && isHost && (
+      {started && (
+        <div className="mt-3 flex flex-wrap gap-3 justify-center w-full max-w-6xl">
           <button
-            onClick={startRound}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-sm font-semibold"
+            onClick={drawCard}
+            disabled={!myTurn}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-xl text-sm font-semibold disabled:opacity-40"
           >
-            Start Game ({players.length}/7)
+            Draw{pendingDraw > 0 ? ` (+${pendingDraw})` : ""}
           </button>
-        )}
 
-        {started && (
-          <>
-            <button
-              onClick={drawCard}
-              disabled={!myTurn}
-              className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-xl text-sm font-semibold disabled:opacity-40"
-            >
-              Draw{pendingDraw > 0 ? ` (+${pendingDraw})` : ""}
-            </button>
+          <button
+            onClick={dropCards}
+            disabled={!myTurn}
+            className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded-xl text-sm font-semibold disabled:opacity-40"
+          >
+            DROP
+          </button>
 
-            <button
-              onClick={dropCards}
-              disabled={!myTurn}
-              className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded-xl text-sm font-semibold disabled:opacity-40"
-            >
-              DROP
-            </button>
-
-            <button
-              onClick={callClose}
-              disabled={!myTurn}
-              className="px-4 py-2 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold disabled:opacity-40"
-            >
-              CLOSE
-            </button>
-          </>
-        )}
-      </div>
+          <button
+            onClick={callClose}
+            disabled={!myTurn}
+            className="px-4 py-2 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold disabled:opacity-40"
+          >
+            CLOSE
+          </button>
+        </div>
+      )}
 
       {/* POINTS POPUP */}
       {showPoints && (
