@@ -36,6 +36,10 @@ export default function CloseMasterGame() {
       setSelectedIds([]);
     });
 
+    s.on("error", (error) => {
+      alert(error.message || "Server error!");
+    });
+
     return () => s.disconnect();
   }, []);
 
@@ -56,6 +60,7 @@ export default function CloseMasterGame() {
   const pendingDraw = game?.pendingDraw || 0;
   const pendingSkips = game?.pendingSkips || 0;
   const closeCalled = game?.closeCalled;
+  const hasDrawn = game?.hasDrawn || false; // ✅ NEW: From server state
 
   const currentPlayer = players[currentIndex];
   const myTurn = started && currentPlayer?.id === youId;
@@ -94,13 +99,17 @@ export default function CloseMasterGame() {
     socket.emit("start_round", { roomId: game.roomId });
   }
 
-  function drawCard() {
-    if (!socket || !roomId || !myTurn) return;
-    socket.emit("action_draw", { roomId });
+  // ✅ NEW: Draw from Deck OR Discard (Open Card)
+  function drawCard(fromDiscard = false) {
+    if (!socket || !roomId || !myTurn || hasDrawn) return;
+    socket.emit("action_draw", { 
+      roomId, 
+      fromDiscard // true = discard pile, false = deck
+    });
   }
 
   function dropCards() {
-    if (!socket || !roomId || !myTurn) return;
+    if (!socket || !roomId || !myTurn || !hasDrawn) return;
     if (selectedIds.length === 0) {
       alert("Drop cheyali ante mundu konni cards select chey.");
       return;
@@ -242,7 +251,9 @@ export default function CloseMasterGame() {
                 {currentPlayer?.name || "-"}
               </span>
               {myTurn && (
-                <span className="ml-2 text-emerald-400">(Your turn)</span>
+                <span className="ml-2 text-emerald-400">
+                  (Your turn) {hasDrawn ? "✓ Drew" : "➤ Draw first"}
+                </span>
               )}
             </>
           ) : closeCalled ? (
@@ -254,16 +265,26 @@ export default function CloseMasterGame() {
           )}
         </div>
         <div className="text-xs text-gray-300 flex gap-3">
-          <span>Pending Draw: {pendingDraw}</span>
-          <span>Pending Skips: {pendingSkips}</span>
+          <span>Draw: {pendingDraw}</span>
+          <span>Skip: {pendingSkips}</span>
         </div>
       </div>
 
-      {/* OPEN CARD */}
+      {/* OPEN CARD - Click to draw */}
       <div className="mt-1 p-3 bg-gray-900 rounded-xl shadow-lg border border-gray-700 text-center">
-        <h3 className="text-sm text-gray-300 mb-1">OPEN CARD</h3>
+        <h3 className="text-sm text-gray-300 mb-1">
+          OPEN CARD {myTurn && !hasDrawn && "(Click to draw)"}
+        </h3>
         {discardTop ? (
-          <div className="w-20 h-28 bg-white rounded-2xl shadow-2xl flex flex-col justify-between p-1.5 mx-auto">
+          <button
+            onClick={() => drawCard(true)} // ✅ Draw from discard
+            disabled={!myTurn || hasDrawn}
+            className={`w-20 h-28 bg-white rounded-2xl shadow-2xl flex flex-col justify-between p-1.5 mx-auto transition-all ${
+              myTurn && !hasDrawn
+                ? "hover:scale-105 cursor-pointer border-2 border-blue-400"
+                : "cursor-default"
+            } disabled:opacity-50`}
+          >
             <div className={`text-xs font-bold ${cardTextColor(discardTop)}`}>
               {discardTop.rank}
             </div>
@@ -273,7 +294,7 @@ export default function CloseMasterGame() {
             <div className={`text-xs text-right ${cardTextColor(discardTop)}`}>
               {discardTop.rank}
             </div>
-          </div>
+          </button>
         ) : (
           <div className="w-20 h-28 border border-gray-600 rounded-xl text-xs text-gray-400 flex items-center justify-center mx-auto">
             No card
@@ -294,7 +315,7 @@ export default function CloseMasterGame() {
               key={p.id}
               className={`p-2 bg-gray-900 rounded-xl border ${
                 currentPlayer?.id === p.id ? "border-yellow-400 shadow-lg" : "border-gray-700"
-              }`}
+              } ${p.hasDrawn ? "ring-2 ring-green-500/30" : ""}`}
             >
               <p className="text-xs font-bold">
                 {p.name}
@@ -302,6 +323,7 @@ export default function CloseMasterGame() {
               </p>
               <p className="text-[10px] text-gray-400">
                 Cards: {p.handSize} | Score: {p.score}
+                {p.hasDrawn && " ✓"}
               </p>
 
               <div className="flex mt-1 gap-1 flex-wrap">
@@ -323,7 +345,9 @@ export default function CloseMasterGame() {
             <h3 className="text-sm text-gray-300 font-semibold">
               Your Cards (Score: {me.score})
             </h3>
-            <span className="text-[11px] text-gray-400">Tap cards to select</span>
+            <span className="text-[11px] text-gray-400">
+              {hasDrawn ? "✓ Drew - Select to drop" : "Draw first"}
+            </span>
           </div>
 
           <div
@@ -350,11 +374,12 @@ export default function CloseMasterGame() {
                   <button
                     key={c.id}
                     onClick={() => toggleSelect(c.id)}
+                    disabled={!hasDrawn} // ✅ Can't select until drawn
                     className={`w-16 h-24 bg-white rounded-2xl shadow-xl border transition-all duration-150 ${
                       sel
                         ? "border-4 border-emerald-500 scale-110 translate-y-[-4px]"
-                        : "border-gray-300"
-                    }`}
+                        : "border-gray-300 hover:border-gray-400"
+                    } ${!hasDrawn ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
                     <div
                       className={`flex flex-col justify-between h-full p-2 ${color}`}
@@ -373,25 +398,30 @@ export default function CloseMasterGame() {
         </div>
       )}
 
-      {/* ACTION BUTTONS */}
+      {/* ACTION BUTTONS - NEW RULES */}
       {started && (
         <div className="mt-3 flex flex-wrap gap-3 justify-center w-full max-w-6xl">
+          {/* ✅ DECK DRAW */}
           <button
-            onClick={drawCard}
-            disabled={!myTurn}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-xl text-sm font-semibold disabled:opacity-40"
+            onClick={() => drawCard(false)} // Deck draw
+            disabled={!myTurn || hasDrawn}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+            title={hasDrawn ? "Already drawn this turn" : "Draw from deck"}
           >
-            Draw{pendingDraw > 0 ? ` (+${pendingDraw})` : ""}
+            Deck Draw{pendingDraw > 0 ? ` (+${pendingDraw})` : ""}
           </button>
 
+          {/* ✅ DROP - Only after draw */}
           <button
             onClick={dropCards}
-            disabled={!myTurn}
-            className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded-xl text-sm font-semibold disabled:opacity-40"
+            disabled={!myTurn || !hasDrawn || selectedIds.length === 0}
+            className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+            title={!hasDrawn ? "Must draw first!" : "Drop selected cards"}
           >
-            DROP
+            DROP ({selectedIds.length})
           </button>
 
+          {/* CLOSE */}
           <button
             onClick={callClose}
             disabled={!myTurn}
@@ -402,7 +432,17 @@ export default function CloseMasterGame() {
         </div>
       )}
 
-      {/* POINTS POPUP (also auto after CLOSE) */}
+      {/* ✅ NEW RULE GUIDANCE */}
+      {myTurn && started && (
+        <div className="mt-2 text-xs text-center text-yellow-400 max-w-md">
+          {hasDrawn 
+            ? `✓ Drew card. Now select same rank cards & DROP!` 
+            : `➤ Draw from DECK or OPEN CARD first, then DROP`
+          }
+        </div>
+      )}
+
+      {/* POINTS POPUP */}
       {showPoints && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
           <div className="bg-white text-black rounded-xl p-4 w-80 shadow-xl">
