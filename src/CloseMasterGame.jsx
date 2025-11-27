@@ -2,13 +2,7 @@ import React, { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 
 const SERVER_URL = "https://close-master-server-production.up.railway.app";
-
-function cardTextColor(card) {
-  if (!card) return "text-black";
-  if (card.rank === "JOKER") return "text-purple-700 font-bold";
-  if (card.suit === "♥" || card.suit === "♦") return "text-red-600";
-  return "text-black";
-}
+const MAX_PLAYERS = 7;
 
 function NeonFloatingCards() {
   const cards = Array.from({ length: 20 }).map((_, i) => {
@@ -61,6 +55,13 @@ export default function CloseMasterGame() {
 
     s.on("connect", () => console.log("✅ Socket connected:", s.id));
     s.on("game_state", (state) => {
+      console.log("🎮 Game State:", {
+        roomId: state.roomId,
+        youId: state.youId,
+        hostId: state.hostId,
+        isHost: state.hostId === state.youId,
+        playerCount: state.players.length,
+      });
       setGame(state);
       setIsHost(state.hostId === state.youId);
       setSelectedIds([]);
@@ -88,8 +89,6 @@ export default function CloseMasterGame() {
   const discardTop = game?.discardTop;
   const currentIndex = game?.currentIndex ?? 0;
   const started = game?.started;
-  const pendingDraw = game?.pendingDraw || 0;
-  const pendingSkips = game?.pendingSkips || 0;
 
   const currentPlayer = players[currentIndex];
   const myTurn = started && currentPlayer?.id === youId;
@@ -267,40 +266,56 @@ export default function CloseMasterGame() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/30 to-blue-900/30 text-white p-6 flex flex-col items-center gap-6 relative overflow-hidden">
       <NeonFloatingCards />
-      <div className="z-10 w-full max-w-5xl text-center p-4 bg-black/50 rounded-3xl border border-white/20 shadow-xl">
+      <div className="z-10 w-full max-w-5xl text-center p-6 bg-black/60 backdrop-blur-xl rounded-3xl border border-emerald-500/50 shadow-2xl">
         <h1 className="mb-4 text-4xl font-black bg-gradient-to-r from-emerald-400 to-emerald-600 bg-clip-text text-transparent">
-          Room: <span className="text-emerald-300">{roomId}</span>
+          Room: <span className="text-emerald-300 font-bold">{roomId?.toUpperCase()}</span>
         </h1>
-        <p className="text-xl">
-          You: <span className="font-bold text-white">{me?.name}</span> {isHost && "👑(Host)"}
+        <p className="text-xl mb-6">
+          You: <span className="font-bold text-white px-3 py-1 bg-emerald-500/30 rounded-full">{me?.name}</span>
+          {isHost && (
+            <span className="ml-4 px-4 py-2 bg-yellow-500/90 text-black font-bold rounded-full text-lg animate-pulse">👑 HOST</span>
+          )}
         </p>
-        <div className="flex justify-center gap-4 mt-6">
+        <div className="flex flex-wrap gap-4 justify-center items-center">
           {isHost && (
             <button
               onClick={startRound}
               disabled={started || players.length < 2}
-              className="rounded-3xl bg-emerald-600 px-6 py-3 font-bold hover:bg-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed"
+              className={`px-8 py-4 rounded-3xl text-xl font-black shadow-2xl transition-all duration-300 flex items-center gap-2 ${
+                started || players.length < 2
+                  ? "bg-gray-700/50 border-2 border-gray-600 cursor-not-allowed opacity-60"
+                  : "bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 hover:scale-105 hover:shadow-emerald-500/50"
+              }`}
             >
-              {started ? "⚡ Running" : "▶️ START GAME"}
+              {started ? "⚡ GAME RUNNING" : players.length < 2 ? `▶️ WAIT (${players.length}/2)` : "▶️ START GAME"}
             </button>
           )}
           <button
             onClick={() => setShowPoints(true)}
-            className="rounded-3xl bg-amber-500 px-6 py-3 font-bold hover:bg-amber-400"
+            className="px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 rounded-3xl font-bold text-xl shadow-2xl hover:shadow-amber-500/50 transition-all"
           >
-            📊 SCORES
+            📊 SCORES ({players.length})
           </button>
           <button
             onClick={exitGame}
-            className="rounded-3xl bg-gray-700 px-6 py-3 font-bold hover:bg-gray-600"
+            className="px-8 py-4 bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 rounded-3xl font-bold text-xl shadow-2xl hover:shadow-gray-500/50 transition-all"
           >
-            🚪 Exit
+            🚪 EXIT
           </button>
+        </div>
+        <div className="mt-4 text-lg opacity-90">
+          Players: <span className="text-emerald-400 font-bold">{players.length}/{MAX_PLAYERS}</span> | Turn:{" "}
+          <span
+            className={`font-bold px-3 py-1 rounded-full ${
+              myTurn ? "bg-yellow-500/90 text-black" : "bg-gray-600/50"
+            }`}
+          >
+            {currentPlayer?.name || "None"}
+          </span>
         </div>
       </div>
 
-      {/* Add your game screen UI below */}
-      {/* For brevity, you can continue with your existing game UI using the same styling approach */}
+      {/* Your existing game UI goes here */}
 
       {showPoints && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
