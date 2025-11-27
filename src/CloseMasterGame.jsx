@@ -1,29 +1,26 @@
 import React, { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 
-// Connect to your LIVE Railway server
 const SERVER_URL = "https://close-master-server-production.up.railway.app";
 
-function cardColorClass(card) {
-  if (!card) return "text-slate-900";
-  if (card.rank === "JOKER") return "text-purple-700";
-  if (card.suit === "♥" || card.suit === "♦") return "text-red-600";
-  return "text-slate-900";
+// UI helper
+function cardColor(card) {
+  if (!card) return "text-white";
+  if (card.rank === "JOKER") return "text-purple-400";
+  if (card.suit === "♥" || card.suit === "♦") return "text-red-400";
+  return "text-white";
 }
 
 export default function CloseMasterGame() {
-  const [screen, setScreen] = useState("welcome");
   const [socket, setSocket] = useState(null);
+  const [screen, setScreen] = useState("welcome");
   const [playerName, setPlayerName] = useState("");
-  const [joinRoomId, setJoinRoomId] = useState("");
-
+  const [joinCode, setJoinCode] = useState("");
   const [game, setGame] = useState(null);
-  const [isHost, setIsHost] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [showScores, setShowScores] = useState(false);
-  const [showRules, setShowRules] = useState(false);
+  const [isHost, setIsHost] = useState(false);
 
-  // ---------- connect to SERVER ----------
+  // ---------------- CONNECT TO SERVER ----------------
   useEffect(() => {
     const s = io(SERVER_URL, {
       transports: ["websocket"],
@@ -32,63 +29,42 @@ export default function CloseMasterGame() {
 
     setSocket(s);
 
-    s.on("connect", () => {
-      console.log("Connected:", s.id);
-    });
-
-    s.on("connect_error", (err) => {
-      console.error("Socket Error:", err.message);
-    });
-
     s.on("game_state", (state) => {
       setGame(state);
       setIsHost(state.hostId === state.youId);
       setSelectedIds([]);
     });
 
-    return () => {
-      s.disconnect();
-    };
+    return () => s.disconnect();
   }, []);
 
-  const youId = game?.youId || "";
+  const roomId = game?.roomId;
+  const youId = game?.youId;
   const players = game?.players || [];
-  const roomId = game?.roomId || "";
-  const started = game?.started || false;
+  const discardTop = game?.discardTop;
+  const currentIndex = game?.currentIndex;
+  const started = game?.started;
+  const pendingDraw = game?.pendingDraw;
+  const pendingSkips = game?.pendingSkips;
 
-  const currentPlayer =
-    players[game?.currentIndex ?? -1] || null;
+  const currentPlayer = players[currentIndex];
+  const myTurn = started && currentPlayer?.id === youId;
 
-  const topCard = game?.discardTop || null;
+  const me = players.find((p) => p.id === youId);
 
-  const myTurn =
-    started &&
-    !game?.roundEnded &&
-    currentPlayer &&
-    currentPlayer.id === youId;
-
-  // -------- Lobby actions --------
-  function handleCreateRoom() {
-    if (!socket) return;
-    socket.emit(
-      "create_room",
-      { name: playerName || "Player" },
-      (res) => {
-        if (res?.roomId) setScreen("game");
-      }
-    );
+  // --------------- ACTIONS ----------------
+  function createRoom() {
+    if (!socket || !playerName.trim()) return;
+    socket.emit("create_room", { name: playerName }, (res) => {
+      if (res?.roomId) setScreen("game");
+    });
   }
 
-  function handleJoinRoom() {
-    if (!socket) return;
-    if (!joinRoomId.trim()) return alert("Enter room ID");
-
+  function joinRoom() {
+    if (!socket || !playerName.trim() || !joinCode.trim()) return;
     socket.emit(
       "join_room",
-      {
-        roomId: joinRoomId.trim().toUpperCase(),
-        name: playerName || "Player",
-      },
+      { name: playerName, roomId: joinCode.trim().toUpperCase() },
       (res) => {
         if (res?.error) alert(res.error);
         else if (res?.roomId) setScreen("game");
@@ -96,31 +72,25 @@ export default function CloseMasterGame() {
     );
   }
 
-  function handleStartRound() {
+  function startRound() {
     if (!socket || !roomId || !isHost) return;
     socket.emit("start_round", { roomId });
   }
 
-  // -------- Game actions --------
-  function handleDraw() {
-    if (!socket || !roomId) return;
+  function drawCard() {
+    if (!socket || !roomId || !myTurn) return;
     socket.emit("action_draw", { roomId });
   }
 
-  function handleDrop() {
-    if (!socket || !roomId) return;
+  function dropCards() {
+    if (!socket || !roomId || !myTurn) return;
+    if (selectedIds.length === 0) return;
     socket.emit("action_drop", { roomId, selectedIds });
   }
 
-  function handleCallClose() {
-    if (!socket || !roomId) return;
+  function callClose() {
+    if (!socket || !roomId || !myTurn) return;
     socket.emit("action_close", { roomId });
-  }
-
-  function handlePoints() {
-    if (!socket || !roomId) return;
-    socket.emit("action_points", { roomId });
-    setShowScores(true);
   }
 
   function toggleSelect(id) {
@@ -129,61 +99,45 @@ export default function CloseMasterGame() {
     );
   }
 
-  // -------- EXIT (correct version) --------
-  function handleExitGame() {
-    if (
-      !window.confirm(
-        "Exit cheyyali? Game continue avutundi, mee score save untundi."
-      )
-    )
-      return;
+  function exitGame() {
+    if (!window.confirm("Exit game?")) return;
 
     if (socket) socket.disconnect();
 
+    setScreen("welcome");
+    setPlayerName("");
+    setJoinCode("");
     setGame(null);
     setSelectedIds([]);
-    setPlayerName("");
-    setJoinRoomId("");
     setIsHost(false);
-    setShowScores(false);
-    setShowRules(false);
-    setScreen("welcome");
   }
 
-  // -------- WELCOME SCREEN --------
+  // ---------------- WELCOME SCREEN ----------------
   if (screen === "welcome") {
     return (
-      <div className="min-h-screen w-full bg-[#020617] flex items-center justify-center text-white">
-        <div className="p-6 max-w-md w-full bg-black/60 rounded-2xl space-y-4">
-          <h1 className="text-3xl font-bold text-center">CLOSE MASTER 🔥</h1>
+      <div className="min-h-screen bg-[#0f172a] flex items-center justify-center text-white px-4">
+        <div className="bg-black/40 p-6 rounded-2xl w-full max-w-md space-y-4">
+          <h1 className="text-3xl font-bold text-center">CLOSE MASTER POWER GAME 🔥</h1>
 
           <input
-            type="text"
+            className="w-full p-2 bg-gray-900 rounded-lg"
+            placeholder="Your Name"
             value={playerName}
             onChange={(e) => setPlayerName(e.target.value)}
-            placeholder="Your Name"
-            className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm"
           />
 
           <input
-            type="text"
-            value={joinRoomId}
-            onChange={(e) => setJoinRoomId(e.target.value)}
+            className="w-full p-2 bg-gray-900 rounded-lg"
             placeholder="Room ID"
-            className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm"
+            value={joinCode}
+            onChange={(e) => setJoinCode(e.target.value)}
           />
 
-          <button
-            onClick={handleCreateRoom}
-            className="w-full bg-emerald-600 py-2 rounded-lg"
-          >
+          <button onClick={createRoom} className="w-full bg-emerald-600 py-2 rounded-lg">
             Create Room
           </button>
 
-          <button
-            onClick={handleJoinRoom}
-            className="w-full bg-sky-600 py-2 rounded-lg"
-          >
+          <button onClick={joinRoom} className="w-full bg-blue-600 py-2 rounded-lg">
             Join Room
           </button>
         </div>
@@ -191,142 +145,133 @@ export default function CloseMasterGame() {
     );
   }
 
-  // -------- GAME SCREEN --------
+  // ---------------- GAME SCREEN ----------------
   return (
-    <div className="min-h-screen bg-[#0a0f1f] p-4 text-white">
-      <h1 className="text-3xl font-bold mb-2">Room: {roomId}</h1>
+    <div className="min-h-screen bg-[#0a0f1f] text-white p-3 flex flex-col items-center">
+      <h2 className="text-xl font-bold mb-2">ROOM: {roomId}</h2>
 
-      {!started ? (
-        <div className="mb-4">
-          {isHost ? (
-            <button
-              onClick={handleStartRound}
-              disabled={players.length < 2}
-              className="px-4 py-2 bg-emerald-600 rounded-xl"
-            >
-              Start Game ({players.length}/7)
-            </button>
-          ) : (
-            <p>Waiting for Host…</p>
-          )}
+      {/* TURN INDICATOR */}
+      {started && (
+        <div className="mb-3 text-lg">
+          Turn:{" "}
+          <span className="text-yellow-400 font-bold">
+            {currentPlayer?.name}
+          </span>
         </div>
-      ) : (
-        <p className="text-green-400 mb-4">Game Started ✔</p>
       )}
 
-      {/* Players around */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {players.map((p) => {
-          const isSelf = p.id === youId;
-          const isCurrent =
-            currentPlayer && currentPlayer.id === p.id;
-
-          return (
-            <div
-              key={p.id}
-              className={`p-3 rounded-xl bg-gray-900 border ${
-                isCurrent ? "border-yellow-400" : "border-gray-700"
-              }`}
-            >
-              <p className="font-bold">
-                {p.name} {isSelf && "(You)"}
-              </p>
-              <p className="text-sm text-gray-300">
-                Cards: {p.handSize} | Score: {p.score}
-              </p>
-
-              {isSelf && started && (
-                <button
-                  onClick={handleExitGame}
-                  className="mt-2 px-3 py-1 bg-red-600 rounded-lg text-xs"
-                >
-                  Exit
-                </button>
-              )}
-
-              {isSelf && started && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {p.hand.map((card) => {
-                    const selected = selectedIds.includes(card.id);
-                    return (
-                      <button
-                        key={card.id}
-                        onClick={() => toggleSelect(card.id)}
-                        className={`w-12 h-16 bg-white rounded-lg text-black text-sm border ${
-                          selected ? "border-green-500" : "border-gray-500"
-                        }`}
-                      >
-                        {card.rank}
-                        {card.suit}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
+      {/* CENTER OPEN CARD */}
+      <div className="my-4 p-4 bg-gray-900 rounded-2xl shadow-xl text-center">
+        <h3 className="text-lg mb-2">OPEN CARD</h3>
+        {discardTop ? (
+          <div
+            className={`w-20 h-28 bg-white rounded-xl mx-auto flex flex-col items-center justify-center text-black text-xl shadow-lg ${cardColor(
+              discardTop
+            )}`}
+          >
+            {discardTop.rank}
+            <span className="text-sm">{discardTop.suit}</span>
+          </div>
+        ) : (
+          <p>No card</p>
+        )}
       </div>
 
+      {/* OTHER PLAYERS (BACKSIDE) */}
+      <div className="grid grid-cols-3 gap-3 w-full max-w-3xl">
+        {players
+          .filter((p) => p.id !== youId)
+          .map((p) => (
+            <div
+              key={p.id}
+              className={`p-2 bg-gray-900 rounded-xl text-center ${
+                currentPlayer?.id === p.id ? "border-2 border-yellow-400" : ""
+              }`}
+            >
+              <p className="font-bold">{p.name}</p>
+              <p className="text-sm mb-2">Cards: {p.handSize}</p>
+
+              {/* backside cards */}
+              <div className="flex justify-center flex-wrap gap-1">
+                {Array.from({ length: p.handSize }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="w-6 h-8 bg-gray-700 rounded-sm border border-gray-500"
+                  ></div>
+                ))}
+              </div>
+            </div>
+          ))}
+      </div>
+
+      {/* YOUR CARDS */}
+      {me && (
+        <div className="mt-4 w-full max-w-3xl">
+          <h3 className="text-lg mb-1">YOUR CARDS</h3>
+          <div className="flex flex-wrap gap-2 justify-center">
+            {me.hand.map((c) => {
+              const sel = selectedIds.includes(c.id);
+              return (
+                <div
+                  key={c.id}
+                  onClick={() => toggleSelect(c.id)}
+                  className={`w-14 h-20 bg-white rounded-xl p-2 text-black text-center shadow-md cursor-pointer transition-all ${
+                    sel ? "border-4 border-green-500 scale-110" : "border border-gray-400"
+                  } ${cardColor(c)}`}
+                >
+                  <div className="text-lg">{c.rank}</div>
+                  <div className="text-sm">{c.suit}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ACTION BUTTONS */}
       {started && (
-        <div className="mt-4 flex gap-2">
+        <div className="mt-4 flex gap-3">
           <button
-            onClick={handleDraw}
+            onClick={drawCard}
             disabled={!myTurn}
-            className="px-4 py-2 bg-purple-600 rounded-xl disabled:opacity-50"
+            className="px-4 py-2 bg-purple-600 rounded-lg disabled:opacity-40"
           >
             Draw
           </button>
 
           <button
-            onClick={handleDrop}
+            onClick={dropCards}
             disabled={!myTurn}
-            className="px-4 py-2 bg-green-600 rounded-xl disabled:opacity-50"
+            className="px-4 py-2 bg-green-600 rounded-lg disabled:opacity-40"
           >
             Drop
           </button>
 
           <button
-            onClick={handleCallClose}
+            onClick={callClose}
             disabled={!myTurn}
-            className="px-4 py-2 bg-red-600 rounded-xl disabled:opacity-50"
+            className="px-4 py-2 bg-red-600 rounded-lg disabled:opacity-40"
           >
             Close
           </button>
 
-          {isHost && (
-            <button
-              onClick={handlePoints}
-              className="px-4 py-2 bg-amber-700 rounded-xl"
-            >
-              Points
-            </button>
-          )}
+          <button
+            onClick={exitGame}
+            className="px-4 py-2 bg-gray-700 rounded-lg"
+          >
+            Exit
+          </button>
         </div>
       )}
 
-      {/* Scores popup */}
-      {showScores && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center">
-          <div className="bg-white text-black p-4 rounded-xl w-80">
-            <h2 className="text-lg font-bold">Scores</h2>
-            {players.map((p) => (
-              <div
-                key={p.id}
-                className="flex justify-between border-b py-1"
-              >
-                <span>{p.name}</span>
-                <span>{p.score}</span>
-              </div>
-            ))}
-            <button
-              onClick={() => setShowScores(false)}
-              className="mt-3 w-full bg-gray-800 text-white py-2 rounded-lg"
-            >
-              Close
-            </button>
-          </div>
-        </div>
+      {/* START BUTTON BEFORE ROUND */}
+      {!started && isHost && (
+        <button
+          onClick={startRound}
+          className="mt-4 px-5 py-2 bg-emerald-600 rounded-xl"
+        >
+          Start Game
+        </button>
       )}
     </div>
   );
