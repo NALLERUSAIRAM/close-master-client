@@ -60,11 +60,11 @@ export default function CloseMasterGame() {
   const pendingDraw = game?.pendingDraw || 0;
   const pendingSkips = game?.pendingSkips || 0;
   const closeCalled = game?.closeCalled;
-  const hasDrawn = game?.hasDrawn || false; // ✅ NEW: From server state
 
   const currentPlayer = players[currentIndex];
   const myTurn = started && currentPlayer?.id === youId;
   const me = players.find((p) => p.id === youId);
+  const hasDrawn = me?.hasDrawn || false; // ✅ Get from my player object
 
   // actions
   function createRoom() {
@@ -99,12 +99,12 @@ export default function CloseMasterGame() {
     socket.emit("start_round", { roomId: game.roomId });
   }
 
-  // ✅ NEW: Draw from Deck OR Discard (Open Card)
+  // ✅ DRAW from Deck OR Discard
   function drawCard(fromDiscard = false) {
     if (!socket || !roomId || !myTurn || hasDrawn) return;
     socket.emit("action_draw", { 
       roomId, 
-      fromDiscard // true = discard pile, false = deck
+      fromDiscard // true = discard, false = deck
     });
   }
 
@@ -270,20 +270,20 @@ export default function CloseMasterGame() {
         </div>
       </div>
 
-      {/* OPEN CARD - Click to draw */}
+      {/* OPEN CARD - Click to DRAW */}
       <div className="mt-1 p-3 bg-gray-900 rounded-xl shadow-lg border border-gray-700 text-center">
         <h3 className="text-sm text-gray-300 mb-1">
-          OPEN CARD {myTurn && !hasDrawn && "(Click to draw)"}
+          OPEN CARD {myTurn && !hasDrawn && "(Click to DRAW)"}
         </h3>
         {discardTop ? (
           <button
             onClick={() => drawCard(true)} // ✅ Draw from discard
             disabled={!myTurn || hasDrawn}
-            className={`w-20 h-28 bg-white rounded-2xl shadow-2xl flex flex-col justify-between p-1.5 mx-auto transition-all ${
+            className={`w-20 h-28 bg-white rounded-2xl shadow-2xl flex flex-col justify-between p-1.5 mx-auto transition-all duration-200 ${
               myTurn && !hasDrawn
-                ? "hover:scale-105 cursor-pointer border-2 border-blue-400"
+                ? "hover:scale-105 cursor-pointer border-2 border-blue-400 hover:shadow-emerald-500"
                 : "cursor-default"
-            } disabled:opacity-50`}
+            } ${hasDrawn ? "opacity-60" : ""}`}
           >
             <div className={`text-xs font-bold ${cardTextColor(discardTop)}`}>
               {discardTop.rank}
@@ -313,9 +313,11 @@ export default function CloseMasterGame() {
           .map((p) => (
             <div
               key={p.id}
-              className={`p-2 bg-gray-900 rounded-xl border ${
-                currentPlayer?.id === p.id ? "border-yellow-400 shadow-lg" : "border-gray-700"
-              } ${p.hasDrawn ? "ring-2 ring-green-500/30" : ""}`}
+              className={`p-2 bg-gray-900 rounded-xl border transition-all ${
+                currentPlayer?.id === p.id 
+                  ? "border-yellow-400 shadow-lg ring-2 ring-yellow-500/50" 
+                  : "border-gray-700 hover:border-gray-600"
+              } ${p.hasDrawn ? "bg-green-900/50 ring-2 ring-green-500/30" : ""}`}
             >
               <p className="text-xs font-bold">
                 {p.name}
@@ -323,7 +325,7 @@ export default function CloseMasterGame() {
               </p>
               <p className="text-[10px] text-gray-400">
                 Cards: {p.handSize} | Score: {p.score}
-                {p.hasDrawn && " ✓"}
+                {p.hasDrawn && " ✓Drew"}
               </p>
 
               <div className="flex mt-1 gap-1 flex-wrap">
@@ -346,7 +348,7 @@ export default function CloseMasterGame() {
               Your Cards (Score: {me.score})
             </h3>
             <span className="text-[11px] text-gray-400">
-              {hasDrawn ? "✓ Drew - Select to drop" : "Draw first"}
+              {hasDrawn ? "✓ Drew - Select same rank to DROP" : "Draw first"}
             </span>
           </div>
 
@@ -377,9 +379,9 @@ export default function CloseMasterGame() {
                     disabled={!hasDrawn} // ✅ Can't select until drawn
                     className={`w-16 h-24 bg-white rounded-2xl shadow-xl border transition-all duration-150 ${
                       sel
-                        ? "border-4 border-emerald-500 scale-110 translate-y-[-4px]"
+                        ? "border-4 border-emerald-500 scale-110 translate-y-[-4px] shadow-2xl"
                         : "border-gray-300 hover:border-gray-400"
-                    } ${!hasDrawn ? "opacity-50 cursor-not-allowed" : ""}`}
+                    } ${!hasDrawn ? "opacity-50 cursor-not-allowed" : "hover:scale-[1.02]"}`}
                   >
                     <div
                       className={`flex flex-col justify-between h-full p-2 ${color}`}
@@ -398,73 +400,100 @@ export default function CloseMasterGame() {
         </div>
       )}
 
-      {/* ACTION BUTTONS - NEW RULES */}
+      {/* ACTION BUTTONS - PERFECT DRAW→DROP FLOW */}
       {started && (
-        <div className="mt-3 flex flex-wrap gap-3 justify-center w-full max-w-6xl">
-          {/* ✅ DECK DRAW */}
+        <div className="mt-4 flex flex-wrap gap-3 justify-center w-full max-w-6xl">
+          {/* DECK DRAW */}
           <button
-            onClick={() => drawCard(false)} // Deck draw
+            onClick={() => drawCard(false)}
             disabled={!myTurn || hasDrawn}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+            className={`px-6 py-3 rounded-xl text-sm font-bold transition-all duration-200 ${
+              !myTurn || hasDrawn
+                ? "bg-purple-900 text-purple-300 opacity-50 cursor-not-allowed"
+                : "bg-purple-600 hover:bg-purple-500 hover:shadow-lg shadow-purple-500/25"
+            }`}
             title={hasDrawn ? "Already drawn this turn" : "Draw from deck"}
           >
-            Deck Draw{pendingDraw > 0 ? ` (+${pendingDraw})` : ""}
+            📥 DECK DRAW
+            {pendingDraw > 0 && ` (+${pendingDraw})`}
           </button>
 
-          {/* ✅ DROP - Only after draw */}
+          {/* DROP - Only after DRAW */}
           <button
             onClick={dropCards}
             disabled={!myTurn || !hasDrawn || selectedIds.length === 0}
-            className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
-            title={!hasDrawn ? "Must draw first!" : "Drop selected cards"}
+            className={`px-6 py-3 rounded-xl text-sm font-bold transition-all duration-200 ${
+              !myTurn || !hasDrawn || selectedIds.length === 0
+                ? "bg-green-900 text-green-300 opacity-50 cursor-not-allowed"
+                : "bg-green-600 hover:bg-green-500 hover:shadow-lg shadow-green-500/25"
+            }`}
+            title={!hasDrawn ? "Must DRAW first!" : `Drop ${selectedIds.length} cards`}
           >
-            DROP ({selectedIds.length})
+            🗑️ DROP ({selectedIds.length})
           </button>
 
           {/* CLOSE */}
           <button
             onClick={callClose}
             disabled={!myTurn}
-            className="px-4 py-2 bg-red-600 hover:bg-red-500 rounded-xl text-sm font-semibold disabled:opacity-40"
+            className={`px-6 py-3 rounded-xl text-sm font-bold transition-all duration-200 ${
+              !myTurn
+                ? "bg-red-900 text-red-300 opacity-50 cursor-not-allowed"
+                : "bg-red-600 hover:bg-red-500 hover:shadow-lg shadow-red-500/25"
+            }`}
           >
-            CLOSE
+            ❌ CLOSE
           </button>
         </div>
       )}
 
-      {/* ✅ NEW RULE GUIDANCE */}
+      {/* ✅ PERFECT RULE GUIDANCE */}
       {myTurn && started && (
-        <div className="mt-2 text-xs text-center text-yellow-400 max-w-md">
-          {hasDrawn 
-            ? `✓ Drew card. Now select same rank cards & DROP!` 
-            : `➤ Draw from DECK or OPEN CARD first, then DROP`
-          }
+        <div className="mt-4 p-3 bg-gradient-to-r from-yellow-900/80 to-orange-900/80 rounded-2xl border-2 border-yellow-500/50 text-center max-w-md mx-auto">
+          <div className="text-xs font-semibold text-yellow-200 mb-1">
+            📋 YOUR TURN
+          </div>
+          {hasDrawn ? (
+            <div className="text-sm text-emerald-300">
+              ✓ Drew card! Now select <strong>same rank cards</strong> & DROP 🚀
+            </div>
+          ) : (
+            <div className="text-sm text-yellow-200">
+              ➤ DRAW from DECK or OPEN CARD first, then DROP
+            </div>
+          )}
         </div>
       )}
 
       {/* POINTS POPUP */}
       {showPoints && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-          <div className="bg-white text-black rounded-xl p-4 w-80 shadow-xl">
-            <h3 className="text-lg font-bold text-center mb-3">SCORES</h3>
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-white text-black rounded-2xl p-6 w-96 shadow-2xl max-h-[80vh] overflow-auto">
+            <h3 className="text-2xl font-bold text-center mb-6 bg-gradient-to-r from-gray-800 to-gray-900 text-white py-2 rounded-xl">
+              🏆 FINAL SCORES
+            </h3>
 
-            <div className="space-y-2 max-h-60 overflow-auto">
-              {players.map((p) => (
+            <div className="space-y-3">
+              {players.map((p, i) => (
                 <div
                   key={p.id}
-                  className="flex justify-between p-2 border-b border-gray-300 text-sm"
+                  className="flex justify-between items-center p-4 bg-gray-50 rounded-xl border-l-4 border-emerald-500 hover:shadow-md transition-all"
                 >
-                  <span>{p.name}</span>
-                  <span className="font-semibold">{p.score}</span>
+                  <span className="font-semibold text-lg">{p.name}</span>
+                  <span className={`text-2xl font-bold px-3 py-1 rounded-full ${
+                    i === 0 ? "bg-emerald-500 text-white shadow-lg" : "bg-gray-200 text-gray-800"
+                  }`}>
+                    {p.score}
+                  </span>
                 </div>
               ))}
             </div>
 
             <button
               onClick={() => setShowPoints(false)}
-              className="w-full mt-3 py-2 bg-gray-900 text-white rounded-lg text-sm font-semibold"
+              className="w-full mt-6 py-3 bg-gradient-to-r from-gray-800 to-gray-900 text-white rounded-xl text-lg font-bold hover:shadow-xl transition-all duration-200"
             >
-              CLOSE
+              CONTINUE
             </button>
           </div>
         </div>
