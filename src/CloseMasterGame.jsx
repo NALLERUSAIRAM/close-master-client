@@ -21,7 +21,7 @@ export default function CloseMasterGame() {
   const [isHost, setIsHost] = useState(false);
   const [showPoints, setShowPoints] = useState(false);
 
-  // ---------------- CONNECT TO SERVER ----------------
+  // connect
   useEffect(() => {
     const s = io(SERVER_URL, {
       transports: ["websocket"],
@@ -39,14 +39,14 @@ export default function CloseMasterGame() {
     return () => s.disconnect();
   }, []);
 
-  // 🔔 AUTO OPEN POINTS POPUP WHEN CLOSE HAPPENS
+  // auto open points when CLOSE happens
   useEffect(() => {
     if (game?.closeCalled) {
       setShowPoints(true);
     }
   }, [game?.closeCalled]);
 
-  // ---------- DERIVED STATE ----------
+  // derived
   const roomId = game?.roomId;
   const youId = game?.youId;
   const players = game?.players || [];
@@ -61,7 +61,7 @@ export default function CloseMasterGame() {
   const myTurn = started && currentPlayer?.id === youId;
   const me = players.find((p) => p.id === youId);
 
-  // --------------- ACTIONS ----------------
+  // actions
   function createRoom() {
     if (!socket || !playerName.trim()) return;
     socket.emit("create_room", { name: playerName }, (res) => {
@@ -110,12 +110,9 @@ export default function CloseMasterGame() {
 
   function callClose() {
     if (!socket || !roomId || !myTurn) return;
-    if (
-      !window.confirm(
-        "Sure na? CLOSE ante direct ga scoring jarugutundi."
-      )
-    )
+    if (!window.confirm("Sure na? CLOSE ante direct ga scoring jarugutundi.")) {
       return;
+    }
     socket.emit("action_close", { roomId });
   }
 
@@ -127,7 +124,6 @@ export default function CloseMasterGame() {
 
   function exitGame() {
     if (!window.confirm("Exit game cheyyala?")) return;
-
     if (socket) socket.disconnect();
 
     setScreen("welcome");
@@ -139,7 +135,7 @@ export default function CloseMasterGame() {
     setShowPoints(false);
   }
 
-  // ---------------- WELCOME SCREEN ----------------
+  // welcome screen
   if (screen === "welcome") {
     return (
       <div className="min-h-screen bg-[#020617] flex items-center justify-center text-white px-4">
@@ -159,9 +155,7 @@ export default function CloseMasterGame() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs text-gray-300">
-              Room ID (join cheyadaniki)
-            </label>
+            <label className="text-xs text-gray-300">Room ID (join cheyadaniki)</label>
             <input
               className="w-full p-2 bg-gray-900 rounded-lg border border-gray-700 outline-none text-sm"
               placeholder="Host ichina code ivvu"
@@ -188,17 +182,14 @@ export default function CloseMasterGame() {
     );
   }
 
-  // ---------------- GAME SCREEN ----------------
+  // game screen
   return (
     <div className="min-h-screen bg-[#020617] text-white p-3 flex flex-col items-center gap-3">
       {/* HEADER */}
       <div className="w-full max-w-6xl flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold">
-            Room:{" "}
-            <span className="text-emerald-400">
-              {roomId || "----"}
-            </span>
+            Room: <span className="text-emerald-400">{roomId || "----"}</span>
           </h2>
           <p className="text-xs text-gray-300">
             You are:{" "}
@@ -209,7 +200,6 @@ export default function CloseMasterGame() {
         </div>
 
         <div className="flex gap-2 items-center">
-          {/* Start Game button for host */}
           {isHost && (
             <button
               onClick={startRound}
@@ -241,7 +231,7 @@ export default function CloseMasterGame() {
         </div>
       </div>
 
-      {/* TURN / STATUS BAR */}
+      {/* STATUS BAR */}
       <div className="w-full max-w-6xl bg-gray-900/70 border border-gray-700 rounded-xl px-3 py-2 text-sm flex justify-between items-center">
         <div>
           Status:{" "}
@@ -252,15 +242,11 @@ export default function CloseMasterGame() {
                 {currentPlayer?.name || "-"}
               </span>
               {myTurn && (
-                <span className="ml-2 text-emerald-400">
-                  (Your turn)
-                </span>
+                <span className="ml-2 text-emerald-400">(Your turn)</span>
               )}
             </>
           ) : closeCalled ? (
-            <span className="text-red-300">
-              Round ended (CLOSE called)
-            </span>
+            <span className="text-red-300">Round ended (CLOSE called)</span>
           ) : (
             <span className="text-gray-300">
               Waiting for Start Game (Host)
@@ -273,32 +259,18 @@ export default function CloseMasterGame() {
         </div>
       </div>
 
-      {/* OPEN CARD PANEL */}
+      {/* OPEN CARD */}
       <div className="mt-1 p-3 bg-gray-900 rounded-xl shadow-lg border border-gray-700 text-center">
         <h3 className="text-sm text-gray-300 mb-1">OPEN CARD</h3>
         {discardTop ? (
           <div className="w-20 h-28 bg-white rounded-2xl shadow-2xl flex flex-col justify-between p-1.5 mx-auto">
-            <div
-              className={`text-xs font-bold ${cardTextColor(
-                discardTop
-              )}`}
-            >
+            <div className={`text-xs font-bold ${cardTextColor(discardTop)}`}>
               {discardTop.rank}
             </div>
-            <div
-              className={`text-2xl text-center ${cardTextColor(
-                discardTop
-              )}`}
-            >
-              {discardTop.rank === "JOKER"
-                ? "🃏"
-                : discardTop.suit}
+            <div className={`text-2xl text-center ${cardTextColor(discardTop)}`}>
+              {discardTop.rank === "JOKER" ? "🃏" : discardTop.suit}
             </div>
-            <div
-              className={`text-xs text-right ${cardTextColor(
-                discardTop
-              )}`}
-            >
+            <div className={`text-xs text-right ${cardTextColor(discardTop)}`}>
               {discardTop.rank}
             </div>
           </div>
@@ -309,9 +281,7 @@ export default function CloseMasterGame() {
         )}
         <p className="mt-1 text-[11px] text-gray-400">
           Match value:{" "}
-          <span className="font-semibold">
-            {discardTop?.rank || "-"}
-          </span>
+          <span className="font-semibold">{discardTop?.rank || "-"}</span>
         </p>
       </div>
 
@@ -323,9 +293,7 @@ export default function CloseMasterGame() {
             <div
               key={p.id}
               className={`p-2 bg-gray-900 rounded-xl border ${
-                currentPlayer?.id === p.id
-                  ? "border-yellow-400 shadow-lg"
-                  : "border-gray-700"
+                currentPlayer?.id === p.id ? "border-yellow-400 shadow-lg" : "border-gray-700"
               }`}
             >
               <p className="text-xs font-bold">
@@ -355,9 +323,7 @@ export default function CloseMasterGame() {
             <h3 className="text-sm text-gray-300 font-semibold">
               Your Cards (Score: {me.score})
             </h3>
-            <span className="text-[11px] text-gray-400">
-              Tap cards to select
-            </span>
+            <span className="text-[11px] text-gray-400">Tap cards to select</span>
           </div>
 
           <div
@@ -373,11 +339,7 @@ export default function CloseMasterGame() {
               items-center
               whitespace-nowrap
             "
-            style={{
-              maxHeight: "none",
-              height: "auto",
-              paddingBottom: "12px",
-            }}
+            style={{ maxHeight: "none", height: "auto", paddingBottom: "12px" }}
           >
             <div className="flex gap-3">
               {me.hand.map((c) => {
@@ -397,17 +359,11 @@ export default function CloseMasterGame() {
                     <div
                       className={`flex flex-col justify-between h-full p-2 ${color}`}
                     >
-                      <div className="text-sm font-bold">
-                        {c.rank}
-                      </div>
+                      <div className="text-sm font-bold">{c.rank}</div>
                       <div className="text-3xl text-center">
-                        {c.rank === "JOKER"
-                          ? "🃏"
-                          : c.suit}
+                        {c.rank === "JOKER" ? "🃏" : c.suit}
                       </div>
-                      <div className="text-[11px] text-right">
-                        {c.rank}
-                      </div>
+                      <div className="text-[11px] text-right">{c.rank}</div>
                     </div>
                   </button>
                 );
@@ -446,13 +402,11 @@ export default function CloseMasterGame() {
         </div>
       )}
 
-      {/* POINTS POPUP */}
+      {/* POINTS POPUP (also auto after CLOSE) */}
       {showPoints && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
           <div className="bg-white text-black rounded-xl p-4 w-80 shadow-xl">
-            <h3 className="text-lg font-bold text-center mb-3">
-              SCORES
-            </h3>
+            <h3 className="text-lg font-bold text-center mb-3">SCORES</h3>
 
             <div className="space-y-2 max-h-60 overflow-auto">
               {players.map((p) => (
