@@ -56,7 +56,6 @@ export default function CloseMasterGame() {
       setGame(state);
       setIsHost(state.hostId === state.youId);
       setSelectedIds([]);
-      // game not started -> lobby, started -> game
       if (!state.started) {
         setScreen("lobby");
       } else {
@@ -90,7 +89,29 @@ export default function CloseMasterGame() {
   const myTurn = started && currentPlayer?.id === youId;
   const me = players.find((p) => p.id === youId);
   const hasDrawn = me?.hasDrawn || false;
-  const matchingOpenCardCount = game?.matchingOpenCardCount || 0;
+
+  // selection info (for DROP rules)
+  const selectedCards = me
+    ? me.hand.filter((c) => selectedIds.includes(c.id))
+    : [];
+  const selectedRanks = [...new Set(selectedCards.map((c) => c.rank))];
+  const selectedSingleRank =
+    selectedRanks.length === 1 ? selectedRanks[0] : null;
+  const openCardRank = discardTop?.rank;
+
+  let canDropWithoutDraw = false;
+  if (!hasDrawn && selectedCards.length > 0 && selectedSingleRank) {
+    const sameAsOpen = openCardRank && selectedSingleRank === openCardRank;
+    if (sameAsOpen) {
+      // same as open card -> any count
+      canDropWithoutDraw = true;
+    } else if (selectedCards.length >= 3) {
+      // different rank but 3+ cards
+      canDropWithoutDraw = true;
+    }
+  }
+  const allowDrop =
+    selectedCards.length > 0 && (hasDrawn || canDropWithoutDraw);
 
   const createRoom = () => {
     if (!socket || !playerName.trim()) {
@@ -138,8 +159,8 @@ export default function CloseMasterGame() {
   };
 
   const dropCards = () => {
-    if (!socket || !roomId || !myTurn || selectedIds.length === 0) {
-      alert("Cards select cheyali");
+    if (!socket || !roomId || !myTurn || !allowDrop) {
+      alert("Valid cards select cheyali");
       return;
     }
     socket.emit("action_drop", { roomId, selectedIds });
@@ -172,7 +193,6 @@ export default function CloseMasterGame() {
   };
 
   const handleContinue = () => {
-    // scores modal close, server lo already started=false -> lobby
     setShowPoints(false);
     setScreen("lobby");
   };
@@ -562,9 +582,9 @@ export default function CloseMasterGame() {
           </button>
           <button
             onClick={dropCards}
-            disabled={selectedIds.length === 0 || (!hasDrawn && selectedIds.length < 3)}
+            disabled={!allowDrop}
             className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${
-              selectedIds.length > 0 && (hasDrawn || selectedIds.length >= 3)
+              allowDrop
                 ? "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
                 : "bg-gray-700/50 cursor-not-allowed opacity-50"
             }`}
