@@ -4,6 +4,13 @@ import { io } from "socket.io-client";
 const SERVER_URL = "https://close-master-server-production.up.railway.app";
 const MAX_PLAYERS = 7;
 
+function cardTextColor(card) {
+  if (!card) return "text-black";
+  if (card.rank === "JOKER") return "text-purple-700 font-bold";
+  if (card.suit === "♥" || card.suit === "♦") return "text-red-600";
+  return "text-black";
+}
+
 function NeonFloatingCards() {
   return (
     <div className="fixed inset-0 pointer-events-none -z-10">
@@ -39,7 +46,7 @@ function NeonFloatingCards() {
 
 export default function CloseMasterGame() {
   const [socket, setSocket] = useState(null);
-  const [screen, setScreen] = useState("welcome"); // welcome | lobby | game
+  const [screen, setScreen] = useState("welcome");
   const [playerName, setPlayerName] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [game, setGame] = useState(null);
@@ -48,6 +55,7 @@ export default function CloseMasterGame() {
   const [loading, setLoading] = useState(false);
   const [myTurn, setMyTurn] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
   const [showPoints, setShowPoints] = useState(false);
 
   useEffect(() => {
@@ -66,8 +74,8 @@ export default function CloseMasterGame() {
     s.on("room_joined", (data) => {
       setGame(data.room);
       setPlayers(data.players);
-      setIsHost(data.isHost);
-      setScreen("game");
+      setIsHost(false);
+      setScreen("lobby"); // always lobby first
       setLoading(false);
     });
 
@@ -76,15 +84,17 @@ export default function CloseMasterGame() {
     s.on("game_update", (room) => {
       setGame(room);
       setPlayers(room.players);
-      const turn = room.currentPlayerId === s.id;
-      setMyTurn(turn);
-      setHasDrawn(room.hasDrawn && turn);
-      if (!turn) setHasDrawn(false);
-      if (screen !== "game") setScreen("game");
+      const isMyTurn = room.currentPlayerId === s.id;
+      setMyTurn(isMyTurn);
+      setHasDrawn(room.hasDrawn && isMyTurn);
+      if (!isMyTurn) {
+        setHasDrawn(false);
+        setSelectedIds([]);
+      }
+      setScreen(room.started ? "game" : "lobby");
     });
 
     s.on("game_ended", (scores) => {
-      // scores = players array with updated score field
       setPlayers(scores);
       setShowPoints(true);
     });
@@ -96,17 +106,17 @@ export default function CloseMasterGame() {
 
     setSocket(s);
     return () => s.disconnect();
-  }, [screen]);
+  }, []);
 
   const createRoom = () => {
-    if (!playerName.trim()) return alert("Enter name");
+    if (!playerName.trim()) return alert("Enter name!");
     setLoading(true);
     socket.emit("create_room", { name: playerName.trim() });
   };
 
   const joinRoom = () => {
     if (!playerName.trim() || !joinCode.trim())
-      return alert("Enter name & room code");
+      return alert("Name & code required!");
     setLoading(true);
     socket.emit("join_room", {
       name: playerName.trim(),
@@ -117,37 +127,35 @@ export default function CloseMasterGame() {
   const startGame = () => {
     if (!socket) return;
     socket.emit("start_game");
-    setTimeout(() => {
-      if (screen === "lobby") setScreen("game");
-    }, 400);
   };
 
-  const drawCard = () => {
-    if (!socket || !game) return;
-    if (!myTurn || hasDrawn) return;
-    socket.emit("action_draw");
+  const drawCard = (fromOpen = false) => {
+    if (!socket || !game || !myTurn || hasDrawn) return;
+    if (
+      fromOpen &&
+      game.discardPile?.[0]?.rank &&
+      game.discardPile[0].rank.match(/7|J/)
+    ) {
+      alert("🚫 Cannot take 7 or J from open!");
+      return;
+    }
+    socket.emit("action_draw", { fromDiscard: fromOpen });
   };
 
   const dropCards = () => {
     if (!socket || !game) return;
-    if (!myTurn || !hasDrawn) {
-      alert("Draw first, then DROP");
+    if (!myTurn || !hasDrawn || selectedIds.length === 0) {
+      alert("Draw first & select cards");
       return;
     }
-    // UI lo cards kanipinchakapoina, server ki at least 1 id pampali
-    const my = game.players.find((p) => p.id === socket.id);
-    if (!my || !my.hand || !my.hand.length) {
-      alert("No cards to drop");
-      return;
-    }
-    const oneId = my.hand[0].id; // first card drop chestunnam
-    socket.emit("action_drop", { selectedIds: [oneId] });
+    socket.emit("action_drop", { selectedIds });
+    setSelectedIds([]);
   };
 
   const callClose = () => {
     if (!socket || !game) return;
-    if (!myTurn) return alert("Not your turn");
-    if (hasDrawn) return alert("CLOSE only before DRAW");
+    if (!myTurn) return alert("Wait for your turn");
+    if (hasDrawn) return alert("CLOSE only BEFORE draw");
     if (!window.confirm("Close this round?")) return;
     socket.emit("action_close");
   };
@@ -164,10 +172,11 @@ export default function CloseMasterGame() {
     setLoading(false);
     setMyTurn(false);
     setHasDrawn(false);
+    setSelectedIds([]);
     setShowPoints(false);
   };
 
-  // WELCOME SCREEN
+  // WELCOME
   if (screen === "welcome") {
     return (
       <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/20 to-blue-900/20 flex items-center justify-center px-4 relative overflow-hidden">
@@ -222,7 +231,7 @@ export default function CloseMasterGame() {
     );
   }
 
-  // LOBBY SCREEN
+  // LOBBY
   if (screen === "lobby") {
     return (
       <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/20 to-blue-900/20 flex flex-col items-center justify-center px-4 relative overflow-hidden">
@@ -281,48 +290,245 @@ export default function CloseMasterGame() {
     );
   }
 
-  // MAIN GAME SCREEN
+  // MAIN GAME
+  const me = game?.players?.find((p) => p.id === socket.id);
+  const others = game?.players?.filter((p) => p.id !== socket.id) || [];
+  const topRow = others.slice(0, 3);
+  const sideLeft = others[3];
+  const sideRight = others[4];
+  const extraBottom = others[5];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/20 to-blue-900/20 flex flex-col relative overflow-hidden">
       <NeonFloatingCards />
       <div className="p-4 pt-6 pb-24 flex-1 flex flex-col">
         {/* TOP BAR */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <div>
-            <div className="text-lg text-white/70">
-              Turn:{" "}
+            <div className="text-sm text-white/60">Turn</div>
+            <div className="text-xl font-bold text-white">
               {game?.players?.find((p) => p.id === game.currentPlayerId)?.name ||
                 "—"}
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <div className="text-right mr-2">
+              <div className="text-xs text-white/60">Your Score</div>
+              <div className="text-lg font-bold text-emerald-400">
+                {me?.score || 0} pts
+              </div>
+            </div>
             <button
               onClick={() => setShowPoints(true)}
-              className="px-4 py-2 bg-white/10 border border-white/30 rounded-xl text-sm font-semibold text-white hover:bg-white/20 transition-all"
+              className="px-4 py-2 bg-white/10 border border-white/30 rounded-xl text-xs font-semibold text-white hover:bg-white/20 transition-all"
             >
               POINTS
             </button>
             <button
               onClick={exitGame}
-              className="px-4 py-2 bg-red-600/80 hover:bg-red-700 text-white font-bold rounded-xl text-sm border border-red-400/60"
+              className="px-4 py-2 bg-red-600/80 hover:bg-red-700 text-white font-bold rounded-xl text-xs border border-red-400/60"
             >
               EXIT
             </button>
           </div>
         </div>
 
-        {/* CENTER AREA – empty table feel */}
+        {/* TOP ROW PLAYERS */}
+        <div className="flex justify-center gap-3 mb-4">
+          {topRow.map((pl) => (
+            <div
+              key={pl.id}
+              className={`min-w-[110px] px-3 py-2 rounded-2xl border text-center text-xs ${
+                pl.id === game.currentPlayerId
+                  ? "border-yellow-400 bg-yellow-500/15 shadow-lg shadow-yellow-500/40"
+                  : "border-white/20 bg-white/5"
+              }`}
+            >
+              <div className="text-white font-semibold truncate">{pl.name}</div>
+              <div className="text-emerald-300 font-bold">{pl.score} pts</div>
+              <div className="text-white/50 text-[11px]">
+                {pl.hand?.length || 0} cards
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* MIDDLE TABLE */}
         <div className="flex-1 flex items-center justify-center">
-          <div className="px-6 py-4 rounded-3xl border border-white/10 bg-black/40 text-white/50 text-sm">
-            Lowest count game – play with DRAW, DROP, CLOSE buttons below.
+          <div className="flex items-center justify-center w-full max-w-5xl">
+            {/* LEFT */}
+            <div className="w-32">
+              {sideLeft && (
+                <div
+                  className={`px-3 py-2 rounded-2xl border text-center text-xs ${
+                    sideLeft.id === game.currentPlayerId
+                      ? "border-yellow-400 bg-yellow-500/15 shadow-lg shadow-yellow-500/40"
+                      : "border-white/20 bg-white/5"
+                  }`}
+                >
+                  <div className="text-white font-semibold truncate">
+                    {sideLeft.name}
+                  </div>
+                  <div className="text-emerald-300 font-bold">
+                    {sideLeft.score} pts
+                  </div>
+                  <div className="text-white/50 text-[11px]">
+                    {sideLeft.hand?.length || 0} cards
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* OPEN + DECK */}
+            <div className="flex flex-col items-center justify-center gap-3 px-6">
+              {/* OPEN */}
+              <div
+                className={`relative w-28 h-40 rounded-3xl border-4 shadow-2xl bg-gradient-to-br from-white to-gray-100 flex flex-col items-center justify-center p-3 cursor-pointer transition-all hover:scale-105 hover:shadow-white/50 ${
+                  game?.discardPile?.[0] &&
+                  myTurn &&
+                  !game.discardPile[0].rank?.match(/7|J/)
+                    ? "border-emerald-400"
+                    : "border-white/30"
+                }`}
+                onClick={() => drawCard(true)}
+              >
+                {game?.discardPile?.[0] ? (
+                  <>
+                    <div
+                      className={`text-3xl font-bold ${cardTextColor(
+                        game.discardPile[0]
+                      )}`}
+                    >
+                      {game.discardPile[0].rank}
+                    </div>
+                    <div
+                      className={`text-2xl ${cardTextColor(
+                        game.discardPile[0]
+                      )}`}
+                    >
+                      {game.discardPile[0].suit}
+                    </div>
+                  </>
+                ) : (
+                  <span className="text-gray-500 font-bold text-sm">
+                    NO CARD
+                  </span>
+                )}
+              </div>
+
+              {/* DECK */}
+              <div
+                className={`w-24 h-36 rounded-3xl border-4 border-white/30 shadow-2xl bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center cursor-pointer transition-all hover:scale-105 hover:shadow-white/50 ${
+                  myTurn && !hasDrawn
+                    ? "hover:border-emerald-400"
+                    : "opacity-50 cursor-not-allowed"
+                }`}
+                onClick={() => drawCard(false)}
+              >
+                <span className="text-2xl">📥</span>
+              </div>
+            </div>
+
+            {/* RIGHT */}
+            <div className="w-32 text-right">
+              {sideRight && (
+                <div
+                  className={`px-3 py-2 rounded-2xl border text-center text-xs ml-auto ${
+                    sideRight.id === game.currentPlayerId
+                      ? "border-yellow-400 bg-yellow-500/15 shadow-lg shadow-yellow-500/40"
+                      : "border-white/20 bg-white/5"
+                  }`}
+                >
+                  <div className="text-white font-semibold truncate">
+                    {sideRight.name}
+                  </div>
+                  <div className="text-emerald-300 font-bold">
+                    {sideRight.score} pts
+                  </div>
+                  <div className="text-white/50 text-[11px]">
+                    {sideRight.hand?.length || 0} cards
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* BOTTOM BUTTON BAR */}
-        <div className="mt-6">
-          <div className="flex justify-center gap-4 bg-black/70 backdrop-blur-xl border border-white/20 rounded-3xl px-4 py-4 max-w-xl mx-auto">
+        {/* EXTRA BOTTOM PLAYER */}
+        {extraBottom && (
+          <div className="flex justify-center mb-3">
+            <div
+              className={`min-w-[110px] px-3 py-2 rounded-2xl border text-center text-xs ${
+                extraBottom.id === game.currentPlayerId
+                  ? "border-yellow-400 bg-yellow-500/15 shadow-lg shadow-yellow-500/40"
+                  : "border-white/20 bg-white/5"
+              }`}
+            >
+              <div className="text-white font-semibold truncate">
+                {extraBottom.name}
+              </div>
+              <div className="text-emerald-300 font-bold">
+                {extraBottom.score} pts
+              </div>
+              <div className="text-white/50 text-[11px]">
+                {extraBottom.hand?.length || 0} cards
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* YOUR HAND */}
+        <div className="mt-2">
+          <div className="flex items-center mb-2">
+            <div className="text-lg font-bold text-white mr-3">
+              YOUR HAND ({me?.hand?.length || 0})
+            </div>
+            <span
+              className={`px-3 py-1 rounded-xl text-xs font-bold ${
+                hasDrawn
+                  ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400"
+                  : "bg-yellow-500/20 text-yellow-300 border border-yellow-400"
+              }`}
+            >
+              {hasDrawn ? "✓ DREW" : "➤ DRAW"}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2 justify-center">
+            {me?.hand?.map((card) => (
+              <div
+                key={card.id}
+                className={`w-16 h-24 rounded-2xl border-4 shadow-xl flex flex-col items-center justify-center p-1 cursor-pointer transition-all hover:scale-110 hover:shadow-white/50 ${
+                  selectedIds.includes(card.id)
+                    ? "border-emerald-400 bg-emerald-400/20 shadow-emerald-500/50"
+                    : "border-white/30 bg-gradient-to-br from-white to-gray-100"
+                }`}
+                onClick={() =>
+                  setSelectedIds((prev) =>
+                    prev.includes(card.id)
+                      ? prev.filter((x) => x !== card.id)
+                      : [...prev, card.id]
+                  )
+                }
+              >
+                <div className={`text-lg font-bold ${cardTextColor(card)}`}>
+                  {card.rank}
+                </div>
+                <div className={`text-base ${cardTextColor(card)}`}>
+                  {card.suit}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="text-center text-xs text-white/60 mt-1">
+            {selectedIds.length} selected
+          </div>
+        </div>
+
+        {/* BOTTOM ACTIONS */}
+        <div className="mt-4">
+          <div className="flex justify-center gap-3 bg-black/70 backdrop-blur-xl border border-white/20 rounded-3xl px-4 py-4 max-w-xl mx-auto">
             <button
-              onClick={drawCard}
+              onClick={() => drawCard(false)}
               disabled={!myTurn || hasDrawn}
               className={`flex-1 px-4 py-3 rounded-2xl font-bold text-lg shadow-2xl transition-all ${
                 myTurn && !hasDrawn
@@ -335,9 +541,9 @@ export default function CloseMasterGame() {
 
             <button
               onClick={dropCards}
-              disabled={!myTurn || !hasDrawn}
+              disabled={!myTurn || !hasDrawn || selectedIds.length === 0}
               className={`flex-1 px-4 py-3 rounded-2xl font-bold text-lg shadow-2xl transition-all ${
-                myTurn && hasDrawn
+                myTurn && hasDrawn && selectedIds.length > 0
                   ? "bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white hover:scale-105"
                   : "bg-gray-700/50 cursor-not-allowed opacity-50 text-gray-300"
               }`}
@@ -357,11 +563,10 @@ export default function CloseMasterGame() {
               ❌ CLOSE
             </button>
           </div>
-
           <div className="text-center text-xs text-white/50 mt-2">
             {myTurn
               ? hasDrawn
-                ? "✓ Drew – now you MUST DROP"
+                ? "✓ Drew – select cards & DROP"
                 : "Your turn – draw or close"
               : "Waiting for other players..."}
           </div>
