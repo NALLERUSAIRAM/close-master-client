@@ -12,8 +12,6 @@ function cardTextColor(card) {
 }
 
 export default function CloseMasterGame() {
-  // ... (same state variables as before)
-
   const [socket, setSocket] = useState(null);
   const [roomId, setRoomId] = useState("");
   const [me, setMe] = useState(null);
@@ -30,25 +28,102 @@ export default function CloseMasterGame() {
   const [name, setName] = useState("");
   const [joinRoomId, setJoinRoomId] = useState("");
 
-  // ... (same useEffect, handlers as before)
+  useEffect(() => {
+    const newSocket = io(SERVER_URL);
+    setSocket(newSocket);
+
+    newSocket.on("game_state", (room) => {
+      setPlayers(room.players);
+      setTurnId(room.turnId);
+      setOpenCard(room.discardPile[room.discardPile.length - 1] || null);
+      setPendingDraw(room.pendingDraw || 0);
+      setPendingSkips(room.pendingSkips || 0);
+      setHasSpecialCardThisRound(room.hasSpecialCardThisRound || false);
+      setLog(room.log.slice(-8));
+      setRoomId(room.id);
+      
+      const mePlayer = room.players.find(p => p.id === newSocket.id);
+      setMe(mePlayer);
+      setHand(mePlayer?.hand || []);
+      
+      if (room.started === false && room.players.length > 0) {
+        setScreen("lobby");
+      } else if (room.started) {
+        setScreen("game");
+      }
+    });
+
+    newSocket.on("room_created", ({ roomId }) => {
+      setRoomId(roomId);
+      setScreen("lobby");
+    });
+
+    newSocket.on("error", (msg) => {
+      alert(msg);
+    });
+
+    return () => newSocket.close();
+  }, []);
 
   const isMyTurn = me && turnId === me.id;
-  const canDraw = isMyTurn && !me?.hasDrawn;
-  const canDrop = isMyTurn && me?.hasDrawn && selectedIds.length > 0;
-  const canClose = isMyTurn && !me?.hasDrawn;
+  
+  // Drop logic: allow drop if open card rank matches or 3+ same rank cards selected
+  const selectedCards = hand.filter(c => selectedIds.includes(c.id));
+  const hasOpenCardMatch = openCard && selectedCards.some(c => c.rank === openCard.rank);
+  const canDropWithoutDraw = hasOpenCardMatch || selectedCards.length >= 3;
+  
+  const canDraw = isMyTurn && !me?.hasDrawn && pendingDraw > 0;
+  const canDrop = isMyTurn && (me?.hasDrawn || canDropWithoutDraw) && selectedIds.length > 0 && pendingDraw === 0 && pendingSkips === 0;
+  const canClose = isMyTurn && !me?.hasDrawn && pendingDraw === 0 && pendingSkips === 0 && !hasSpecialCardThisRound;
 
-  // ... (same functions: toggleSelectCard, handleDraw, handleDrop, handleClose, handleCreateRoom, handleJoinRoom)
+  function toggleSelectCard(cardId) {
+    setSelectedIds(prev => 
+      prev.includes(cardId) 
+        ? prev.filter(id => id !== cardId)
+        : [...prev, cardId]
+    );
+  }
+
+  function handleDraw() {
+    socket?.emit("action_draw");
+    setSelectedIds([]);
+  }
+
+  function handleDrop() {
+    socket?.emit("action_drop", { selectedIds });
+    setSelectedIds([]);
+  }
+
+  function handleClose() {
+    socket?.emit("action_close");
+    setSelectedIds([]);
+  }
+
+  function handleCreateRoom() {
+    if (name.trim() && socket) {
+      socket.emit("create_room", { name: name.trim() });
+    }
+  }
+
+  function handleJoinRoom() {
+    if (name.trim() && joinRoomId.trim() && socket) {
+      socket.emit("join_room", { 
+        name: name.trim(), 
+        roomId: joinRoomId.trim().toUpperCase() 
+      });
+    }
+  }
 
   function Card({ card, isSelected, onClick }) {
     return (
       <div
         onClick={onClick}
-        className={`relative border-4 rounded-xl p-3 m-2 cursor-pointer neon-glow transform transition-all duration-300 hover:scale-110 hover:rotate-3 shadow-2xl ${
+        className={`relative border-4 rounded-xl p-3 m-2 cursor-pointer neon-glow transform transition-all duration-300 hover:scale-110 hover:rotate-3 shadow-2xl backdrop-blur-sm ${
           isSelected 
-            ? "border-blue-400 bg-blue-500/20 neon-blue" 
-            : "border-white/50 bg-white/10 neon-card"
-        } ${cardTextColor(card)} font-bold text-xl backdrop-blur-sm`}
-        style={{ minWidth: 75, height: 105 }}
+            ? "border-blue-400 bg-blue-500/30 neon-blue" 
+            : "border-white/50 bg-white/20 neon-card"
+        } ${cardTextColor(card)} font-bold text-xl`}
+        style={{ minWidth: 75, height: 105, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}
       >
         <div className="absolute top-1 left-1 text-xs opacity-75">{card.suit}</div>
         <div className="text-3xl drop-shadow-lg">{card.rank}</div>
@@ -59,32 +134,31 @@ export default function CloseMasterGame() {
 
   if (screen === "welcome") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-black relative overflow-hidden">
-        {/* NEON FLYING CARDS BACKGROUND */}
-        <div className="fixed inset-0 pointer-events-none">
-          {[...Array(12)].map((_, i) => (
+      <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/50 to-black/80 relative overflow-hidden">
+        <div className="fixed inset-0 pointer-events-none z-0">
+          {[...Array(15)].map((_, i) => (
             <div
               key={i}
-              className="neon-card-float absolute text-4xl opacity-20"
+              className="neon-card-float absolute text-4xl opacity-15 font-bold"
               style={{
-                left: `${Math.random() * 100}%`,
-                animationDelay: `${i * 0.3}s`,
-                animationDuration: `${8 + Math.random() * 4}s`
+                left: `${(i * 15) % 100}%`,
+                animationDelay: `${i * 0.4}s`,
+                animationDuration: `${10 + i * 0.5}s`
               }}
             >
-              🂠
+              {['🂠', '🂡', '🂢', '🂣'][i % 4]}
             </div>
           ))}
         </div>
 
-        <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
-          <div className="bg-black/40 backdrop-blur-3xl rounded-3xl p-10 shadow-2xl max-w-md w-full border-4 border-neon-purple animate-neon-pulse">
-            <div className="text-center mb-10">
-              <h1 className="text-5xl md:text-6xl font-black bg-gradient-to-r from-neon-purple via-neon-blue to-neon-cyan bg-clip-text text-transparent mb-4 drop-shadow-2xl">
+        <div className="relative z-10 flex items-center justify-center min-h-screen p-6">
+          <div className="bg-black/60 backdrop-blur-xl rounded-3xl p-12 shadow-2xl max-w-lg w-full border border-neon-purple/50 animate-neon-pulse">
+            <div className="text-center mb-12">
+              <h1 className="text-5xl md:text-6xl font-black bg-gradient-to-r from-[#a855f7] via-[#06b6d4] to-[#10b981] bg-clip-text text-transparent mb-6 drop-shadow-2xl">
                 CLOSE MASTER
               </h1>
-              <div className="w-32 h-1 bg-gradient-to-r from-neon-purple to-neon-cyan mx-auto rounded-full animate-neon-line"></div>
-              <p className="text-neon-cyan text-xl font-bold mt-4 tracking-wider drop-shadow-lg">POWER RUMMY</p>
+              <div className="w-40 h-1 bg-gradient-to-r from-[#a855f7] to-[#06b6d4] mx-auto rounded-full animate-neon-line mb-4"></div>
+              <p className="text-[#06b6d4] text-2xl font-bold tracking-wider drop-shadow-lg">POWER RUMMY</p>
             </div>
             
             <div className="space-y-6">
@@ -93,37 +167,37 @@ export default function CloseMasterGame() {
                 placeholder="Enter Your Name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full p-5 bg-black/50 border-2 border-neon-purple rounded-2xl text-lg text-white placeholder-neon-gray focus:border-neon-cyan focus:outline-none transition-all duration-300 text-center font-mono tracking-wider"
+                className="w-full p-6 bg-black/70 border-2 border-[#a855f7]/50 rounded-2xl text-xl text-white placeholder-gray-400 focus:border-[#06b6d4] focus:outline-none transition-all duration-500 text-center font-mono tracking-wider"
               />
-              
               <button 
                 onClick={handleCreateRoom} 
                 disabled={!name.trim()}
-                className="w-full p-5 bg-gradient-to-r from-neon-purple to-neon-blue text-white rounded-2xl text-xl font-black neon-glow-btn hover:from-neon-cyan hover:to-neon-purple transform hover:scale-105 transition-all duration-300 disabled:opacity-30 shadow-2xl"
+                className="w-full p-6 bg-gradient-to-r from-[#a855f7] to-[#3b82f6] text-white rounded-2xl text-xl font-black hover:from-[#06b6d4] hover:to-[#10b981] transform hover:scale-105 transition-all duration-300 disabled:opacity-40 shadow-2xl neon-glow-btn"
               >
                 🎮 CREATE ROOM
               </button>
               
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-neon-purple to-neon-cyan blur opacity-30 animate-pulse"></div>
-                <div className="text-center py-6 text-neon-gray font-bold relative z-10">OR JOIN</div>
+              <div className="text-center py-6 text-gray-500 font-bold relative bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-full">
+                ── OR JOIN ──
               </div>
               
-              <input
-                type="text"
-                placeholder="ROOM ID"
-                value={joinRoomId}
-                onChange={(e) => setJoinRoomId(e.target.value.toUpperCase())}
-                maxLength={4}
-                className="w-full p-5 bg-black/50 border-2 border-neon-cyan rounded-2xl text-2xl uppercase text-center font-mono tracking-widest text-neon-cyan focus:border-neon-purple focus:outline-none transition-all duration-300"
-              />
-              <button 
-                onClick={handleJoinRoom}
-                disabled={!name.trim() || joinRoomId.length !== 4}
-                className="w-full p-5 bg-gradient-to-r from-neon-cyan to-neon-green text-black rounded-2xl text-xl font-black neon-glow-btn hover:from-neon-blue hover:to-neon-purple transform hover:scale-105 transition-all duration-300 disabled:opacity-30 shadow-2xl font-mono tracking-wider"
-              >
-                🚪 JOIN ROOM
-              </button>
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  placeholder="ROOM ID"
+                  value={joinRoomId}
+                  onChange={(e) => setJoinRoomId(e.target.value.toUpperCase())}
+                  maxLength={4}
+                  className="flex-1 p-6 bg-black/70 border-2 border-[#06b6d4]/50 rounded-2xl text-2xl uppercase text-center font-mono tracking-widest text-[#06b6d4] focus:border-[#10b981] focus:outline-none transition-all duration-300"
+                />
+                <button 
+                  onClick={handleJoinRoom}
+                  disabled={!name.trim() || joinRoomId.length !== 4}
+                  className="w-28 p-6 bg-gradient-to-r from-[#3b82f6] to-[#06b6d4] text-white rounded-2xl text-xl font-black neon-glow-btn hover:from-[#10b981] hover:to-[#3b82f6] transition-all duration-300 disabled:opacity-40 shadow-2xl"
+                >
+                  🚪 JOIN
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -135,7 +209,6 @@ export default function CloseMasterGame() {
     const isHost = me?.id === players[0]?.id;
     return (
       <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-black relative overflow-hidden">
-        {/* MOVING NEON LINES */}
         <div className="fixed inset-0 pointer-events-none">
           {[...Array(6)].map((_, i) => (
             <div
@@ -165,7 +238,7 @@ export default function CloseMasterGame() {
             </div>
 
             <div className="space-y-4 mb-10 max-h-64 overflow-y-auto">
-              {players.map((p, i) => (
+              {players.map((p) => (
                 <div key={p.id} className={`p-6 rounded-2xl border-3 flex items-center space-x-4 transform hover:scale-105 transition-all duration-300 ${
                   p.id === me?.id 
                     ? "border-neon-green bg-neon-green/10 neon-glow-green" 
@@ -199,12 +272,11 @@ export default function CloseMasterGame() {
     );
   }
 
-  // GAME SCREEN WITH NEON NATURE
+  // GAME SCREEN
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-indigo-900 to-purple-900 relative overflow-hidden">
-      {/* NEON NATURE BACKGROUND */}
+      {/* Background Neon flying cards and particles */}
       <div className="fixed inset-0 pointer-events-none">
-        {/* Flying cards */}
         {[...Array(8)].map((_, i) => (
           <div
             key={i}
@@ -218,7 +290,6 @@ export default function CloseMasterGame() {
             🂡
           </div>
         ))}
-        {/* Neon particles */}
         {[...Array(20)].map((_, i) => (
           <div
             key={i}
@@ -233,7 +304,6 @@ export default function CloseMasterGame() {
       </div>
 
       <div className="relative z-10 max-w-6xl mx-auto space-y-8 p-6">
-        {/* Header */}
         <div className="text-center">
           <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-neon-purple via-neon-cyan to-neon-green bg-clip-text text-transparent mb-4 drop-shadow-2xl">
             CLOSE MASTER
@@ -250,7 +320,6 @@ export default function CloseMasterGame() {
           </div>
         </div>
 
-        {/* Open Card */}
         <div className="flex justify-center">
           <div className="bg-black/40 backdrop-blur-3xl rounded-3xl p-8 border-4 border-neon-purple/50 shadow-2xl neon-glow">
             <p className="text-neon-cyan text-2xl font-black mb-6 text-center tracking-wider drop-shadow-lg">🂱 OPEN CARD</p>
@@ -264,7 +333,6 @@ export default function CloseMasterGame() {
           </div>
         </div>
 
-        {/* Your Hand */}
         <div className="bg-black/30 backdrop-blur-3xl rounded-3xl p-8 border-4 border-neon-green/30 shadow-2xl">
           <p className="text-neon-green text-3xl font-black mb-8 text-center tracking-widest drop-shadow-2xl">
             YOUR HAND ({hand.length}) {me?.score && <span className="text-neon-yellow text-xl">| {me.score} PTS</span>}
@@ -281,7 +349,6 @@ export default function CloseMasterGame() {
           </div>
         </div>
 
-        {/* ACTION BUTTONS */}
         <div className="flex flex-col lg:flex-row gap-6 justify-center items-center p-8 bg-black/40 backdrop-blur-3xl rounded-3xl border-4 border-neon-purple/20 shadow-2xl">
           <button
             onClick={handleDraw}
@@ -293,7 +360,6 @@ export default function CloseMasterGame() {
             }`}
           >
             📥 DRAW
-            {canDraw && <div className="absolute inset-0 bg-gradient-to-r from-neon-green to-neon-cyan rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur animate-pulse"></div>}
           </button>
           
           <button
@@ -321,7 +387,6 @@ export default function CloseMasterGame() {
           </button>
         </div>
 
-        {/* GAME LOG */}
         <div className="bg-black/40 backdrop-blur-3xl rounded-3xl p-8 border-4 border-neon-cyan/30 shadow-2xl max-h-60 overflow-y-auto">
           <p className="text-neon-cyan text-2xl font-black mb-6 text-center tracking-widest drop-shadow-2xl">📝 GAME LOG</p>
           <div className="space-y-3">
