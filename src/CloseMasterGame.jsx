@@ -60,8 +60,7 @@ export default function CloseMasterGame() {
   useEffect(()=>{if(game?.closeCalled)setShowPoints(true);},[game?.closeCalled]);
 
   const roomId=game?.roomId || game?.id, youId=socket?.id, players=game?.players||[];
-  const discardTop=game?.discardTop || game?.discardPile?.[game?.discardPile?.length-1], 
-        currentIndex=game?.currentIndex??game?.turnIndex??0, started=game?.started;
+  const discardTop=game?.discardTop, currentIndex=game?.currentIndex??0, started=game?.started;
   const pendingDraw=game?.pendingDraw||0, pendingSkips=game?.pendingSkips||0;
   const currentPlayer=players[currentIndex], myTurn=started&&currentPlayer?.id===youId;
   const me=players.find(p=>p.id===youId), hasDrawn=me?.hasDrawn||false;
@@ -78,21 +77,16 @@ export default function CloseMasterGame() {
     socket.emit("join_room",{name:playerName.trim(),roomId:joinCode.toUpperCase().trim()});
   };
 
+  // ✅ FIXED: Correct event name + roomId
   const startRound=()=>{
     if(!socket||!roomId||!isHost||players.length<2){alert("2+ players!");return;}
-    socket.emit("start_game");
+    socket.emit("start_round", {roomId});
   };
 
-  // ✅ FIXED: Draw logic
-  const drawCard=(fromDiscard=false)=>{
-    if(!socket||!roomId||!myTurn) return;
-    
-    if(fromDiscard && discardTop && (discardTop.rank === "7" || discardTop.rank === "J")){
-      alert("Cannot take 7 or J from open!");
-      return;
-    }
-    
-    socket.emit("action_draw",{roomId,fromDiscard});
+  // ✅ FIXED: Simplified - server handles fromDiscard logic
+  const drawCard=()=>{
+    if(!socket||!roomId||!myTurn||hasDrawn) return;
+    socket.emit("action_draw",{roomId});
   };
 
   const dropCards=()=>{
@@ -103,7 +97,7 @@ export default function CloseMasterGame() {
     socket.emit("action_drop",{roomId,selectedIds});
   };
 
-  // ✅ FIXED: CLOSE only BEFORE draw (DECK click)
+  // ✅ FIXED: Close only BEFORE draw
   const callClose=()=>{
     if(!socket||!roomId||!myTurn){
       alert("Wait for your turn!");
@@ -180,22 +174,19 @@ export default function CloseMasterGame() {
         </div>
       </div>}
 
-      {/* ✅ Open Card - Click to take (except 7/J) */}
+      {/* Open Card */}
       {started&&<div className="z-10 text-center">
         <h3 className="text-lg md:text-xl mb-3 md:mb-4 font-bold">🎴 OPEN CARD</h3>
         {discardTop?
-          <button onClick={()=>drawCard(true)} disabled={!myTurn||hasDrawn||(discardTop.rank==="7"||discardTop.rank==="J")} 
+          <button onClick={drawCard} disabled={!myTurn||hasDrawn} 
             className={`relative w-20 md:w-24 h-28 md:h-36 bg-white rounded-2xl shadow-2xl border-4 p-2 md:p-3 flex flex-col justify-between mx-auto transition-all ${
-              myTurn&&!hasDrawn&&(discardTop.rank!=="7"&&discardTop.rank!=="J")
+              myTurn&&!hasDrawn
                 ?"hover:scale-105 cursor-pointer border-blue-400 shadow-blue-500 ring-4 ring-blue-200 animate-pulse"
                 :"border-gray-300 opacity-70"
             }`}>
             <div className={`text-base md:text-lg font-bold ${cardTextColor(discardTop)}`}>{discardTop.rank}</div>
             <div className={`text-3xl md:text-4xl text-center ${cardTextColor(discardTop)}`}>{discardTop.rank==="JOKER"?"🃏":discardTop.suit}</div>
             <div className={`text-base md:text-lg font-bold text-right ${cardTextColor(discardTop)}`}>{discardTop.rank}</div>
-            {(discardTop.rank==="7"||discardTop.rank==="J")&&(
-              <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full font-bold animate-pulse">🚫</div>
-            )}
           </button>
           :<div className="w-20 md:w-24 h-28 md:h-36 bg-gray-800 border-2 border-dashed border-gray-600 rounded-2xl flex items-center justify-center text-gray-500 text-xs md:text-sm">Empty</div>
         }
@@ -225,10 +216,10 @@ export default function CloseMasterGame() {
         </div>
       </div>}
 
-      {/* ✅ PERFECTED Actions */}
+      {/* PERFECTED Actions - Perfect button logic */}
       {myTurn&&started&&<div className="z-10 flex flex-wrap gap-2 md:gap-4 justify-center max-w-4xl p-4 md:p-6 bg-black/50 backdrop-blur-xl rounded-3xl border border-white/20">
         {/* DECK - Disabled after draw */}
-        <button onClick={()=>drawCard(false)} disabled={hasDrawn} className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${hasDrawn?"bg-gray-700/50 cursor-not-allowed opacity-50":"bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 hover:scale-105"}`}>📥 DECK</button>
+        <button onClick={drawCard} disabled={hasDrawn} className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${hasDrawn?"bg-gray-700/50 cursor-not-allowed opacity-50":"bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 hover:scale-105"}`}>📥 DECK</button>
         
         {/* DROP - Enabled only after draw */}
         <button onClick={dropCards} disabled={!hasDrawn || selectedIds.length===0} className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${hasDrawn&&selectedIds.length>0?"bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 hover:scale-105":"bg-gray-700/50 cursor-not-allowed opacity-50"}`}>🗑️ DROP ({selectedIds.length})</button>
