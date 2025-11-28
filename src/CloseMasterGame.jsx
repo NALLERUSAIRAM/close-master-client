@@ -12,6 +12,8 @@ function cardTextColor(card) {
 }
 
 export default function CloseMasterGame() {
+  // ... (same state variables as before)
+
   const [socket, setSocket] = useState(null);
   const [roomId, setRoomId] = useState("");
   const [me, setMe] = useState(null);
@@ -28,159 +30,103 @@ export default function CloseMasterGame() {
   const [name, setName] = useState("");
   const [joinRoomId, setJoinRoomId] = useState("");
 
-  useEffect(() => {
-    const newSocket = io(SERVER_URL);
-    setSocket(newSocket);
-
-    newSocket.on("game_state", (room) => {
-      setPlayers(room.players);
-      setTurnId(room.turnId);
-      setOpenCard(room.discardPile[room.discardPile.length - 1] || null);
-      setPendingDraw(room.pendingDraw || 0);
-      setPendingSkips(room.pendingSkips || 0);
-      setHasSpecialCardThisRound(room.hasSpecialCardThisRound || false);
-      setLog(room.log.slice(-5)); // Last 5 logs
-      setRoomId(room.id);
-      const mePlayer = room.players.find(p => p.id === newSocket.id);
-      setMe(mePlayer);
-      setHand(mePlayer?.hand || []);
-      
-      if (room.started === false && room.players.length > 0) {
-        setScreen("lobby");
-      } else if (room.started) {
-        setScreen("game");
-      }
-    });
-
-    newSocket.on("room_created", ({ roomId }) => {
-      setRoomId(roomId);
-      setScreen("lobby");
-    });
-
-    newSocket.on("error", (msg) => {
-      alert(msg);
-    });
-
-    return () => newSocket.close();
-  }, []);
+  // ... (same useEffect, handlers as before)
 
   const isMyTurn = me && turnId === me.id;
-  
-  // PERFECT BUTTON LOGIC
   const canDraw = isMyTurn && !me?.hasDrawn;
   const canDrop = isMyTurn && me?.hasDrawn && selectedIds.length > 0;
-  const canClose = isMyTurn && !me?.hasDrawn; // Turn start lo matrame!
+  const canClose = isMyTurn && !me?.hasDrawn;
 
-  function toggleSelectCard(cardId) {
-    setSelectedIds(prev => 
-      prev.includes(cardId) 
-        ? prev.filter(id => id !== cardId)
-        : [...prev, cardId]
-    );
-  }
-
-  function handleDraw() {
-    socket?.emit("action_draw");
-    setSelectedIds([]);
-  }
-
-  function handleDrop() {
-    socket?.emit("action_drop", { selectedIds });
-    setSelectedIds([]);
-  }
-
-  function handleClose() {
-    socket?.emit("action_close");
-    setSelectedIds([]);
-  }
-
-  function handleCreateRoom() {
-    if (name && socket) {
-      socket.emit("create_room", { name: name.trim() });
-    }
-  }
-
-  function handleJoinRoom() {
-    if (name && joinRoomId.trim() && socket) {
-      socket.emit("join_room", { 
-        name: name.trim(), 
-        roomId: joinRoomId.trim().toUpperCase() 
-      });
-    }
-  }
+  // ... (same functions: toggleSelectCard, handleDraw, handleDrop, handleClose, handleCreateRoom, handleJoinRoom)
 
   function Card({ card, isSelected, onClick }) {
     return (
       <div
         onClick={onClick}
-        className={`relative border-4 rounded-xl p-3 m-2 cursor-pointer transform transition-all duration-200 hover:scale-110 shadow-lg ${
+        className={`relative border-4 rounded-xl p-3 m-2 cursor-pointer neon-glow transform transition-all duration-300 hover:scale-110 hover:rotate-3 shadow-2xl ${
           isSelected 
-            ? "border-blue-500 bg-blue-100 shadow-blue-300" 
-            : "border-gray-300 bg-gradient-to-br from-white to-gray-50 shadow-md hover:shadow-xl"
-        } ${cardTextColor(card)} font-bold text-lg`}
-        style={{ minWidth: 70, height: 100, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}
+            ? "border-blue-400 bg-blue-500/20 neon-blue" 
+            : "border-white/50 bg-white/10 neon-card"
+        } ${cardTextColor(card)} font-bold text-xl backdrop-blur-sm`}
+        style={{ minWidth: 75, height: 105 }}
       >
-        <div className="absolute top-1 left-1 text-xs">{card.suit}</div>
-        <div className="text-2xl">{card.rank}</div>
-        <div className="absolute bottom-1 right-1 text-xs">{card.suit}</div>
+        <div className="absolute top-1 left-1 text-xs opacity-75">{card.suit}</div>
+        <div className="text-3xl drop-shadow-lg">{card.rank}</div>
+        <div className="absolute bottom-1 right-1 text-xs opacity-75">{card.suit}</div>
       </div>
     );
   }
 
   if (screen === "welcome") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-500 via-emerald-400 to-blue-500 flex items-center justify-center p-4 animate-pulse">
-        <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-8 shadow-2xl max-w-md w-full border-4 border-white/50 animate-float">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent mb-2">
-              Close Master
-            </h1>
-            <p className="text-gray-600 text-lg">Power Rummy</p>
-          </div>
-          
-          <div className="space-y-4">
-            <input
-              type="text"
-              placeholder="Your Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full p-4 border-2 border-gray-200 rounded-2xl text-lg focus:border-emerald-500 focus:outline-none transition-all"
-            />
-            <button 
-              onClick={handleCreateRoom} 
-              disabled={!name.trim()}
-              className="w-full p-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl text-xl font-bold hover:from-emerald-600 hover:to-emerald-700 transform hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl"
+      <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-black relative overflow-hidden">
+        {/* NEON FLYING CARDS BACKGROUND */}
+        <div className="fixed inset-0 pointer-events-none">
+          {[...Array(12)].map((_, i) => (
+            <div
+              key={i}
+              className="neon-card-float absolute text-4xl opacity-20"
+              style={{
+                left: `${Math.random() * 100}%`,
+                animationDelay: `${i * 0.3}s`,
+                animationDuration: `${8 + Math.random() * 4}s`
+              }}
             >
-              🎮 Create Room
-            </button>
+              🂠
+            </div>
+          ))}
+        </div>
+
+        <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
+          <div className="bg-black/40 backdrop-blur-3xl rounded-3xl p-10 shadow-2xl max-w-md w-full border-4 border-neon-purple animate-neon-pulse">
+            <div className="text-center mb-10">
+              <h1 className="text-5xl md:text-6xl font-black bg-gradient-to-r from-neon-purple via-neon-blue to-neon-cyan bg-clip-text text-transparent mb-4 drop-shadow-2xl">
+                CLOSE MASTER
+              </h1>
+              <div className="w-32 h-1 bg-gradient-to-r from-neon-purple to-neon-cyan mx-auto rounded-full animate-neon-line"></div>
+              <p className="text-neon-cyan text-xl font-bold mt-4 tracking-wider drop-shadow-lg">POWER RUMMY</p>
+            </div>
             
-            <div className="text-center py-4 text-gray-400">or</div>
-            
-            <input
-              type="text"
-              placeholder="Room ID (ABCD)"
-              value={joinRoomId}
-              onChange={(e) => setJoinRoomId(e.target.value.toUpperCase())}
-              maxLength={4}
-              className="w-full p-4 border-2 border-gray-200 rounded-2xl text-lg uppercase text-center font-mono tracking-wider focus:border-blue-500 focus:outline-none transition-all"
-            />
-            <button 
-              onClick={handleJoinRoom}
-              disabled={!name.trim() || joinRoomId.length !== 4}
-              className="w-full p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl text-xl font-bold hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl"
-            >
-              🚪 Join Room
-            </button>
+            <div className="space-y-6">
+              <input
+                type="text"
+                placeholder="Enter Your Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full p-5 bg-black/50 border-2 border-neon-purple rounded-2xl text-lg text-white placeholder-neon-gray focus:border-neon-cyan focus:outline-none transition-all duration-300 text-center font-mono tracking-wider"
+              />
+              
+              <button 
+                onClick={handleCreateRoom} 
+                disabled={!name.trim()}
+                className="w-full p-5 bg-gradient-to-r from-neon-purple to-neon-blue text-white rounded-2xl text-xl font-black neon-glow-btn hover:from-neon-cyan hover:to-neon-purple transform hover:scale-105 transition-all duration-300 disabled:opacity-30 shadow-2xl"
+              >
+                🎮 CREATE ROOM
+              </button>
+              
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-neon-purple to-neon-cyan blur opacity-30 animate-pulse"></div>
+                <div className="text-center py-6 text-neon-gray font-bold relative z-10">OR JOIN</div>
+              </div>
+              
+              <input
+                type="text"
+                placeholder="ROOM ID"
+                value={joinRoomId}
+                onChange={(e) => setJoinRoomId(e.target.value.toUpperCase())}
+                maxLength={4}
+                className="w-full p-5 bg-black/50 border-2 border-neon-cyan rounded-2xl text-2xl uppercase text-center font-mono tracking-widest text-neon-cyan focus:border-neon-purple focus:outline-none transition-all duration-300"
+              />
+              <button 
+                onClick={handleJoinRoom}
+                disabled={!name.trim() || joinRoomId.length !== 4}
+                className="w-full p-5 bg-gradient-to-r from-neon-cyan to-neon-green text-black rounded-2xl text-xl font-black neon-glow-btn hover:from-neon-blue hover:to-neon-purple transform hover:scale-105 transition-all duration-300 disabled:opacity-30 shadow-2xl font-mono tracking-wider"
+              >
+                🚪 JOIN ROOM
+              </button>
+            </div>
           </div>
         </div>
-        
-        <style jsx>{`
-          @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-20px) rotate(2deg); }
-          }
-          .animate-float { animation: float 6s ease-in-out infinite; }
-        `}</style>
       </div>
     );
   }
@@ -188,87 +134,142 @@ export default function CloseMasterGame() {
   if (screen === "lobby") {
     const isHost = me?.id === players[0]?.id;
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center p-4">
-        <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-8 shadow-2xl max-w-md w-full border-4 border-white/50">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-black bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-              Room: <span className="font-mono text-4xl tracking-wider">{roomId}</span>
-            </h1>
-            <p className="text-2xl mt-2">Players: {players.length}/{MAX_PLAYERS}</p>
-          </div>
+      <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-black relative overflow-hidden">
+        {/* MOVING NEON LINES */}
+        <div className="fixed inset-0 pointer-events-none">
+          {[...Array(6)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute bg-gradient-to-r from-neon-purple to-neon-cyan w-full h-1 animate-neon-line-diagonal"
+              style={{
+                top: `${20 + i * 12}%`,
+                animationDelay: `${i * 0.5}s`,
+                animationDuration: `${10 + i * 2}s`
+              }}
+            ></div>
+          ))}
+        </div>
 
-          <div className="space-y-3 mb-8 max-h-48 overflow-y-auto">
-            {players.map((p) => (
-              <div key={p.id} className={`p-4 rounded-2xl border-2 flex items-center space-x-3 ${
-                p.id === me?.id ? "border-emerald-400 bg-emerald-50" : "border-gray-200 bg-gray-50"
-              } transform hover:scale-105 transition-all`}>
-                <div className={`w-3 h-3 rounded-full ${p.id === me?.id ? "bg-emerald-500" : "bg-gray-400"}`}></div>
-                <span className={`font-bold ${p.id === me?.id ? "text-emerald-700" : "text-gray-700"}`}>
-                  {p.name}
-                </span>
-                {p.id === players[0]?.id && (
-                  <span className="ml-auto px-3 py-1 bg-purple-200 text-purple-800 rounded-full text-sm font-bold">
-                    👑 Host
-                  </span>
-                )}
+        <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
+          <div className="bg-black/50 backdrop-blur-3xl rounded-3xl p-10 shadow-2xl max-w-lg w-full border-4 border-neon-purple animate-neon-pulse">
+            <div className="text-center mb-10">
+              <h2 className="text-4xl font-black bg-gradient-to-r from-neon-cyan to-neon-purple bg-clip-text text-transparent mb-4">
+                ROOM LOBBY
+              </h2>
+              <div className="text-5xl font-mono tracking-widest text-neon-green mb-4 drop-shadow-2xl">
+                {roomId}
               </div>
-            ))}
-          </div>
+              <div className="text-3xl text-neon-yellow drop-shadow-lg">
+                {players.length}/{MAX_PLAYERS} Players
+              </div>
+            </div>
 
-          {isHost && players.length >= 2 && (
-            <button
-              onClick={() => socket.emit("start_game")}
-              className="w-full p-5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl text-xl font-black shadow-2xl hover:from-purple-700 hover:to-pink-700 transform hover:scale-105 transition-all"
-            >
-              🚀 START GAME ({players.length} players)
-            </button>
-          )}
+            <div className="space-y-4 mb-10 max-h-64 overflow-y-auto">
+              {players.map((p, i) => (
+                <div key={p.id} className={`p-6 rounded-2xl border-3 flex items-center space-x-4 transform hover:scale-105 transition-all duration-300 ${
+                  p.id === me?.id 
+                    ? "border-neon-green bg-neon-green/10 neon-glow-green" 
+                    : "border-neon-blue/50 bg-white/5 neon-glow-blue"
+                }`}>
+                  <div className={`w-4 h-4 rounded-full ${p.id === me?.id ? "bg-neon-green" : "bg-neon-blue"} animate-ping`}></div>
+                  <span className="text-xl font-bold text-neon-white drop-shadow-lg flex-1">
+                    {p.name}
+                  </span>
+                  {p.id === players[0]?.id && (
+                    <div className="px-4 py-2 bg-neon-purple/30 text-neon-purple rounded-full text-sm font-bold border border-neon-purple animate-pulse">
+                      👑 HOST
+                    </div>
+                  )}
+                  <div className="w-8 h-8 bg-gradient-to-r from-neon-purple to-neon-cyan rounded-full animate-spin-slow"></div>
+                </div>
+              ))}
+            </div>
+
+            {isHost && players.length >= 2 && (
+              <button
+                onClick={() => socket.emit("start_game")}
+                className="w-full p-6 bg-gradient-to-r from-neon-green via-neon-cyan to-neon-blue text-black rounded-3xl text-2xl font-black neon-glow-btn shadow-2xl hover:from-neon-purple hover:to-neon-green transform hover:scale-110 transition-all duration-500 animate-pulse-once"
+              >
+                🚀 START GAME
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
   }
 
-  // GAME SCREEN
+  // GAME SCREEN WITH NEON NATURE
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-black via-indigo-900 to-purple-900 relative overflow-hidden">
+      {/* NEON NATURE BACKGROUND */}
+      <div className="fixed inset-0 pointer-events-none">
+        {/* Flying cards */}
+        {[...Array(8)].map((_, i) => (
+          <div
+            key={i}
+            className="neon-card-float absolute text-3xl opacity-10"
+            style={{
+              left: `${10 + i * 12}%`,
+              animationDelay: `${i * 0.8}s`,
+              animationDuration: `${12 + Math.random() * 6}s`
+            }}
+          >
+            🂡
+          </div>
+        ))}
+        {/* Neon particles */}
+        {[...Array(20)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-2 h-2 bg-neon-cyan rounded-full animate-neon-particle"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${i * 0.1}s`
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="relative z-10 max-w-6xl mx-auto space-y-8 p-6">
         {/* Header */}
-        <div className="text-center text-white">
-          <h1 className="text-2xl md:text-3xl font-black mb-2">Close Master - Room {roomId}</h1>
-          <div className={`inline-flex px-4 py-2 rounded-full text-lg font-bold ${
+        <div className="text-center">
+          <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-neon-purple via-neon-cyan to-neon-green bg-clip-text text-transparent mb-4 drop-shadow-2xl">
+            CLOSE MASTER
+          </h1>
+          <div className="text-2xl font-mono text-neon-yellow drop-shadow-lg">
+            Room: <span className="text-neon-cyan tracking-widest">{roomId}</span>
+          </div>
+          <div className={`inline-flex px-6 py-3 rounded-full text-xl font-bold mt-4 border-2 ${
             isMyTurn 
-              ? "bg-emerald-500 text-black shadow-lg" 
-              : "bg-gray-700"
+              ? "border-neon-green bg-neon-green/20 neon-glow-green animate-pulse" 
+              : "border-neon-blue/50 bg-black/30"
           }`}>
-            Turn: {players.find(p => p.id === turnId)?.name || "—"}
-            {isMyTurn && " ← YOU"}
+            {players.find(p => p.id === turnId)?.name || "—"} {isMyTurn && "← YOUR TURN"}
           </div>
         </div>
 
         {/* Open Card */}
         <div className="flex justify-center">
-          <div className="bg-white/20 backdrop-blur-xl rounded-3xl p-6 border-4 border-white/30 shadow-2xl">
-            <p className="text-white text-lg font-bold mb-4 text-center">🂱 Open Card</p>
+          <div className="bg-black/40 backdrop-blur-3xl rounded-3xl p-8 border-4 border-neon-purple/50 shadow-2xl neon-glow">
+            <p className="text-neon-cyan text-2xl font-black mb-6 text-center tracking-wider drop-shadow-lg">🂱 OPEN CARD</p>
             {openCard ? (
-              <Card 
-                card={openCard} 
-                isSelected={false}
-                onClick={() => {}} 
-              />
+              <Card card={openCard} isSelected={false} onClick={() => {}} />
             ) : (
-              <div className="w-24 h-32 bg-gray-300 rounded-xl flex items-center justify-center text-gray-600 font-bold animate-pulse">
-                No Card
+              <div className="w-32 h-44 bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl border-4 border-neon-blue/50 flex items-center justify-center text-neon-gray font-bold text-xl animate-pulse">
+                NO CARD
               </div>
             )}
           </div>
         </div>
 
         {/* Your Hand */}
-        <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-6 border-2 border-white/20">
-          <p className="text-white text-xl font-bold mb-6 text-center">
-            Your Hand ({hand.length} cards) {me?.score ? `| Score: ${me.score}` : ""}
+        <div className="bg-black/30 backdrop-blur-3xl rounded-3xl p-8 border-4 border-neon-green/30 shadow-2xl">
+          <p className="text-neon-green text-3xl font-black mb-8 text-center tracking-widest drop-shadow-2xl">
+            YOUR HAND ({hand.length}) {me?.score && <span className="text-neon-yellow text-xl">| {me.score} PTS</span>}
           </p>
-          <div className="flex flex-wrap justify-center gap-3 max-w-4xl mx-auto">
+          <div className="flex flex-wrap justify-center gap-4">
             {hand.map((card) => (
               <Card
                 key={card.id}
@@ -280,27 +281,28 @@ export default function CloseMasterGame() {
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center p-6 bg-white/5 backdrop-blur-xl rounded-3xl border-2 border-white/10">
+        {/* ACTION BUTTONS */}
+        <div className="flex flex-col lg:flex-row gap-6 justify-center items-center p-8 bg-black/40 backdrop-blur-3xl rounded-3xl border-4 border-neon-purple/20 shadow-2xl">
           <button
             onClick={handleDraw}
             disabled={!canDraw}
-            className={`px-8 py-4 rounded-2xl text-xl font-black shadow-2xl transform transition-all duration-200 ${
+            className={`px-12 py-6 rounded-3xl text-2xl font-black shadow-2xl transform transition-all duration-300 group ${
               canDraw
-                ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 hover:scale-105 shadow-green-500"
-                : "bg-gray-600 text-gray-400 cursor-not-allowed"
+                ? "bg-gradient-to-r from-neon-green to-neon-cyan text-black neon-glow-green hover:from-neon-purple hover:to-neon-blue hover:scale-110 shadow-neon-green"
+                : "bg-gray-800/50 text-neon-gray border-2 border-neon-gray/50 cursor-not-allowed"
             }`}
           >
             📥 DRAW
+            {canDraw && <div className="absolute inset-0 bg-gradient-to-r from-neon-green to-neon-cyan rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur animate-pulse"></div>}
           </button>
           
           <button
             onClick={handleDrop}
             disabled={!canDrop}
-            className={`px-8 py-4 rounded-2xl text-xl font-bold shadow-2xl transform transition-all duration-200 ${
+            className={`px-12 py-6 rounded-3xl text-2xl font-black shadow-2xl transform transition-all duration-300 group relative overflow-hidden ${
               canDrop
-                ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 hover:scale-105 shadow-blue-500"
-                : "bg-gray-600 text-gray-400 cursor-not-allowed"
+                ? "bg-gradient-to-r from-neon-blue to-neon-purple text-white neon-glow-blue hover:from-neon-cyan hover:to-neon-green hover:scale-110 shadow-neon-blue"
+                : "bg-gray-800/50 text-neon-gray border-2 border-neon-gray/50 cursor-not-allowed"
             }`}
           >
             🂠 DROP ({selectedIds.length})
@@ -309,36 +311,93 @@ export default function CloseMasterGame() {
           <button
             onClick={handleClose}
             disabled={!canClose}
-            className={`px-8 py-4 rounded-2xl text-xl font-black shadow-2xl transform transition-all duration-200 ${
+            className={`px-12 py-6 rounded-3xl text-2xl font-black shadow-2xl transform transition-all duration-300 group ${
               canClose
-                ? "bg-gradient-to-r from-red-500 to-rose-600 text-white hover:from-red-600 hover:to-rose-700 hover:scale-105 shadow-red-500"
-                : "bg-gray-600 text-gray-400 cursor-not-allowed"
+                ? "bg-gradient-to-r from-neon-red to-neon-pink text-white neon-glow-red hover:from-neon-purple hover:to-neon-orange hover:scale-110 shadow-neon-red animate-pulse"
+                : "bg-gray-800/50 text-neon-gray border-2 border-neon-gray/50 cursor-not-allowed"
             }`}
           >
             ✅ CLOSE
           </button>
         </div>
 
-        {/* Game Log */}
-        <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border-2 border-white/10 max-h-48 overflow-y-auto">
-          <p className="text-white font-bold mb-4 text-lg">📝 Recent Actions</p>
-          <div className="space-y-2">
+        {/* GAME LOG */}
+        <div className="bg-black/40 backdrop-blur-3xl rounded-3xl p-8 border-4 border-neon-cyan/30 shadow-2xl max-h-60 overflow-y-auto">
+          <p className="text-neon-cyan text-2xl font-black mb-6 text-center tracking-widest drop-shadow-2xl">📝 GAME LOG</p>
+          <div className="space-y-3">
             {log.map((entry, i) => (
-              <p key={i} className="text-white/90 text-sm bg-white/10 p-3 rounded-xl backdrop-blur-sm">
+              <div key={i} className="p-4 bg-neon-purple/10 border-l-4 border-neon-green rounded-2xl backdrop-blur-sm text-neon-white text-lg animate-slide-in">
                 {entry}
-              </p>
+              </div>
             ))}
           </div>
         </div>
       </div>
 
       <style jsx>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0) rotate(0deg); }
-          50% { transform: translateY(-20px) rotate(5deg); }
+        @keyframes neon-pulse {
+          0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
+          50% { box-shadow: 0 0 40px rgba(59, 130, 246, 1); }
         }
-        .animate-float { animation: float 15s ease-in-out infinite; }
-        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes neon-glow {
+          0%, 100% { filter: drop-shadow(0 0 10px currentColor); }
+          50% { filter: drop-shadow(0 0 30px currentColor); }
+        }
+        @keyframes neon-card-float {
+          0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+          10% { opacity: 0.3; }
+          90% { opacity: 0.3; }
+          100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+        }
+        @keyframes neon-line-diagonal {
+          0% { transform: translateX(-100vw) skewX(-45deg); }
+          100% { transform: translateX(100vw) skewX(-45deg); }
+        }
+        @keyframes neon-particle {
+          0%, 100% { transform: scale(0) translateY(0); opacity: 0; }
+          50% { transform: scale(1) translateY(-20px); opacity: 1; }
+        }
+        @keyframes slide-in {
+          from { opacity: 0; transform: translateX(-20px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes spin-slow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes animate-pulse-once {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
+        }
+
+        .neon-glow, .neon-glow-btn, .neon-glow-green, .neon-glow-blue, .neon-glow-red {
+          animation: neon-glow 2s ease-in-out infinite alternate;
+        }
+        .neon-card-float { animation: neon-card-float linear infinite; }
+        .neon-line-diagonal { animation: neon-line-diagonal linear infinite; }
+        .neon-glow-green { filter: drop-shadow(0 0 20px #10b981); }
+        .neon-glow-blue { filter: drop-shadow(0 0 20px #3b82f6); }
+        .neon-glow-red { filter: drop-shadow(0 0 20px #ef4444); }
+        .animate-neon-pulse { animation: neon-pulse 2s infinite; }
+        .animate-neon-line { background-size: 200% 100%; animation: neon-pulse 3s ease-in-out infinite; }
+        .animate-ping { animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite; }
+        .animate-spin-slow { animation: spin-slow 3s linear infinite; }
+        .animate-slide-in { animation: slide-in 0.5s ease-out; }
+
+        .text-neon-white { color: #ffffff; }
+        .text-neon-gray { color: #9ca3af; }
+        .text-neon-cyan { color: #06b6d4; }
+        .text-neon-purple { color: #a855f7; }
+        .text-neon-blue { color: #3b82f6; }
+        .text-neon-green { color: #10b981; }
+        .text-neon-yellow { color: #eab308; }
+        .text-neon-pink { color: #ec4899; }
+        .text-neon-orange { color: #f97316; }
+        .border-neon-purple { border-color: #a855f7; }
+        .border-neon-cyan { border-color: #06b6d4; }
+        .border-neon-green { border-color: #10b981; }
+        .bg-neon-purple { background-color: rgba(168, 85, 247, 0.2); }
+        .bg-neon-green { background-color: rgba(16, 185, 129, 0.2); }
       `}</style>
     </div>
   );
