@@ -37,7 +37,6 @@ export default function CloseMasterGame() {
     const s=io(SERVER_URL,{transports:["websocket"],upgrade:false,timeout:20000});
     s.on("connect",()=>console.log("✅ Connected:",s.id));
     
-    // ✅ FIX: room_created listener added
     s.on("room_created", ({roomId}) => {
       console.log("✅ Room created:", roomId);
       setScreen("lobby");
@@ -66,13 +65,10 @@ export default function CloseMasterGame() {
   const pendingDraw=game?.pendingDraw||0, pendingSkips=game?.pendingSkips||0;
   const currentPlayer=players[currentIndex], myTurn=started&&currentPlayer?.id===youId;
   const me=players.find(p=>p.id===youId), hasDrawn=me?.hasDrawn||false;
-  const matchingOpenCardCount=game?.matchingOpenCardCount||0;
 
-  // ✅ FIXED: All game functions
   const createRoom=()=>{
     if(!socket||!playerName.trim()){alert("Name!");return;}
     setLoading(true);
-    console.log("🎮 Creating room:", playerName.trim());
     socket.emit("create_room",{name:playerName.trim()});
   };
 
@@ -87,11 +83,10 @@ export default function CloseMasterGame() {
     socket.emit("start_game");
   };
 
-  // ✅ FIXED: Open card 7/J block + direct click
+  // ✅ FIXED: Draw logic
   const drawCard=(fromDiscard=false)=>{
     if(!socket||!roomId||!myTurn) return;
     
-    // ✅ BLOCK 7/J from open pile
     if(fromDiscard && discardTop && (discardTop.rank === "7" || discardTop.rank === "J")){
       alert("Cannot take 7 or J from open!");
       return;
@@ -108,14 +103,14 @@ export default function CloseMasterGame() {
     socket.emit("action_drop",{roomId,selectedIds});
   };
 
-  // ✅ FIXED: CLOSE only after draw
+  // ✅ FIXED: CLOSE only BEFORE draw (DECK click)
   const callClose=()=>{
     if(!socket||!roomId||!myTurn){
       alert("Wait for your turn!");
       return;
     }
-    if(!hasDrawn){
-      alert("Draw a card first!");
+    if(hasDrawn){
+      alert("Cannot close after drawing!");
       return;
     }
     if(!confirm("CLOSE round?")) return;
@@ -185,14 +180,14 @@ export default function CloseMasterGame() {
         </div>
       </div>}
 
-      {/* ✅ FIXED Open Card - Direct click + 7/J block */}
+      {/* ✅ Open Card - Click to take (except 7/J) */}
       {started&&<div className="z-10 text-center">
         <h3 className="text-lg md:text-xl mb-3 md:mb-4 font-bold">🎴 OPEN CARD</h3>
         {discardTop?
           <button onClick={()=>drawCard(true)} disabled={!myTurn||hasDrawn||(discardTop.rank==="7"||discardTop.rank==="J")} 
             className={`relative w-20 md:w-24 h-28 md:h-36 bg-white rounded-2xl shadow-2xl border-4 p-2 md:p-3 flex flex-col justify-between mx-auto transition-all ${
               myTurn&&!hasDrawn&&(discardTop.rank!=="7"&&discardTop.rank!=="J")
-                ?"hover:scale-105 cursor-pointer border-blue-400 shadow-blue-500 ring-4 ring-blue-200"
+                ?"hover:scale-105 cursor-pointer border-blue-400 shadow-blue-500 ring-4 ring-blue-200 animate-pulse"
                 :"border-gray-300 opacity-70"
             }`}>
             <div className={`text-base md:text-lg font-bold ${cardTextColor(discardTop)}`}>{discardTop.rank}</div>
@@ -230,13 +225,16 @@ export default function CloseMasterGame() {
         </div>
       </div>}
 
-      {/* ✅ FIXED Actions - Perfect flow */}
+      {/* ✅ PERFECTED Actions */}
       {myTurn&&started&&<div className="z-10 flex flex-wrap gap-2 md:gap-4 justify-center max-w-4xl p-4 md:p-6 bg-black/50 backdrop-blur-xl rounded-3xl border border-white/20">
+        {/* DECK - Disabled after draw */}
         <button onClick={()=>drawCard(false)} disabled={hasDrawn} className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${hasDrawn?"bg-gray-700/50 cursor-not-allowed opacity-50":"bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 hover:scale-105"}`}>📥 DECK</button>
         
-        <button onClick={dropCards} disabled={selectedIds.length===0} className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${selectedIds.length>0?"bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 hover:scale-105":"bg-gray-700/50 cursor-not-allowed opacity-50"}`}>🗑️ DROP ({selectedIds.length})</button>
+        {/* DROP - Enabled only after draw */}
+        <button onClick={dropCards} disabled={!hasDrawn || selectedIds.length===0} className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${hasDrawn&&selectedIds.length>0?"bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 hover:scale-105":"bg-gray-700/50 cursor-not-allowed opacity-50"}`}>🗑️ DROP ({selectedIds.length})</button>
         
-        <button onClick={callClose} disabled={!hasDrawn} className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${hasDrawn?"bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 hover:scale-105 animate-pulse":"bg-gray-700/50 cursor-not-allowed opacity-50"}`}>❌ CLOSE</button>
+        {/* CLOSE - Enabled ONLY before draw */}
+        <button onClick={callClose} disabled={hasDrawn} className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${!hasDrawn?"bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 hover:scale-105 animate-pulse":"bg-gray-700/50 cursor-not-allowed opacity-50"}`}>❌ CLOSE</button>
       </div>}
 
       {/* Scores Modal */}
