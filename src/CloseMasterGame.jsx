@@ -48,9 +48,49 @@ export default function CloseMasterGame() {
       transports: ["websocket"],
       upgrade: false,
       timeout: 20000,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
     });
 
-    s.on("connect", () => console.log("Connected:", s.id));
+    let reconnectAttempts = 0;
+    const MAX_RECONNECTS = 10;
+
+    s.on("connect", () => {
+      console.log("✅ Connected:", s.id);
+      reconnectAttempts = 0; // Reset attempts
+      if (game?.roomId && playerName) {
+        setTimeout(() => {
+          s.emit("rejoin_room", { roomId: game.roomId, name: playerName });
+        }, 500);
+      }
+    });
+
+    s.on("disconnect", (reason) => {
+      console.log("🔌 Disconnected:", reason);
+      if (reason === "io server disconnect") {
+        s.disconnect();
+      }
+    });
+
+    s.on("connect_error", (err) => {
+      console.log("❌ Connect error:", err.message);
+      reconnectAttempts++;
+      if (reconnectAttempts >= MAX_RECONNECTS) {
+        alert("Connection failed. Check internet & try again.");
+      }
+    });
+
+    s.on("rejoin_success", (state) => {
+      console.log("🔄 Rejoined game:", state.roomId);
+      setGame(state);
+    });
+
+    s.on("rejoin_error", (error) => {
+      console.log("❌ Rejoin failed:", error);
+      setScreen("welcome");
+    });
 
     s.on("game_state", (state) => {
       setGame(state);
@@ -70,12 +110,40 @@ export default function CloseMasterGame() {
     });
 
     setSocket(s);
-    return () => s.disconnect();
+
+    return () => {
+      s.disconnect();
+    };
   }, []);
 
   useEffect(() => {
     if (game?.closeCalled) setShowPoints(true);
   }, [game?.closeCalled]);
+
+  // Page visibility and reconnect handling
+  useEffect(() => {
+    let reconnectTimeout;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        console.log("📱 App background");
+      } else {
+        console.log("📱 App foreground");
+        if (socket && game?.roomId && playerName && screen !== "welcome") {
+          reconnectTimeout = setTimeout(() => {
+            socket.emit("rejoin_room", { roomId: game.roomId, name: playerName });
+          }, 1000);
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+    };
+  }, [socket, game?.roomId, playerName, screen]);
 
   const roomId = game?.roomId;
   const youId = game?.youId;
@@ -449,7 +517,7 @@ export default function CloseMasterGame() {
           <h3 className="text-lg md:text-xl mb-3 md:mb-4 font-bold">OPEN CARD</h3>
           {discardTop ? (
             <button
-              onClick={() => drawCard(true)} // open card click draws card from discard pile
+              onClick={() => drawCard(true)}
               disabled={!myTurn || hasDrawn}
               className={`w-20 md:w-24 h-28 md:h-36 bg-white rounded-2xl shadow-2xl border-4 p-2 md:p-3 flex flex-col justify-between ${
                 myTurn && !hasDrawn
@@ -572,7 +640,6 @@ export default function CloseMasterGame() {
           >
             DECK
           </button>
-          {/* OPEN button removed as discussed */}
           <button
             onClick={dropCards}
             disabled={!allowDrop}
