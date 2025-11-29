@@ -449,7 +449,7 @@ export default function CloseMasterGame() {
           <h3 className="text-lg md:text-xl mb-3 md:mb-4 font-bold">OPEN CARD</h3>
           {discardTop ? (
             <button
-              onClick={() => drawCard(true)}
+              onClick={() => drawCard(true)} // open card click draws card from discard pile
               disabled={!myTurn || hasDrawn}
               className={`w-20 md:w-24 h-28 md:h-36 bg-white rounded-2xl shadow-2xl border-4 p-2 md:p-3 flex flex-col justify-between ${
                 myTurn && !hasDrawn
@@ -572,17 +572,7 @@ export default function CloseMasterGame() {
           >
             DECK
           </button>
-          <button
-            onClick={() => drawCard(true)}
-            disabled={hasDrawn}
-            className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${
-              hasDrawn
-                ? "bg-gray-700/50 cursor-not-allowed opacity-50"
-                : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
-            }`}
-          >
-            OPEN
-          </button>
+          {/* OPEN button removed as discussed */}
           <button
             onClick={dropCards}
             disabled={!allowDrop}
