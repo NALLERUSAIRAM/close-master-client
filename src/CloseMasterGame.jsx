@@ -17,90 +17,55 @@ function NeonFloatingCards() {
       {Array.from({ length: 20 }).map((_, i) => (
         <div
           key={i}
-          className="absolute w-16 h-24 rounded-3xl border border-white/20 shadow-[0_0_20px_#3b82f6] backdrop-blur-md bg-gradient-to-br from-blue-500/20 to-purple-500/20 animate-float-slow"
+          className="absolute w-16 h-24 rounded-3xl border border-white/20 shadow-[0_0_20px_#3b82f6] backdrop-blur-md animate-float-slow"
           style={{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            animationDelay: `${Math.random() * 15}s`,
-            animationDuration: `${10 + Math.random() * 10}s`,
+            left: `${5 + Math.random() * 90}%`,
+            top: `${10 + Math.random() * 80}%`,
+            animationDelay: `${Math.random() * 10}s`,
+            animationDuration: `${12 + Math.random() * 8}s`,
+            boxShadow: "0 0 20px 4px rgba(59,130,246,0.6)",
+            background: "rgba(255,255,255,0.05)",
           }}
         />
       ))}
-      <style jsx>{`
-        @keyframes float {
-          0%,
-          100% {
-            transform: translateY(0) rotate(0);
-          }
-          50% {
-            transform: translateY(-20px) rotate(5deg);
-          }
-        }
-        .animate-float-slow {
-          animation: float 15s ease-in-out infinite;
-        }
-      `}</style>
     </div>
   );
 }
 
 export default function CloseMasterGame() {
   const [socket, setSocket] = useState(null);
-  const [screen, setScreen] = useState("welcome");
+  const [screen, setScreen] = useState("welcome"); // welcome | lobby | game
   const [playerName, setPlayerName] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [game, setGame] = useState(null);
-  const [players, setPlayers] = useState([]);
-  const [isHost, setIsHost] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [myTurn, setMyTurn] = useState(false);
-  const [hasDrawn, setHasDrawn] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [isHost, setIsHost] = useState(false);
   const [showPoints, setShowPoints] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const s = io(SERVER_URL);
-
-    s.on("connect", () => console.log("socket connected", s.id));
-
-    s.on("room_created", (data) => {
-      setGame(data.room);
-      setPlayers(data.players);
-      setIsHost(true);
-      setScreen("lobby");
-      setLoading(false);
+    const s = io(SERVER_URL, {
+      transports: ["websocket"],
+      upgrade: false,
+      timeout: 20000,
     });
 
-    s.on("room_joined", (data) => {
-      setGame(data.room);
-      setPlayers(data.players);
-      setIsHost(false);
-      setScreen("lobby"); // always lobby first
-      setLoading(false);
-    });
+    s.on("connect", () => console.log("Connected:", s.id));
 
-    s.on("player_joined", (pls) => setPlayers(pls));
-
-    s.on("game_update", (room) => {
-      setGame(room);
-      setPlayers(room.players);
-      const isMyTurn = room.currentPlayerId === s.id;
-      setMyTurn(isMyTurn);
-      setHasDrawn(room.hasDrawn && isMyTurn);
-      if (!isMyTurn) {
-        setHasDrawn(false);
-        setSelectedIds([]);
+    s.on("game_state", (state) => {
+      setGame(state);
+      setIsHost(state.hostId === state.youId);
+      setSelectedIds([]);
+      if (!state.started) {
+        setScreen("lobby");
+      } else {
+        setScreen("game");
       }
-      setScreen(room.started ? "game" : "lobby");
+      setLoading(false);
     });
 
-    s.on("game_ended", (scores) => {
-      setPlayers(scores);
-      setShowPoints(true);
-    });
-
-    s.on("error", (msg) => {
-      alert(msg);
+    s.on("error", (e) => {
+      alert(e.message || "Server error!");
       setLoading(false);
     });
 
@@ -108,496 +73,565 @@ export default function CloseMasterGame() {
     return () => s.disconnect();
   }, []);
 
-  const createRoom = () => {
-    if (!playerName.trim()) return alert("Enter name!");
-    setLoading(true);
-    socket.emit("create_room", { name: playerName.trim() });
-  };
+  useEffect(() => {
+    if (game?.closeCalled) setShowPoints(true);
+  }, [game?.closeCalled]);
 
-  const joinRoom = () => {
-    if (!playerName.trim() || !joinCode.trim())
-      return alert("Name & code required!");
+  const roomId = game?.roomId;
+  const youId = game?.youId;
+  const players = game?.players || [];
+  const discardTop = game?.discardTop;
+  const currentIndex = game?.currentIndex ?? 0;
+  const started = game?.started;
+  const pendingDraw = game?.pendingDraw || 0;
+  const pendingSkips = game?.pendingSkips || 0;
+  const currentPlayer = players[currentIndex];
+  const myTurn = started && currentPlayer?.id === youId;
+  const me = players.find((p) => p.id === youId);
+  const hasDrawn = me?.hasDrawn || false;
+
+  // selection info (for DROP rules)
+  const selectedCards = me
+    ? me.hand.filter((c) => selectedIds.includes(c.id))
+    : [];
+  const selectedRanks = [...new Set(selectedCards.map((c) => c.rank))];
+  const selectedSingleRank =
+    selectedRanks.length === 1 ? selectedRanks[0] : null;
+  const openCardRank = discardTop?.rank;
+
+  let canDropWithoutDraw = false;
+  if (!hasDrawn && selectedCards.length > 0 && selectedSingleRank) {
+    const sameAsOpen = openCardRank && selectedSingleRank === openCardRank;
+    if (sameAsOpen) {
+      // same as open card -> any count
+      canDropWithoutDraw = true;
+    } else if (selectedCards.length >= 3) {
+      // different rank but 3+ cards
+      canDropWithoutDraw = true;
+    }
+  }
+  const allowDrop =
+    selectedCards.length > 0 && (hasDrawn || canDropWithoutDraw);
+
+  const createRoom = () => {
+    if (!socket || !playerName.trim()) {
+      alert("Name enter cheyali");
+      return;
+    }
     setLoading(true);
-    socket.emit("join_room", {
-      name: playerName.trim(),
-      roomId: joinCode.trim().toUpperCase(),
+    socket.emit("create_room", { name: playerName.trim() }, (res) => {
+      setLoading(false);
+      if (!res || res.error) {
+        alert(res?.error || "Create failed");
+      }
     });
   };
 
-  const startGame = () => {
-    if (!socket) return;
-    socket.emit("start_game");
-  };
-
-  const drawCard = (fromOpen = false) => {
-    if (!socket || !game || !myTurn || hasDrawn) return;
-    if (
-      fromOpen &&
-      game.discardPile?.[0]?.rank &&
-      game.discardPile[0].rank.match(/7|J/)
-    ) {
-      alert("🚫 Cannot take 7 or J from open!");
+  const joinRoom = () => {
+    if (!socket || !playerName.trim() || !joinCode.trim()) {
+      alert("Name & Room ID enter cheyali");
       return;
     }
-    socket.emit("action_draw", { fromDiscard: fromOpen });
+    setLoading(true);
+    socket.emit(
+      "join_room",
+      { name: playerName.trim(), roomId: joinCode.toUpperCase().trim() },
+      (res) => {
+        setLoading(false);
+        if (res?.error) {
+          alert(res.error);
+        }
+      }
+    );
+  };
+
+  const startRound = () => {
+    if (!socket || !roomId || !isHost || players.length < 2) {
+      alert("Minimum 2 players (host only)");
+      return;
+    }
+    socket.emit("start_round", { roomId });
+  };
+
+  const drawCard = (fromDiscard = false) => {
+    if (!socket || !roomId || !myTurn) return;
+    socket.emit("action_draw", { roomId, fromDiscard });
   };
 
   const dropCards = () => {
-    if (!socket || !game) return;
-    if (!myTurn || !hasDrawn || selectedIds.length === 0) {
-      alert("Draw first & select cards");
+    if (!socket || !roomId || !myTurn || !allowDrop) {
+      alert("Valid cards select cheyali");
       return;
     }
-    socket.emit("action_drop", { selectedIds });
-    setSelectedIds([]);
+    socket.emit("action_drop", { roomId, selectedIds });
   };
 
   const callClose = () => {
-    if (!socket || !game) return;
-    if (!myTurn) return alert("Wait for your turn");
-    if (hasDrawn) return alert("CLOSE only BEFORE draw");
-    if (!window.confirm("Close this round?")) return;
-    socket.emit("action_close");
+    if (!socket || !roomId || !myTurn) return;
+    if (!window.confirm("CLOSE cheyala?")) return;
+    socket.emit("action_close", { roomId });
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
   };
 
   const exitGame = () => {
-    if (!window.confirm("Exit game?")) return;
-    socket?.disconnect();
-    setScreen("welcome");
-    setPlayerName("");
-    setJoinCode("");
-    setGame(null);
-    setPlayers([]);
-    setIsHost(false);
-    setLoading(false);
-    setMyTurn(false);
-    setHasDrawn(false);
-    setSelectedIds([]);
-    setShowPoints(false);
+    if (window.confirm("Game exit cheyala?")) {
+      socket?.disconnect();
+      setScreen("welcome");
+      setPlayerName("");
+      setJoinCode("");
+      setGame(null);
+      setSelectedIds([]);
+      setIsHost(false);
+      setShowPoints(false);
+      setLoading(false);
+    }
   };
 
-  // WELCOME
+  const handleContinue = () => {
+    setShowPoints(false);
+    setScreen("lobby");
+  };
+
+  // 1) WELCOME SCREEN
   if (screen === "welcome") {
     return (
       <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/20 to-blue-900/20 flex items-center justify-center px-4 relative overflow-hidden">
         <NeonFloatingCards />
         <div className="relative z-10 bg-black/80 backdrop-blur-2xl p-8 rounded-3xl w-full max-w-md border border-white/20 shadow-2xl">
           <div className="text-center mb-8">
-            <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-emerald-400 via-blue-400 to-purple-500 bg-clip-text text-transparent mb-4 drop-shadow-2xl">
+            <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-emerald-400 via-blue-400 to-purple-500 bg-clip-text text-transparent drop-shadow-2xl">
               CLOSE MASTER
             </h1>
-            <p className="text-xl text-white/80 font-semibold">
-              Lowest Count Game
-            </p>
           </div>
-          <div className="space-y-4">
-            <input
-              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-2xl text-white placeholder-white/50 focus:outline-none focus:border-emerald-400 transition-all"
-              placeholder="Your Name"
-              value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
-            />
-            <button
-              onClick={createRoom}
-              disabled={loading}
-              className={`w-full px-8 py-4 rounded-2xl font-bold text-xl shadow-2xl transition-all ${
-                loading
-                  ? "bg-gray-600 text-gray-400 cursor-not-allowed"
-                  : "bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700 hover:scale-105 shadow-emerald-500/50"
-              }`}
-            >
-              {loading ? "⏳ Creating..." : "🎮 CREATE ROOM"}
-            </button>
-            <div className="text-center text-white/50 my-4">OR JOIN ROOM</div>
-            <div className="flex space-x-3">
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-200 mb-3">
+                Name
+              </label>
               <input
-                className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-2xl text-white placeholder-white/50 focus:outline-none focus:border-emerald-400"
-                placeholder="ROOM"
+                type="text"
+                className="w-full p-4 bg-gray-900/80 border-2 border-gray-600 rounded-2xl text-lg font-semibold text-white placeholder-gray-500 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/30 transition-all"
+                placeholder=""
+                value={playerName}
+                onChange={(e) => setPlayerName(e.target.value)}
+                maxLength={15}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-200 mb-3">
+                Room ID
+              </label>
+              <input
+                type="text"
+                className="w-full p-4 bg-gray-900/80 border-2 border-gray-600 rounded-2xl text-lg font-semibold text-white placeholder-gray-500 uppercase focus:border-sky-400 focus:ring-4 focus:ring-sky-500/30 transition-all"
+                placeholder=""
                 value={joinCode}
                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                 maxLength={4}
               />
-              <button
-                onClick={joinRoom}
-                disabled={loading || !playerName || !joinCode}
-                className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 rounded-2xl font-bold text-white shadow-purple-500/50 hover:scale-105 whitespace-nowrap"
-              >
-                JOIN
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // LOBBY
-  if (screen === "lobby") {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/20 to-blue-900/20 flex flex-col items-center justify-center px-4 relative overflow-hidden">
-        <NeonFloatingCards />
-        <div className="relative z-10 w-full max-w-md">
-          <button
-            onClick={exitGame}
-            className="absolute top-6 left-6 text-white/70 hover:text-white text-2xl"
-          >
-            ←
-          </button>
-          <div className="bg-black/80 backdrop-blur-2xl p-8 rounded-3xl border border-white/20 shadow-2xl">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-black bg-gradient-to-r from-emerald-400 to-blue-500 bg-clip-text text-transparent mb-2">
-                Room: {game?.roomId}
-              </h1>
-              <p className="text-white/70">
-                {players.length}/{MAX_PLAYERS} Players
-              </p>
-            </div>
-            <div className="space-y-3 mb-8 max-h-64 overflow-y-auto">
-              {players.map((p) => (
-                <div
-                  key={p.id}
-                  className={`flex items-center p-3 rounded-xl ${
-                    p.id === socket.id
-                      ? "bg-emerald-500/20 border-emerald-400 border"
-                      : "bg-white/10"
-                  }`}
-                >
-                  <div className="w-10 h-10 bg-gradient-to-r from-emerald-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm mr-3">
-                    {p.name.slice(0, 2).toUpperCase()}
-                  </div>
-                  <span className="text-white font-medium flex-1">
-                    {p.name}
-                  </span>
-                  {p.id === socket.id && (
-                    <span className="text-emerald-400 text-sm font-bold">
-                      (YOU)
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-            {isHost && players.length >= 2 && (
-              <button
-                onClick={startGame}
-                className="w-full px-8 py-4 bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 text-xl font-black rounded-2xl shadow-2xl hover:scale-105 hover:shadow-emerald-500/50 transition-all text-white"
-              >
-                🚀 START GAME
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // MAIN GAME
-  const me = game?.players?.find((p) => p.id === socket.id);
-  const others = game?.players?.filter((p) => p.id !== socket.id) || [];
-  const topRow = others.slice(0, 3);
-  const sideLeft = others[3];
-  const sideRight = others[4];
-  const extraBottom = others[5];
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/20 to-blue-900/20 flex flex-col relative overflow-hidden">
-      <NeonFloatingCards />
-      <div className="p-4 pt-6 pb-24 flex-1 flex flex-col">
-        {/* TOP BAR */}
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <div className="text-sm text-white/60">Turn</div>
-            <div className="text-xl font-bold text-white">
-              {game?.players?.find((p) => p.id === game.currentPlayerId)?.name ||
-                "—"}
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right mr-2">
-              <div className="text-xs text-white/60">Your Score</div>
-              <div className="text-lg font-bold text-emerald-400">
-                {me?.score || 0} pts
-              </div>
             </div>
             <button
-              onClick={() => setShowPoints(true)}
-              className="px-4 py-2 bg-white/10 border border-white/30 rounded-xl text-xs font-semibold text-white hover:bg-white/20 transition-all"
+              onClick={createRoom}
+              disabled={!playerName.trim() || loading}
+              className={`w-full py-4 rounded-2xl text-xl font-black shadow-2xl transition-all ${
+                playerName.trim() && !loading
+                  ? "bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 hover:scale-105"
+                  : "bg-gray-800/50 border-2 border-gray-600 cursor-not-allowed opacity-50"
+              }`}
             >
-              POINTS
+              {loading ? "Creating..." : "CREATE ROOM"}
+            </button>
+            <button
+              onClick={joinRoom}
+              disabled={!playerName.trim() || !joinCode.trim() || loading}
+              className={`w-full py-4 rounded-2xl text-xl font-black shadow-2xl transition-all ${
+                playerName.trim() && joinCode.trim() && !loading
+                  ? "bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 hover:scale-105"
+                  : "bg-gray-800/50 border-2 border-gray-600 cursor-not-allowed opacity-50"
+              }`}
+            >
+              {loading ? "Joining..." : "JOIN ROOM"}
+            </button>
+          </div>
+        </div>
+        <style jsx>{`@keyframes float{0%,100%{transform:translateY(0)rotate(0);}50%{transform:translateY(-20px)rotate(5deg);}}.animate-float-slow{animation:float 15s ease-in-out infinite;}`}</style>
+      </div>
+    );
+  }
+
+  // 2) LOBBY SCREEN
+  if (screen === "lobby") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/30 to-blue-900/30 text-white p-4 md:p-6 flex flex-col items-center gap-4 md:gap-6 relative overflow-hidden">
+        <NeonFloatingCards />
+        <div className="z-10 w-full max-w-5xl text-center p-4 md:p-6 bg-black/60 backdrop-blur-xl rounded-3xl border border-emerald-500/50 shadow-2xl">
+          <h1 className="mb-3 md:mb-4 text-2xl md:text-4xl font-black bg-gradient-to-r from-emerald-400 to-emerald-600 bg-clip-text text-transparent">
+            Room: {roomId?.toUpperCase()}
+          </h1>
+          <p className="text-lg md:text-xl mb-4 md:mb-6">
+            You:{" "}
+            <span className="font-bold text-white px-3 py-1 bg-emerald-500/30 rounded-full">
+              {me?.name}
+            </span>
+            {isHost && (
+              <span className="ml-2 md:ml-4 px-3 md:px-4 py-1 md:py-2 bg-yellow-500/90 text-black font-bold rounded-full text-sm md:text-lg animate-pulse">
+                HOST
+              </span>
+            )}
+          </p>
+          <div className="flex flex-wrap gap-2 md:gap-4 justify-center">
+            {isHost && (
+              <button
+                onClick={startRound}
+                disabled={players.length < 2}
+                className={`px-4 md:px-8 py-3 md:py-4 rounded-3xl text-base md:text-xl font-black shadow-2xl ${
+                  players.length < 2
+                    ? "bg-gray-700/50 border-2 border-gray-600 cursor-not-allowed opacity-60"
+                    : "bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 hover:scale-105"
+                }`}
+              >
+                {players.length < 2
+                  ? `WAIT (${players.length}/2)`
+                  : "START GAME"}
+              </button>
+            )}
+            <button
+              onClick={() => setShowPoints(true)}
+              className="px-4 md:px-8 py-3 md:py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 rounded-3xl font-bold text-base md:text-xl shadow-2xl"
+            >
+              SCORES ({players.length})
             </button>
             <button
               onClick={exitGame}
-              className="px-4 py-2 bg-red-600/80 hover:bg-red-700 text-white font-bold rounded-xl text-xs border border-red-400/60"
+              className="px-4 md:px-8 py-3 md:py-4 bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 rounded-3xl font-bold text-base md:text-xl shadow-2xl"
             >
               EXIT
             </button>
           </div>
+          <div className="mt-3 md:mt-4 text-sm md:text-lg">
+            Players:{" "}
+            <span className="text-emerald-400 font-bold">
+              {players.length}/{MAX_PLAYERS}
+            </span>
+          </div>
         </div>
 
-        {/* TOP ROW PLAYERS */}
-        <div className="flex justify-center gap-3 mb-4">
-          {topRow.map((pl) => (
+        <div className="z-10 w-full max-w-5xl grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
+          {players.map((p) => (
             <div
-              key={pl.id}
-              className={`min-w-[110px] px-3 py-2 rounded-2xl border text-center text-xs ${
-                pl.id === game.currentPlayerId
-                  ? "border-yellow-400 bg-yellow-500/15 shadow-lg shadow-yellow-500/40"
-                  : "border-white/20 bg-white/5"
+              key={p.id}
+              className={`p-3 md:p-4 rounded-2xl border-2 shadow-lg ${
+                p.id === youId
+                  ? "border-emerald-400 bg-emerald-900/30"
+                  : "border-gray-700 bg-gray-900/30"
               }`}
             >
-              <div className="text-white font-semibold truncate">{pl.name}</div>
-              <div className="text-emerald-300 font-bold">{pl.score} pts</div>
-              <div className="text-white/50 text-[11px]">
-                {pl.hand?.length || 0} cards
-              </div>
+              <p className="font-bold text-center text-sm md:text-base truncate">
+                {p.name}
+              </p>
+              <p className="text-xs md:text-sm text-gray-400 text-center">
+                {p.score} pts
+              </p>
             </div>
           ))}
         </div>
 
-        {/* MIDDLE TABLE */}
-        <div className="flex-1 flex items-center justify-center">
-          <div className="flex items-center justify-center w-full max-w-5xl">
-            {/* LEFT */}
-            <div className="w-32">
-              {sideLeft && (
+        {showPoints && (
+          <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
+            <div className="bg-white/95 text-black rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl">
+              <h3 className="text-2xl md:text-3xl font-black text-center mb-4 md:mb-6 text-gray-900">
+                SCORES
+              </h3>
+              {players.map((p, i) => (
                 <div
-                  className={`px-3 py-2 rounded-2xl border text-center text-xs ${
-                    sideLeft.id === game.currentPlayerId
-                      ? "border-yellow-400 bg-yellow-500/15 shadow-lg shadow-yellow-500/40"
-                      : "border-white/20 bg-white/5"
+                  key={p.id}
+                  className={`flex justify-between p-3 md:p-4 rounded-2xl mb-2 md:mb-3 ${
+                    i === 0 ? "bg-emerald-500 text-white" : "bg-gray-100 text-black"
                   }`}
                 >
-                  <div className="text-white font-semibold truncate">
-                    {sideLeft.name}
-                  </div>
-                  <div className="text-emerald-300 font-bold">
-                    {sideLeft.score} pts
-                  </div>
-                  <div className="text-white/50 text-[11px]">
-                    {sideLeft.hand?.length || 0} cards
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* OPEN + DECK */}
-            <div className="flex flex-col items-center justify-center gap-3 px-6">
-              {/* OPEN */}
-              <div
-                className={`relative w-28 h-40 rounded-3xl border-4 shadow-2xl bg-gradient-to-br from-white to-gray-100 flex flex-col items-center justify-center p-3 cursor-pointer transition-all hover:scale-105 hover:shadow-white/50 ${
-                  game?.discardPile?.[0] &&
-                  myTurn &&
-                  !game.discardPile[0].rank?.match(/7|J/)
-                    ? "border-emerald-400"
-                    : "border-white/30"
-                }`}
-                onClick={() => drawCard(true)}
-              >
-                {game?.discardPile?.[0] ? (
-                  <>
-                    <div
-                      className={`text-3xl font-bold ${cardTextColor(
-                        game.discardPile[0]
-                      )}`}
-                    >
-                      {game.discardPile[0].rank}
-                    </div>
-                    <div
-                      className={`text-2xl ${cardTextColor(
-                        game.discardPile[0]
-                      )}`}
-                    >
-                      {game.discardPile[0].suit}
-                    </div>
-                  </>
-                ) : (
-                  <span className="text-gray-500 font-bold text-sm">
-                    NO CARD
+                  <span className="font-bold truncate text-sm md:text-base">
+                    {p.name}
                   </span>
-                )}
-              </div>
-
-              {/* DECK */}
-              <div
-                className={`w-24 h-36 rounded-3xl border-4 border-white/30 shadow-2xl bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center cursor-pointer transition-all hover:scale-105 hover:shadow-white/50 ${
-                  myTurn && !hasDrawn
-                    ? "hover:border-emerald-400"
-                    : "opacity-50 cursor-not-allowed"
-                }`}
-                onClick={() => drawCard(false)}
-              >
-                <span className="text-2xl">📥</span>
-              </div>
-            </div>
-
-            {/* RIGHT */}
-            <div className="w-32 text-right">
-              {sideRight && (
-                <div
-                  className={`px-3 py-2 rounded-2xl border text-center text-xs ml-auto ${
-                    sideRight.id === game.currentPlayerId
-                      ? "border-yellow-400 bg-yellow-500/15 shadow-lg shadow-yellow-500/40"
-                      : "border-white/20 bg-white/5"
-                  }`}
-                >
-                  <div className="text-white font-semibold truncate">
-                    {sideRight.name}
-                  </div>
-                  <div className="text-emerald-300 font-bold">
-                    {sideRight.score} pts
-                  </div>
-                  <div className="text-white/50 text-[11px]">
-                    {sideRight.hand?.length || 0} cards
-                  </div>
+                  <span className="font-black text-xl md:text-2xl px-3 md:px-4 py-1 md:py-2 rounded-xl">
+                    {p.score}
+                  </span>
                 </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* EXTRA BOTTOM PLAYER */}
-        {extraBottom && (
-          <div className="flex justify-center mb-3">
-            <div
-              className={`min-w-[110px] px-3 py-2 rounded-2xl border text-center text-xs ${
-                extraBottom.id === game.currentPlayerId
-                  ? "border-yellow-400 bg-yellow-500/15 shadow-lg shadow-yellow-500/40"
-                  : "border-white/20 bg-white/5"
-              }`}
-            >
-              <div className="text-white font-semibold truncate">
-                {extraBottom.name}
-              </div>
-              <div className="text-emerald-300 font-bold">
-                {extraBottom.score} pts
-              </div>
-              <div className="text-white/50 text-[11px]">
-                {extraBottom.hand?.length || 0} cards
-              </div>
+              ))}
+              <button
+                onClick={handleContinue}
+                className="w-full py-3 md:py-4 bg-gray-900 text-white rounded-2xl text-lg md:text-xl font-bold mt-4 md:mt-6 hover:bg-gray-800"
+              >
+                CONTINUE
+              </button>
             </div>
           </div>
         )}
+      </div>
+    );
+  }
 
-        {/* YOUR HAND */}
-        <div className="mt-2">
-          <div className="flex items-center mb-2">
-            <div className="text-lg font-bold text-white mr-3">
-              YOUR HAND ({me?.hand?.length || 0})
-            </div>
-            <span
-              className={`px-3 py-1 rounded-xl text-xs font-bold ${
-                hasDrawn
-                  ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400"
-                  : "bg-yellow-500/20 text-yellow-300 border border-yellow-400"
-              }`}
-            >
-              {hasDrawn ? "✓ DREW" : "➤ DRAW"}
+  // 3) GAME SCREEN
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/30 to-blue-900/30 text-white p-4 md:p-6 flex flex-col items-center gap-4 md:gap-6 relative overflow-hidden">
+      <NeonFloatingCards />
+
+      <div className="z-10 w-full max-w-5xl text-center p-4 md:p-6 bg-black/60 backdrop-blur-xl rounded-3xl border border-emerald-500/50 shadow-2xl">
+        <h1 className="mb-3 md:mb-4 text-2xl md:text-4xl font-black bg-gradient-to-r from-emerald-400 to-emerald-600 bg-clip-text text-transparent">
+          Room: {roomId?.toUpperCase()}
+        </h1>
+        <p className="text-lg md:text-xl mb-4 md:mb-6">
+          You:{" "}
+          <span className="font-bold text-white px-3 py-1 bg-emerald-500/30 rounded-full">
+            {me?.name}
+          </span>
+          {isHost && (
+            <span className="ml-2 md:ml-4 px-3 md:px-4 py-1 md:py-2 bg-yellow-500/90 text-black font-bold rounded-full text-sm md:text-lg animate-pulse">
+              HOST
             </span>
-          </div>
-          <div className="flex flex-wrap gap-2 justify-center">
-            {me?.hand?.map((card) => (
-              <div
-                key={card.id}
-                className={`w-16 h-24 rounded-2xl border-4 shadow-xl flex flex-col items-center justify-center p-1 cursor-pointer transition-all hover:scale-110 hover:shadow-white/50 ${
-                  selectedIds.includes(card.id)
-                    ? "border-emerald-400 bg-emerald-400/20 shadow-emerald-500/50"
-                    : "border-white/30 bg-gradient-to-br from-white to-gray-100"
-                }`}
-                onClick={() =>
-                  setSelectedIds((prev) =>
-                    prev.includes(card.id)
-                      ? prev.filter((x) => x !== card.id)
-                      : [...prev, card.id]
-                  )
-                }
-              >
-                <div className={`text-lg font-bold ${cardTextColor(card)}`}>
-                  {card.rank}
-                </div>
-                <div className={`text-base ${cardTextColor(card)}`}>
-                  {card.suit}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="text-center text-xs text-white/60 mt-1">
-            {selectedIds.length} selected
-          </div>
-        </div>
-
-        {/* BOTTOM ACTIONS */}
-        <div className="mt-4">
-          <div className="flex justify-center gap-3 bg-black/70 backdrop-blur-xl border border-white/20 rounded-3xl px-4 py-4 max-w-xl mx-auto">
-            <button
-              onClick={() => drawCard(false)}
-              disabled={!myTurn || hasDrawn}
-              className={`flex-1 px-4 py-3 rounded-2xl font-bold text-lg shadow-2xl transition-all ${
-                myTurn && !hasDrawn
-                  ? "bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-black hover:scale-105"
-                  : "bg-gray-700/50 cursor-not-allowed opacity-50 text-gray-300"
-              }`}
-            >
-              ➤ DRAW
-            </button>
-
-            <button
-              onClick={dropCards}
-              disabled={!myTurn || !hasDrawn || selectedIds.length === 0}
-              className={`flex-1 px-4 py-3 rounded-2xl font-bold text-lg shadow-2xl transition-all ${
-                myTurn && hasDrawn && selectedIds.length > 0
-                  ? "bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white hover:scale-105"
-                  : "bg-gray-700/50 cursor-not-allowed opacity-50 text-gray-300"
-              }`}
-            >
-              🗑️ DROP
-            </button>
-
-            <button
-              onClick={callClose}
-              disabled={!myTurn || hasDrawn}
-              className={`flex-1 px-4 py-3 rounded-2xl font-bold text-lg shadow-2xl transition-all ${
-                myTurn && !hasDrawn
-                  ? "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white hover:scale-105"
-                  : "bg-gray-700/50 cursor-not-allowed opacity-50 text-gray-300"
-              }`}
-            >
-              ❌ CLOSE
-            </button>
-          </div>
-          <div className="text-center text-xs text-white/50 mt-2">
-            {myTurn
-              ? hasDrawn
-                ? "✓ Drew – select cards & DROP"
-                : "Your turn – draw or close"
-              : "Waiting for other players..."}
-          </div>
+          )}
+        </p>
+        <div className="mt-3 md:mt-4 text-sm md:text-lg">
+          Players:{" "}
+          <span className="text-emerald-400 font-bold">
+            {players.length}/{MAX_PLAYERS}
+          </span>{" "}
+          | Turn:{" "}
+          <span
+            className={`font-bold px-2 md:px-3 py-1 rounded-full text-sm md:text-base ${
+              myTurn ? "bg-yellow-500/90 text-black" : "bg-gray-600/50"
+            }`}
+          >
+            {currentPlayer?.name || "None"}
+          </span>
         </div>
       </div>
 
-      {/* SCORE MODAL */}
-      {showPoints && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-2xl flex items-center justify-center p-4 z-50">
-          <div className="bg-gradient-to-br from-emerald-500 to-green-600 text-white p-10 rounded-3xl shadow-2xl max-w-lg w-full text-center border-4 border-white/20 max-h-[80vh] overflow-y-auto">
-            <h2 className="text-3xl font-black mb-6">SCORES</h2>
-            <div className="space-y-3 mb-6">
-              {players.map((p) => (
-                <div
-                  key={p.id}
-                  className="flex justify-between p-3 bg-white/20 rounded-2xl"
+      {started && (
+        <div className="z-10 w-full max-w-4xl p-3 md:p-4 bg-gray-900/50 rounded-2xl border border-gray-700">
+          <div className="flex flex-wrap justify-between items-center gap-2 text-sm md:text-base">
+            <div>
+              Turn:{" "}
+              <span className="text-xl md:text-2xl font-bold text-yellow-400">
+                {currentPlayer?.name}
+              </span>
+              {myTurn && (
+                <span
+                  className={`ml-2 md:ml-4 px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-bold ${
+                    hasDrawn
+                      ? "bg-emerald-500/30 text-emerald-200"
+                      : "bg-yellow-500/30 text-yellow-200"
+                  }`}
                 >
-                  <span className="font-semibold">{p.name}</span>
-                  <span className="font-black text-lg">{p.score} pts</span>
-                </div>
-              ))}
+                  {hasDrawn ? "Drew" : "Draw"}
+                </span>
+              )}
             </div>
+            <div className="text-sm md:text-base">
+              Draw: <span className="font-bold">{pendingDraw || 1}</span> | Skip:{" "}
+              <span className="font-bold">{pendingSkips}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {started && (
+        <div className="z-10 text-center">
+          <h3 className="text-lg md:text-xl mb-3 md:mb-4 font-bold">OPEN CARD</h3>
+          {discardTop ? (
             <button
-              onClick={() => setShowPoints(false)}
-              className="w-full px-6 py-3 bg-white/20 rounded-2xl font-bold border border-white/40 hover:bg-white/30 transition-all"
+              onClick={() => drawCard(true)}
+              disabled={!myTurn || hasDrawn}
+              className={`w-20 md:w-24 h-28 md:h-36 bg-white rounded-2xl shadow-2xl border-4 p-2 md:p-3 flex flex-col justify-between ${
+                myTurn && !hasDrawn
+                  ? "hover:scale-105 cursor-pointer border-blue-400"
+                  : "border-gray-300 opacity-70"
+              }`}
             >
-              CLOSE
+              <div
+                className={`text-base md:text-lg font-bold ${cardTextColor(
+                  discardTop
+                )}`}
+              >
+                {discardTop.rank}
+              </div>
+              <div
+                className={`text-3xl md:text-4xl text-center ${cardTextColor(
+                  discardTop
+                )}`}
+              >
+                {discardTop.rank === "JOKER" ? "🃏" : discardTop.suit}
+              </div>
+              <div
+                className={`text-base md:text-lg font-bold text-right ${cardTextColor(
+                  discardTop
+                )}`}
+              >
+                {discardTop.rank}
+              </div>
+            </button>
+          ) : (
+            <div className="w-20 md:w-24 h-28 md:h-36 bg-gray-800 border-2 border-dashed border-gray-600 rounded-2xl flex items-center justify-center text-gray-500 text-xs md:text-sm">
+              Empty
+            </div>
+          )}
+        </div>
+      )}
+
+      {started && (
+        <div className="z-10 w-full max-w-5xl grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
+          {players.map((p) => (
+            <div
+              key={p.id}
+              className={`p-3 md:p-4 rounded-2xl border-2 shadow-lg ${
+                p.id === youId
+                  ? "border-emerald-400 bg-emerald-900/30"
+                  : currentPlayer?.id === p.id
+                  ? "border-yellow-400 bg-yellow-900/30"
+                  : "border-gray-700 bg-gray-900/30"
+              }`}
+            >
+              <p className="font-bold text-center text-sm md:text-base truncate">
+                {p.name}
+              </p>
+              <p className="text-xs md:text-sm text-gray-400 text-center">
+                {p.handSize} cards | {p.score} pts
+              </p>
+              {p.hasDrawn && (
+                <p className="text-xs text-emerald-400 text-center">Drew</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {me && started && (
+        <div className="z-10 w-full max-w-5xl">
+          <h3 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-emerald-400 text-center">
+            Your Hand ({me.hand.length})
+          </h3>
+          <div className="flex gap-2 md:gap-3 flex-wrap justify-center p-3 md:p-4 bg-gray-900/50 rounded-2xl">
+            {me.hand.map((c) => {
+              const selected = selectedIds.includes(c.id);
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => toggleSelect(c.id)}
+                  disabled={!myTurn}
+                  className={`w-16 md:w-20 h-24 md:h-28 bg-white rounded-2xl shadow-xl border-4 flex flex-col p-1 md:p-2 justify-between transition-all ${
+                    selected
+                      ? "border-emerald-500 scale-110 shadow-emerald-500/50"
+                      : myTurn
+                      ? "border-gray-200 hover:border-blue-400 hover:scale-105"
+                      : "border-gray-300 opacity-50"
+                  }`}
+                >
+                  <div
+                    className={`text-sm md:text-lg font-bold ${cardTextColor(c)}`}
+                  >
+                    {c.rank}
+                  </div>
+                  <div
+                    className={`text-2xl md:text-3xl text-center ${cardTextColor(
+                      c
+                    )}`}
+                  >
+                    {c.rank === "JOKER" ? "🃏" : c.suit}
+                  </div>
+                  <div
+                    className={`text-sm md:text-lg font-bold text-right ${cardTextColor(
+                      c
+                    )}`}
+                  >
+                    {c.rank}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {myTurn && started && (
+        <div className="z-10 flex flex-wrap gap-2 md:gap-4 justify-center max-w-4xl p-4 md:p-6 bg-black/50 backdrop-blur-xl rounded-3xl border border-white/20">
+          <button
+            onClick={() => drawCard(false)}
+            disabled={hasDrawn}
+            className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${
+              hasDrawn
+                ? "bg-gray-700/50 cursor-not-allowed opacity-50"
+                : "bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800"
+            }`}
+          >
+            DECK
+          </button>
+          <button
+            onClick={() => drawCard(true)}
+            disabled={hasDrawn}
+            className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${
+              hasDrawn
+                ? "bg-gray-700/50 cursor-not-allowed opacity-50"
+                : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+            }`}
+          >
+            OPEN
+          </button>
+          <button
+            onClick={dropCards}
+            disabled={!allowDrop}
+            className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${
+              allowDrop
+                ? "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                : "bg-gray-700/50 cursor-not-allowed opacity-50"
+            }`}
+          >
+            DROP ({selectedIds.length})
+          </button>
+          <button
+            onClick={callClose}
+            className="px-4 md:px-8 py-3 md:py-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 rounded-2xl font-bold text-base md:text-xl shadow-2xl"
+          >
+            CLOSE
+          </button>
+        </div>
+      )}
+
+      {showPoints && screen === "game" && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-white/95 text-black rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl">
+            <h3 className="text-2xl md:text-3xl font-black text-center mb-4 md:mb-6 text-gray-900">
+              SCORES
+            </h3>
+            {players.map((p, i) => (
+              <div
+                key={p.id}
+                className={`flex justify-between p-3 md:p-4 rounded-2xl mb-2 md:mb-3 ${
+                  i === 0 ? "bg-emerald-500 text-white" : "bg-gray-100 text-black"
+                }`}
+              >
+                <span className="font-bold truncate text-sm md:text-base">
+                  {p.name}
+                </span>
+                <span className="font-black text-xl md:text-2xl px-3 md:px-4 py-1 md:py-2 rounded-xl">
+                  {p.score}
+                </span>
+              </div>
+            ))}
+            <button
+              onClick={handleContinue}
+              className="w-full py-3 md:py-4 bg-gray-900 text-white rounded-2xl text-lg md:text-xl font-bold mt-4 md:mt-6 hover:bg-gray-800"
+            >
+              CONTINUE
             </button>
           </div>
         </div>
       )}
+
+      <style jsx>{`@keyframes float{0%,100%{transform:translateY(0)rotate(0);}50%{transform:translateY(-20px)rotate(5deg);}}.animate-float-slow{animation:float 15s ease-in-out infinite;}`}</style>
     </div>
   );
 }
