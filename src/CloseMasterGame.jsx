@@ -34,7 +34,7 @@ function NeonFloatingCards() {
 
 export default function CloseMasterGame() {
   const [socket, setSocket] = useState(null);
-  const [screen, setScreen] = useState("welcome"); // welcome | lobby | game
+  const [screen, setScreen] = useState("welcome");
   const [playerName, setPlayerName] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [game, setGame] = useState(null);
@@ -90,28 +90,24 @@ export default function CloseMasterGame() {
   const me = players.find((p) => p.id === youId);
   const hasDrawn = me?.hasDrawn || false;
 
-  // selection info (for DROP rules)
-  const selectedCards = me
-    ? me.hand.filter((c) => selectedIds.includes(c.id))
-    : [];
+  const selectedCards = me ? me.hand.filter((c) => selectedIds.includes(c.id)) : [];
   const selectedRanks = [...new Set(selectedCards.map((c) => c.rank))];
-  const selectedSingleRank =
-    selectedRanks.length === 1 ? selectedRanks[0] : null;
+  const selectedSingleRank = selectedRanks.length === 1 ? selectedRanks[0] : null;
   const openCardRank = discardTop?.rank;
 
   let canDropWithoutDraw = false;
   if (!hasDrawn && selectedCards.length > 0 && selectedSingleRank) {
     const sameAsOpen = openCardRank && selectedSingleRank === openCardRank;
     if (sameAsOpen) {
-      // same as open card -> any count
       canDropWithoutDraw = true;
     } else if (selectedCards.length >= 3) {
-      // different rank but 3+ cards
       canDropWithoutDraw = true;
     }
   }
-  const allowDrop =
-    selectedCards.length > 0 && (hasDrawn || canDropWithoutDraw);
+  const allowDrop = selectedCards.length > 0 && (hasDrawn || canDropWithoutDraw);
+
+  // Close button disable logic as per your new rule
+  const closeDisabled = !myTurn || hasDrawn || discardTop?.rank === "7";
 
   const createRoom = () => {
     if (!socket || !playerName.trim()) {
@@ -197,7 +193,6 @@ export default function CloseMasterGame() {
     setScreen("lobby");
   };
 
-  // 1) WELCOME SCREEN
   if (screen === "welcome") {
     return (
       <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/20 to-blue-900/20 flex items-center justify-center px-4 relative overflow-hidden">
@@ -259,12 +254,22 @@ export default function CloseMasterGame() {
             </button>
           </div>
         </div>
-        <style jsx>{`@keyframes float{0%,100%{transform:translateY(0)rotate(0);}50%{transform:translateY(-20px)rotate(5deg);}}.animate-float-slow{animation:float 15s ease-in-out infinite;}`}</style>
+        <style jsx>{`@keyframes float {
+          0%, 100% {
+            transform: translateY(0) rotate(0);
+          }
+          50% {
+            transform: translateY(-20px) rotate(5deg);
+          }
+        }
+        .animate-float-slow {
+          animation: float 15s ease-in-out infinite;
+        }
+        `}</style>
       </div>
     );
   }
 
-  // 2) LOBBY SCREEN
   if (screen === "lobby") {
     return (
       <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/30 to-blue-900/30 text-white p-4 md:p-6 flex flex-col items-center gap-4 md:gap-6 relative overflow-hidden">
@@ -536,9 +541,7 @@ export default function CloseMasterGame() {
                     {c.rank}
                   </div>
                   <div
-                    className={`text-2xl md:text-3xl text-center ${cardTextColor(
-                      c
-                    )}`}
+                    className={`text-2xl md:text-3xl text-center ${cardTextColor(c)}`}
                   >
                     {c.rank === "JOKER" ? "🃏" : c.suit}
                   </div>
@@ -593,7 +596,12 @@ export default function CloseMasterGame() {
           </button>
           <button
             onClick={callClose}
-            className="px-4 md:px-8 py-3 md:py-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 rounded-2xl font-bold text-base md:text-xl shadow-2xl"
+            disabled={closeDisabled}
+            className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${
+              closeDisabled
+                ? "bg-gray-700/50 cursor-not-allowed opacity-50"
+                : "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 hover:scale-105"
+            }`}
           >
             CLOSE
           </button>
@@ -631,7 +639,18 @@ export default function CloseMasterGame() {
         </div>
       )}
 
-      <style jsx>{`@keyframes float{0%,100%{transform:translateY(0)rotate(0);}50%{transform:translateY(-20px)rotate(5deg);}}.animate-float-slow{animation:float 15s ease-in-out infinite;}`}</style>
+      <style jsx>{`@keyframes float {
+        0%, 100% {
+          transform: translateY(0) rotate(0);
+        }
+        50% {
+          transform: translateY(-20px) rotate(5deg);
+        }
+      }
+      .animate-float-slow {
+        animation: float 15s ease-in-out infinite;
+      }
+      `}</style>
     </div>
   );
 }
