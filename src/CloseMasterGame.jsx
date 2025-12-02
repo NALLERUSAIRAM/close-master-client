@@ -43,6 +43,34 @@ export default function CloseMasterGame() {
   const [showPoints, setShowPoints] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // permanent playerId (device-based)
+  const [playerId] = useState(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      let id = localStorage.getItem("cmp_player_id");
+      if (!id) {
+        if (window.crypto?.randomUUID) {
+          id = window.crypto.randomUUID();
+        } else {
+          id = Math.random().toString(36).slice(2);
+        }
+        localStorage.setItem("cmp_player_id", id);
+      }
+      return id;
+    } catch {
+      return "";
+    }
+  });
+
+  // load stored name (optional)
+  useEffect(() => {
+    try {
+      const storedName = localStorage.getItem("cmp_player_name");
+      if (storedName) setPlayerName(storedName);
+    } catch {}
+  }, []);
+
+  // socket setup
   useEffect(() => {
     const s = io(SERVER_URL, {
       transports: ["websocket"],
@@ -59,10 +87,29 @@ export default function CloseMasterGame() {
 
     s.on("connect", () => {
       console.log("✅ Connected:", s.id);
-      reconnectAttempts = 0; // Reset attempts
-      if (game?.roomId && playerName) {
+      reconnectAttempts = 0;
+
+      // try to rejoin using stored info
+      let roomIdToUse = game?.roomId;
+      let nameToUse = playerName;
+
+      try {
+        if (!roomIdToUse) {
+          roomIdToUse = localStorage.getItem("cmp_room_id");
+        }
+        if (!nameToUse) {
+          const storedName = localStorage.getItem("cmp_player_name");
+          if (storedName) nameToUse = storedName;
+        }
+      } catch {}
+
+      if (roomIdToUse && nameToUse) {
         setTimeout(() => {
-          s.emit("rejoin_room", { roomId: game.roomId, name: playerName });
+          s.emit("rejoin_room", {
+            roomId: roomIdToUse,
+            name: nameToUse,
+            playerId,
+          });
         }, 500);
       }
     });
@@ -85,10 +132,12 @@ export default function CloseMasterGame() {
     s.on("rejoin_success", (state) => {
       console.log("🔄 Rejoined game:", state.roomId);
       setGame(state);
+      setScreen(state.started ? "game" : "lobby");
     });
 
     s.on("rejoin_error", (error) => {
       console.log("❌ Rejoin failed:", error);
+      // stay on current screen or go welcome
       setScreen("welcome");
     });
 
@@ -114,7 +163,18 @@ export default function CloseMasterGame() {
     return () => {
       s.disconnect();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // keep roomId & name in localStorage when available
+  useEffect(() => {
+    if (game?.roomId && playerName) {
+      try {
+        localStorage.setItem("cmp_room_id", game.roomId);
+        localStorage.setItem("cmp_player_name", playerName);
+      } catch {}
+    }
+  }, [game?.roomId, playerName]);
 
   useEffect(() => {
     if (game?.closeCalled) setShowPoints(true);
@@ -129,10 +189,29 @@ export default function CloseMasterGame() {
         console.log("📱 App background");
       } else {
         console.log("📱 App foreground");
-        if (socket && game?.roomId && playerName && screen !== "welcome") {
-          reconnectTimeout = setTimeout(() => {
-            socket.emit("rejoin_room", { roomId: game.roomId, name: playerName });
-          }, 1000);
+        if (socket && screen !== "welcome") {
+          let roomIdToUse = game?.roomId;
+          let nameToUse = playerName;
+
+          try {
+            if (!roomIdToUse) {
+              roomIdToUse = localStorage.getItem("cmp_room_id");
+            }
+            if (!nameToUse) {
+              const storedName = localStorage.getItem("cmp_player_name");
+              if (storedName) nameToUse = storedName;
+            }
+          } catch {}
+
+          if (roomIdToUse && nameToUse) {
+            reconnectTimeout = setTimeout(() => {
+              socket.emit("rejoin_room", {
+                roomId: roomIdToUse,
+                name: nameToUse,
+                playerId,
+              });
+            }, 1000);
+          }
         }
       }
     };
@@ -143,7 +222,7 @@ export default function CloseMasterGame() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
     };
-  }, [socket, game?.roomId, playerName, screen]);
+  }, [socket, game?.roomId, playerName, screen, playerId]);
 
   const roomId = game?.roomId;
   const youId = game?.youId;
@@ -174,7 +253,6 @@ export default function CloseMasterGame() {
   }
   const allowDrop = selectedCards.length > 0 && (hasDrawn || canDropWithoutDraw);
 
-  // Close button disable logic as per your new rule
   const closeDisabled = !myTurn || hasDrawn || discardTop?.rank === "7";
 
   const createRoom = () => {
@@ -183,12 +261,16 @@ export default function CloseMasterGame() {
       return;
     }
     setLoading(true);
-    socket.emit("create_room", { name: playerName.trim() }, (res) => {
-      setLoading(false);
-      if (!res || res.error) {
-        alert(res?.error || "Create failed");
+    socket.emit(
+      "create_room",
+      { name: playerName.trim(), playerId },
+      (res) => {
+        setLoading(false);
+        if (!res || res.error) {
+          alert(res?.error || "Create failed");
+        }
       }
-    });
+    );
   };
 
   const joinRoom = () => {
@@ -199,7 +281,11 @@ export default function CloseMasterGame() {
     setLoading(true);
     socket.emit(
       "join_room",
-      { name: playerName.trim(), roomId: joinCode.toUpperCase().trim() },
+      {
+        name: playerName.trim(),
+        roomId: joinCode.toUpperCase().trim(),
+        playerId,
+      },
       (res) => {
         setLoading(false);
         if (res?.error) {
@@ -244,9 +330,12 @@ export default function CloseMasterGame() {
 
   const exitGame = () => {
     if (window.confirm("Game exit cheyala?")) {
+      try {
+        localStorage.removeItem("cmp_room_id");
+        // name & playerId ni keep chesthunam – next time easy
+      } catch {}
       socket?.disconnect();
       setScreen("welcome");
-      setPlayerName("");
       setJoinCode("");
       setGame(null);
       setSelectedIds([]);
@@ -261,6 +350,7 @@ export default function CloseMasterGame() {
     setScreen("lobby");
   };
 
+  // WELCOME SCREEN
   if (screen === "welcome") {
     return (
       <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/20 to-blue-900/20 flex items-center justify-center px-4 relative overflow-hidden">
@@ -338,6 +428,7 @@ export default function CloseMasterGame() {
     );
   }
 
+  // LOBBY SCREEN
   if (screen === "lobby") {
     return (
       <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/30 to-blue-900/30 text-white p-4 md:p-6 flex flex-col items-center gap-4 md:gap-6 relative overflow-hidden">
@@ -448,7 +539,7 @@ export default function CloseMasterGame() {
     );
   }
 
-  // 3) GAME SCREEN
+  // GAME SCREEN
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/30 to-blue-900/30 text-white p-4 md:p-6 flex flex-col items-center gap-4 md:gap-6 relative overflow-hidden">
       <NeonFloatingCards />
@@ -609,7 +700,9 @@ export default function CloseMasterGame() {
                     {c.rank}
                   </div>
                   <div
-                    className={`text-2xl md:text-3xl text-center ${cardTextColor(c)}`}
+                    className={`text-2xl md:text-3xl text-center ${cardTextColor(
+                      c
+                    )}`}
                   >
                     {c.rank === "JOKER" ? "🃏" : c.suit}
                   </div>
