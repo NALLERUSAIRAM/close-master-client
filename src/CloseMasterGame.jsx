@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 
 const SERVER_URL = "https://close-master-server-production.up.railway.app";
@@ -32,12 +32,14 @@ function NeonFloatingCards() {
   );
 }
 
-// current round points helper
-function getRoundPoints(p) {
+// round-points helper (total - base for that round)
+function getRoundPointsForPlayer(p, baseScores) {
   if (!p) return 0;
-  if (typeof p.roundPoints === "number") return p.roundPoints;
-  if (typeof p.lastRoundScore === "number") return p.lastRoundScore;
-  return typeof p.score === "number" ? p.score : 0;
+  const total = typeof p.score === "number" ? p.score : 0;
+  const base =
+    typeof baseScores[p.id] === "number" ? baseScores[p.id] : total;
+  const diff = total - base;
+  return diff < 0 ? 0 : diff;
 }
 
 export default function CloseMasterGame() {
@@ -48,12 +50,16 @@ export default function CloseMasterGame() {
   const [game, setGame] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [isHost, setIsHost] = useState(false);
-  const [showPoints, setShowPoints] = useState(false); // lobby SCORES button kosam
+  const [showPoints, setShowPoints] = useState(false); // lobby SCORES button
   const [loading, setLoading] = useState(false);
 
-  // NEW: close result overlay (fireworks + winner + round points)
+  // CLOSE result overlay
   const [showResultOverlay, setShowResultOverlay] = useState(false);
   const [winnerName, setWinnerName] = useState("");
+
+  // round base scores (total before round start)
+  const [roundBaseScores, setRoundBaseScores] = useState({});
+  const prevStartedRef = useRef(false);
 
   // permanent playerId (device-based)
   const [playerId] = useState(() => {
@@ -101,6 +107,7 @@ export default function CloseMasterGame() {
       console.log("✅ Connected:", s.id);
       reconnectAttempts = 0;
 
+      // try to rejoin using stored info
       let roomIdToUse = game?.roomId;
       let nameToUse = playerName;
 
@@ -176,7 +183,7 @@ export default function CloseMasterGame() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // keep roomId & name in localStorage when available
+  // store roomId & name in localStorage
   useEffect(() => {
     if (game?.roomId && playerName) {
       try {
@@ -186,7 +193,20 @@ export default function CloseMasterGame() {
     }
   }, [game?.roomId, playerName]);
 
-  // 🔥 when round closed → show fireworks + winner + round points
+  // ROUND START detect → save base scores
+  useEffect(() => {
+    const startedNow = !!game?.started;
+    if (startedNow && !prevStartedRef.current) {
+      const base = {};
+      (game?.players || []).forEach((p) => {
+        base[p.id] = typeof p.score === "number" ? p.score : 0;
+      });
+      setRoundBaseScores(base);
+    }
+    prevStartedRef.current = startedNow;
+  }, [game?.started, game?.players]);
+
+  // CLOSE called → show overlay with winner & round points
   useEffect(() => {
     if (!game?.closeCalled) {
       setShowResultOverlay(false);
@@ -201,7 +221,7 @@ export default function CloseMasterGame() {
     setShowResultOverlay(true);
   }, [game?.closeCalled, game?.players, game?.currentIndex]);
 
-  // Page visibility and reconnect handling
+  // Page visibility / reconnect
   useEffect(() => {
     let reconnectTimeout;
 
@@ -258,7 +278,9 @@ export default function CloseMasterGame() {
   const me = players.find((p) => p.id === youId);
   const hasDrawn = me?.hasDrawn || false;
 
-  const selectedCards = me ? me.hand.filter((c) => selectedIds.includes(c.id)) : [];
+  const selectedCards = me
+    ? me.hand.filter((c) => selectedIds.includes(c.id))
+    : [];
   const selectedRanks = [...new Set(selectedCards.map((c) => c.rank))];
   const selectedSingleRank = selectedRanks.length === 1 ? selectedRanks[0] : null;
   const openCardRank = discardTop?.rank;
@@ -367,42 +389,44 @@ export default function CloseMasterGame() {
   };
 
   const handleContinue = () => {
-    // round ayipoindi → lobby ki
     setShowResultOverlay(false);
     setScreen("lobby");
   };
 
-  // FULL-SCREEN RESULT + FIREWORKS OVERLAY (game close ayyaka)
+  // FULL-SCREEN RESULT + FIREWORKS OVERLAY
   const ResultOverlay = () => {
     if (!showResultOverlay || !game?.closeCalled) return null;
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden">
-        {/* full screen dark dim */}
+        {/* dim background */}
         <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
 
-        {/* fireworks – random glowing circles */}
+        {/* fireworks bursts */}
         <div className="absolute inset-0 pointer-events-none">
-          {[...Array(8)].map((_, i) => (
+          {Array.from({ length: 12 }).map((_, i) => (
             <div
               key={i}
-              className="absolute w-40 h-40 rounded-full opacity-70 animate-burst"
+              className="absolute rounded-full firework-burst"
               style={{
+                width: "6rem",
+                height: "6rem",
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 100}%`,
-                boxShadow: "0 0 40px 12px rgba(251,191,36,0.9)",
+                boxShadow: "0 0 40px 10px rgba(251,191,36,0.95)",
                 background:
-                  "radial-gradient(circle, rgba(251,191,36,0.95) 0%, rgba(0,0,0,0) 70%)",
+                  "radial-gradient(circle, rgba(251,191,36,1) 0%, rgba(0,0,0,0) 70%)",
+                animationDelay: `${Math.random() * 0.8}s`,
               }}
             />
           ))}
         </div>
 
-        {/* center card */}
+        {/* winner card */}
         <div className="relative px-8 py-6 md:px-10 md:py-8 bg-black/90 rounded-3xl border border-amber-400 shadow-[0_0_60px_rgba(251,191,36,1)] max-w-md w-[90%]">
           <p className="text-xs md:text-sm font-semibold tracking-[0.3em] text-amber-300 text-center mb-2">
             ROUND WINNER
           </p>
-          <p className="text-2xl md:text-3xl font-black text-amber-400 text-center drop-shadow-lg mb-1 capitalize">
+          <p className="text-2xl md:text-3xl font-black text-amber-400 text-center mb-1 capitalize">
             {winnerName}
           </p>
           <p className="text-sm md:text-base text-amber-100 text-center mb-4">
@@ -413,7 +437,7 @@ export default function CloseMasterGame() {
             <p className="text-xs md:text-sm text-amber-200 font-semibold mb-2 text-center">
               CURRENT ROUND POINTS
             </p>
-            {players.map((p, i) => (
+            {players.map((p) => (
               <div
                 key={p.id}
                 className={`flex justify-between items-center px-3 py-2 rounded-xl mb-1 text-sm md:text-base ${
@@ -424,7 +448,7 @@ export default function CloseMasterGame() {
               >
                 <span className="font-semibold truncate">{p.name}</span>
                 <span className="font-black text-lg md:text-xl">
-                  {getRoundPoints(p)}
+                  {getRoundPointsForPlayer(p, roundBaseScores)}
                 </span>
               </div>
             ))}
@@ -503,17 +527,18 @@ export default function CloseMasterGame() {
             </button>
           </div>
         </div>
-        <style jsx>{`@keyframes float {
-          0%, 100% { transform: translateY(0) rotate(0); }
-          50% { transform: translateY(-20px) rotate(5deg); }
-        }
-        .animate-float-slow { animation: float 15s ease-in-out infinite; }
-        @keyframes burst {
-          0% { transform: scale(0); opacity: 0.9; }
-          70% { transform: scale(1); opacity: 0.6; }
-          100% { transform: scale(1.2); opacity: 0; }
-        }
-        .animate-burst { animation: burst 1.4s ease-out infinite; }
+        <style jsx>{`
+          @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0); }
+            50% { transform: translateY(-20px) rotate(5deg); }
+          }
+          .animate-float-slow { animation: float 15s ease-in-out infinite; }
+          @keyframes firework-burst {
+            0% { transform: scale(0); opacity: 1; }
+            60% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.6); opacity: 0; }
+          }
+          .firework-burst { animation: firework-burst 1.2s ease-out infinite; }
         `}</style>
       </div>
     );
@@ -628,6 +653,20 @@ export default function CloseMasterGame() {
             </div>
           </div>
         )}
+
+        <style jsx>{`
+          @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0); }
+            50% { transform: translateY(-20px) rotate(5deg); }
+          }
+          .animate-float-slow { animation: float 15s ease-in-out infinite; }
+          @keyframes firework-burst {
+            0% { transform: scale(0); opacity: 1; }
+            60% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.6); opacity: 0; }
+          }
+          .firework-burst { animation: firework-burst 1.2s ease-out infinite; }
+        `}</style>
       </div>
     );
   }
@@ -756,7 +795,7 @@ export default function CloseMasterGame() {
               <p className="font-bold text-center text-sm md:text-base truncate">
                 {p.name}
               </p>
-              {/* remaining cards REMOVE, only total score */}
+              {/* remaining cards remove – only total score */}
               <p className="text-xs md:text-sm text-gray-400 text-center">
                 {p.score} pts
               </p>
@@ -853,17 +892,18 @@ export default function CloseMasterGame() {
         </div>
       )}
 
-      <style jsx>{`@keyframes float {
-        0%, 100% { transform: translateY(0) rotate(0); }
-        50% { transform: translateY(-20px) rotate(5deg); }
-      }
-      .animate-float-slow { animation: float 15s ease-in-out infinite; }
-      @keyframes burst {
-        0% { transform: scale(0); opacity: 0.9; }
-        70% { transform: scale(1); opacity: 0.6; }
-        100% { transform: scale(1.2); opacity: 0; }
-      }
-      .animate-burst { animation: burst 1.4s ease-out infinite; }
+      <style jsx>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0) rotate(0); }
+          50% { transform: translateY(-20px) rotate(5deg); }
+        }
+        .animate-float-slow { animation: float 15s ease-in-out infinite; }
+        @keyframes firework-burst {
+          0% { transform: scale(0); opacity: 1; }
+          60% { transform: scale(1); opacity: 1; }
+          100% { transform: scale(1.6); opacity: 0; }
+        }
+        .firework-burst { animation: firework-burst 1.2s ease-out infinite; }
       `}</style>
     </div>
   );
