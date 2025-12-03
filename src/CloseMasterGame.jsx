@@ -32,7 +32,7 @@ function NeonFloatingCards() {
   );
 }
 
-// helper: try to read "current round points" from player object
+// current round points helper
 function getRoundPoints(p) {
   if (!p) return 0;
   if (typeof p.roundPoints === "number") return p.roundPoints;
@@ -48,11 +48,11 @@ export default function CloseMasterGame() {
   const [game, setGame] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [isHost, setIsHost] = useState(false);
-  const [showPoints, setShowPoints] = useState(false);
+  const [showPoints, setShowPoints] = useState(false); // lobby SCORES button kosam
   const [loading, setLoading] = useState(false);
 
-  // NEW: close winner splash (fireworks)
-  const [showWinnerSplash, setShowWinnerSplash] = useState(false);
+  // NEW: close result overlay (fireworks + winner + round points)
+  const [showResultOverlay, setShowResultOverlay] = useState(false);
   const [winnerName, setWinnerName] = useState("");
 
   // permanent playerId (device-based)
@@ -101,7 +101,6 @@ export default function CloseMasterGame() {
       console.log("✅ Connected:", s.id);
       reconnectAttempts = 0;
 
-      // try to rejoin using stored info
       let roomIdToUse = game?.roomId;
       let nameToUse = playerName;
 
@@ -149,7 +148,6 @@ export default function CloseMasterGame() {
 
     s.on("rejoin_error", (error) => {
       console.log("❌ Rejoin failed:", error);
-      // stay on current screen or go welcome
       setScreen("welcome");
     });
 
@@ -188,29 +186,20 @@ export default function CloseMasterGame() {
     }
   }, [game?.roomId, playerName]);
 
-  // 🔥 CLOSE → winner fireworks → after 1.5s round-points popup
+  // 🔥 when round closed → show fireworks + winner + round points
   useEffect(() => {
-    if (!game?.closeCalled) return;
-    // already showing something, avoid re-trigger
-    if (showPoints || showWinnerSplash) return;
+    if (!game?.closeCalled) {
+      setShowResultOverlay(false);
+      return;
+    }
 
     const players = game.players || [];
     const currentIndex = game.currentIndex ?? 0;
-
-    // assume current turn player is the one who closed (most common case)
     const closer = players[currentIndex] || players[0];
-    const name = closer?.name || "CLOSE";
 
-    setWinnerName(name);
-    setShowWinnerSplash(true);
-
-    const t = setTimeout(() => {
-      setShowWinnerSplash(false);
-      setShowPoints(true);
-    }, 1500);
-
-    return () => clearTimeout(t);
-  }, [game?.closeCalled, game?.players, game?.currentIndex, showPoints, showWinnerSplash]);
+    setWinnerName(closer?.name || "Winner");
+    setShowResultOverlay(true);
+  }, [game?.closeCalled, game?.players, game?.currentIndex]);
 
   // Page visibility and reconnect handling
   useEffect(() => {
@@ -352,7 +341,6 @@ export default function CloseMasterGame() {
     if (!socket || !roomId || !myTurn) return;
     if (!window.confirm("CLOSE cheyala?")) return;
     socket.emit("action_close", { roomId });
-    // NOTE: winner splash + points popup handling useEffect lo untundi (game.closeCalled)
   };
 
   const toggleSelect = (id) => {
@@ -365,7 +353,6 @@ export default function CloseMasterGame() {
     if (window.confirm("Game exit cheyala?")) {
       try {
         localStorage.removeItem("cmp_room_id");
-        // name & playerId ni keep chesthunam – next time easy
       } catch {}
       socket?.disconnect();
       setScreen("welcome");
@@ -374,16 +361,84 @@ export default function CloseMasterGame() {
       setSelectedIds([]);
       setIsHost(false);
       setShowPoints(false);
-      setShowWinnerSplash(false);
+      setShowResultOverlay(false);
       setLoading(false);
     }
   };
 
   const handleContinue = () => {
-    // ROUND complete → back to lobby, fireworks off, popup close
-    setShowWinnerSplash(false);
-    setShowPoints(false);
+    // round ayipoindi → lobby ki
+    setShowResultOverlay(false);
     setScreen("lobby");
+  };
+
+  // FULL-SCREEN RESULT + FIREWORKS OVERLAY (game close ayyaka)
+  const ResultOverlay = () => {
+    if (!showResultOverlay || !game?.closeCalled) return null;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden">
+        {/* full screen dark dim */}
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
+
+        {/* fireworks – random glowing circles */}
+        <div className="absolute inset-0 pointer-events-none">
+          {[...Array(8)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-40 h-40 rounded-full opacity-70 animate-burst"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                boxShadow: "0 0 40px 12px rgba(251,191,36,0.9)",
+                background:
+                  "radial-gradient(circle, rgba(251,191,36,0.95) 0%, rgba(0,0,0,0) 70%)",
+              }}
+            />
+          ))}
+        </div>
+
+        {/* center card */}
+        <div className="relative px-8 py-6 md:px-10 md:py-8 bg-black/90 rounded-3xl border border-amber-400 shadow-[0_0_60px_rgba(251,191,36,1)] max-w-md w-[90%]">
+          <p className="text-xs md:text-sm font-semibold tracking-[0.3em] text-amber-300 text-center mb-2">
+            ROUND WINNER
+          </p>
+          <p className="text-2xl md:text-3xl font-black text-amber-400 text-center drop-shadow-lg mb-1 capitalize">
+            {winnerName}
+          </p>
+          <p className="text-sm md:text-base text-amber-100 text-center mb-4">
+            CLOSE SUCCESS 🎉
+          </p>
+
+          <div className="bg-white/5 rounded-2xl p-3 md:p-4 mb-4 max-h-60 overflow-y-auto">
+            <p className="text-xs md:text-sm text-amber-200 font-semibold mb-2 text-center">
+              CURRENT ROUND POINTS
+            </p>
+            {players.map((p, i) => (
+              <div
+                key={p.id}
+                className={`flex justify-between items-center px-3 py-2 rounded-xl mb-1 text-sm md:text-base ${
+                  p.name === winnerName
+                    ? "bg-emerald-500/90 text-white"
+                    : "bg-gray-900/70 text-gray-100"
+                }`}
+              >
+                <span className="font-semibold truncate">{p.name}</span>
+                <span className="font-black text-lg md:text-xl">
+                  {getRoundPoints(p)}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={handleContinue}
+            className="w-full py-3 md:py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 rounded-2xl font-bold text-base md:text-lg text-black shadow-xl"
+          >
+            CONTINUE
+          </button>
+        </div>
+      </div>
+    );
   };
 
   // WELCOME SCREEN
@@ -449,16 +504,16 @@ export default function CloseMasterGame() {
           </div>
         </div>
         <style jsx>{`@keyframes float {
-          0%, 100% {
-            transform: translateY(0) rotate(0);
-          }
-          50% {
-            transform: translateY(-20px) rotate(5deg);
-          }
+          0%, 100% { transform: translateY(0) rotate(0); }
+          50% { transform: translateY(-20px) rotate(5deg); }
         }
-        .animate-float-slow {
-          animation: float 15s ease-in-out infinite;
+        .animate-float-slow { animation: float 15s ease-in-out infinite; }
+        @keyframes burst {
+          0% { transform: scale(0); opacity: 0.9; }
+          70% { transform: scale(1); opacity: 0.6; }
+          100% { transform: scale(1.2); opacity: 0; }
         }
+        .animate-burst { animation: burst 1.4s ease-out infinite; }
         `}</style>
       </div>
     );
@@ -469,26 +524,7 @@ export default function CloseMasterGame() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/30 to-blue-900/30 text-white p-4 md:p-6 flex flex-col items-center gap-4 md:gap-6 relative overflow-hidden">
         <NeonFloatingCards />
-
-        {/* 🔥 Winner fireworks overlay (if previous round just finished) */}
-        {showWinnerSplash && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50">
-            <div className="relative px-8 py-6 bg-black/80 rounded-3xl border border-amber-400 shadow-[0_0_40px_rgba(251,191,36,0.8)]">
-              <div className="absolute -top-4 left-6 w-4 h-4 rounded-full bg-amber-400 animate-ping" />
-              <div className="absolute -top-4 right-6 w-4 h-4 rounded-full bg-sky-400 animate-ping" />
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-emerald-400 animate-ping" />
-              <p className="text-xs md:text-sm font-semibold tracking-[0.3em] text-amber-300 text-center mb-2">
-                ROUND WINNER
-              </p>
-              <p className="text-2xl md:text-3xl font-black text-amber-400 text-center drop-shadow-lg">
-                {winnerName}
-              </p>
-              <p className="mt-2 text-sm md:text-base text-amber-100 text-center">
-                CLOSE SUCCESS 🎉
-              </p>
-            </div>
-          </div>
-        )}
+        <ResultOverlay />
 
         <div className="z-10 w-full max-w-5xl text-center p-4 md:p-6 bg-black/60 backdrop-blur-xl rounded-3xl border border-emerald-500/50 shadow-2xl">
           <h1 className="mb-3 md:mb-4 text-2xl md:text-4xl font-black bg-gradient-to-r from-emerald-400 to-emerald-600 bg-clip-text text-transparent">
@@ -566,7 +602,7 @@ export default function CloseMasterGame() {
           <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
             <div className="bg-white/95 text-black rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl">
               <h3 className="text-2xl md:text-3xl font-black text-center mb-4 md:mb-6 text-gray-900">
-                ROUND POINTS
+                SCORES
               </h3>
               {players.map((p, i) => (
                 <div
@@ -579,12 +615,12 @@ export default function CloseMasterGame() {
                     {p.name}
                   </span>
                   <span className="font-black text-xl md:text-2xl px-3 md:px-4 py-1 md:py-2 rounded-xl">
-                    {getRoundPoints(p)}
+                    {p.score}
                   </span>
                 </div>
               ))}
               <button
-                onClick={handleContinue}
+                onClick={() => setShowPoints(false)}
                 className="w-full py-3 md:py-4 bg-gray-900 text-white rounded-2xl text-lg md:text-xl font-bold mt-4 md:mt-6 hover:bg-gray-800"
               >
                 CONTINUE
@@ -600,26 +636,7 @@ export default function CloseMasterGame() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/30 to-blue-900/30 text-white p-4 md:p-6 flex flex-col items-center gap-4 md:gap-6 relative overflow-hidden">
       <NeonFloatingCards />
-
-      {/* 🔥 Winner fireworks overlay for game screen */}
-      {showWinnerSplash && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50">
-          <div className="relative px-8 py-6 bg-black/80 rounded-3xl border border-amber-400 shadow-[0_0_40px_rgba(251,191,36,0.8)]">
-            <div className="absolute -top-4 left-6 w-4 h-4 rounded-full bg-amber-400 animate-ping" />
-            <div className="absolute -top-4 right-6 w-4 h-4 rounded-full bg-sky-400 animate-ping" />
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-emerald-400 animate-ping" />
-            <p className="text-xs md:text-sm font-semibold tracking-[0.3em] text-amber-300 text-center mb-2">
-              ROUND WINNER
-            </p>
-            <p className="text-2xl md:text-3xl font-black text-amber-400 text-center drop-shadow-lg">
-              {winnerName}
-            </p>
-            <p className="mt-2 text-sm md:text-base text-amber-100 text-center">
-              CLOSE SUCCESS 🎉
-            </p>
-          </div>
-        </div>
-      )}
+      <ResultOverlay />
 
       <div className="z-10 w-full max-w-5xl text-center p-4 md:p-6 bg-black/60 backdrop-blur-xl rounded-3xl border border-emerald-500/50 shadow-2xl">
         <h1 className="mb-3 md:mb-4 text-2xl md:text-4xl font-black bg-gradient-to-r from-emerald-400 to-emerald-600 bg-clip-text text-transparent">
@@ -739,7 +756,7 @@ export default function CloseMasterGame() {
               <p className="font-bold text-center text-sm md:text-base truncate">
                 {p.name}
               </p>
-              {/* 🔄 Remaining cards text remove chesam – only points */}
+              {/* remaining cards REMOVE, only total score */}
               <p className="text-xs md:text-sm text-gray-400 text-center">
                 {p.score} pts
               </p>
@@ -836,48 +853,17 @@ export default function CloseMasterGame() {
         </div>
       )}
 
-      {showPoints && screen === "game" && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-white/95 text-black rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl">
-            <h3 className="text-2xl md:text-3xl font-black text-center mb-4 md:mb-6 text-gray-900">
-              ROUND POINTS
-            </h3>
-            {players.map((p, i) => (
-              <div
-                key={p.id}
-                className={`flex justify-between p-3 md:p-4 rounded-2xl mb-2 md:mb-3 ${
-                  i === 0 ? "bg-emerald-500 text-white" : "bg-gray-100 text-black"
-                }`}
-              >
-                <span className="font-bold truncate text-sm md:text-base">
-                  {p.name}
-                </span>
-                <span className="font-black text-xl md:text-2xl px-3 md:px-4 py-1 md:py-2 rounded-xl">
-                  {getRoundPoints(p)}
-                </span>
-              </div>
-            ))}
-            <button
-              onClick={handleContinue}
-              className="w-full py-3 md:py-4 bg-gray-900 text-white rounded-2xl text-lg md:text-xl font-bold mt-4 md:mt-6 hover:bg-gray-800"
-            >
-              CONTINUE
-            </button>
-          </div>
-        </div>
-      )}
-
       <style jsx>{`@keyframes float {
-        0%, 100% {
-          transform: translateY(0) rotate(0);
-        }
-        50% {
-          transform: translateY(-20px) rotate(5deg);
-        }
+        0%, 100% { transform: translateY(0) rotate(0); }
+        50% { transform: translateY(-20px) rotate(5deg); }
       }
-      .animate-float-slow {
-        animation: float 15s ease-in-out infinite;
+      .animate-float-slow { animation: float 15s ease-in-out infinite; }
+      @keyframes burst {
+        0% { transform: scale(0); opacity: 0.9; }
+        70% { transform: scale(1); opacity: 0.6; }
+        100% { transform: scale(1.2); opacity: 0; }
       }
+      .animate-burst { animation: burst 1.4s ease-out infinite; }
       `}</style>
     </div>
   );
