@@ -208,10 +208,9 @@ export default function CloseMasterGame() {
 
   // CLOSE called → show overlay with winner & round points
   useEffect(() => {
-    if (!game?.closeCalled) {
-      setShowResultOverlay(false);
-      return;
-    }
+    // IMPORTANT: do NOT hide overlay when closeCalled becomes false.
+    // Only react when it becomes true.
+    if (!game?.closeCalled) return;
 
     const players = game.players || [];
     const currentIndex = game.currentIndex ?? 0;
@@ -389,6 +388,7 @@ export default function CloseMasterGame() {
   };
 
   const handleContinue = () => {
+    // overlay close → go to lobby
     setShowResultOverlay(false);
     setScreen("lobby");
   };
@@ -547,7 +547,7 @@ export default function CloseMasterGame() {
   // LOBBY SCREEN
   if (screen === "lobby") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/30 to-blue-900/30 text-white p-4 md:p-6 flex flex-col itemscenter gap-4 md:gap-6 relative overflow-hidden">
+      <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/30 to-blue-900/30 text-white p-4 md:p-6 flex flex-col items-center gap-4 md:gap-6 relative overflow-hidden">
         <NeonFloatingCards />
         <ResultOverlay />
 
@@ -632,7 +632,7 @@ export default function CloseMasterGame() {
               {players.map((p, i) => (
                 <div
                   key={p.id}
-                  className={`flex justifybetween p-3 md:p-4 rounded-2xl mb-2 md:mb-3 ${
+                  className={`flex justify-between p-3 md:p-4 rounded-2xl mb-2 md:mb-3 ${
                     i === 0 ? "bg-emerald-500 text-white" : "bg-gray-100 text-black"
                   }`}
                 >
@@ -795,7 +795,7 @@ export default function CloseMasterGame() {
               <p className="font-bold text-center text-sm md:text-base truncate">
                 {p.name}
               </p>
-              {/* HERE: show cards + points for all players */}
+              {/* cards + points for all players */}
               <p className="text-xs md:text-sm text-gray-400 text-center">
                 {p.handSize} cards | {p.score} pts
               </p>
@@ -855,7 +855,7 @@ export default function CloseMasterGame() {
       )}
 
       {myTurn && started && (
-        <div className="z-10 flex flex-wrap gap-2 md:gap-4 justify-center max-w-4xl p-4 md:p-6 bg-black/50 backdrop-blur-xl rounded-3xl border borderwhite/20">
+        <div className="z-10 flex flex-wrap gap-2 md:gap-4 justify-center max-w-4xl p-4 md:p-6 bg-black/50 backdrop-blur-xl rounded-3xl border border-white/20">
           <button
             onClick={() => drawCard(false)}
             disabled={hasDrawn}
