@@ -820,13 +820,18 @@ export default function CloseMasterGame() {
                   key={c.id}
                   onClick={() => toggleSelect(c.id)}
                   disabled={!myTurn}
-                  className={`w-16 md:w-20 h-24 md:h-28 bg-white rounded-2xl shadow-xl border-4 flex flex-col p-1 md:p-2 justify-between transition-all ${
-                    selected
-                      ? "border-emerald-500 scale-110 shadow-emerald-500/50"
-                      : myTurn
-                      ? "border-gray-200 hover:border-blue-400 hover:scale-105"
-                      : "border-gray-300 opacity-50"
-                  }`}
+                  className={`
+                    w-16 md:w-20 h-24 md:h-28
+                    bg-white rounded-2xl shadow-xl border-4
+                    flex flex-col p-1 md:p-2 justify-between transition-all
+                    ${
+                      selected
+                        ? "scale-125 border-cyan-300 shadow-[0_0_25px_rgba(0,255,255,0.9)] animate-neon-rotate"
+                        : myTurn
+                        ? "border-gray-200 hover:border-blue-400 hover:scale-105"
+                        : "border-gray-300 opacity-50"
+                    }
+                  `}
                 >
                   <div
                     className={`text-sm md:text-lg font-bold ${cardTextColor(c)}`}
@@ -898,12 +903,23 @@ export default function CloseMasterGame() {
           50% { transform: translateY(-20px) rotate(5deg); }
         }
         .animate-float-slow { animation: float 15s ease-in-out infinite; }
+
         @keyframes firework-burst {
           0% { transform: scale(0); opacity: 1; }
           60% { transform: scale(1); opacity: 1; }
           100% { transform: scale(1.6); opacity: 0; }
         }
         .firework-burst { animation: firework-burst 1.2s ease-out infinite; }
+
+        /* NEON selected card rotation */
+        @keyframes neon-rotate {
+          0% { transform: rotate(-4deg) scale(1.25); }
+          50% { transform: rotate(4deg) scale(1.25); }
+          100% { transform: rotate(-4deg) scale(1.25); }
+        }
+        .animate-neon-rotate {
+          animation: neon-rotate 1.5s ease-in-out infinite;
+        }
       `}</style>
     </div>
   );
