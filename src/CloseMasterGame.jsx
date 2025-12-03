@@ -547,7 +547,7 @@ export default function CloseMasterGame() {
   // LOBBY SCREEN
   if (screen === "lobby") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/30 to-blue-900/30 text-white p-4 md:p-6 flex flex-col items-center gap-4 md:gap-6 relative overflow-hidden">
+      <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/30 to-blue-900/30 text-white p-4 md:p-6 flex flex-col itemscenter gap-4 md:gap-6 relative overflow-hidden">
         <NeonFloatingCards />
         <ResultOverlay />
 
@@ -632,7 +632,7 @@ export default function CloseMasterGame() {
               {players.map((p, i) => (
                 <div
                   key={p.id}
-                  className={`flex justify-between p-3 md:p-4 rounded-2xl mb-2 md:mb-3 ${
+                  className={`flex justifybetween p-3 md:p-4 rounded-2xl mb-2 md:mb-3 ${
                     i === 0 ? "bg-emerald-500 text-white" : "bg-gray-100 text-black"
                   }`}
                 >
@@ -795,9 +795,9 @@ export default function CloseMasterGame() {
               <p className="font-bold text-center text-sm md:text-base truncate">
                 {p.name}
               </p>
-              {/* remaining cards remove – only total score */}
+              {/* HERE: show cards + points for all players */}
               <p className="text-xs md:text-sm text-gray-400 text-center">
-                {p.score} pts
+                {p.handSize} cards | {p.score} pts
               </p>
               {p.hasDrawn && (
                 <p className="text-xs text-emerald-400 text-center">Drew</p>
@@ -855,7 +855,7 @@ export default function CloseMasterGame() {
       )}
 
       {myTurn && started && (
-        <div className="z-10 flex flex-wrap gap-2 md:gap-4 justify-center max-w-4xl p-4 md:p-6 bg-black/50 backdrop-blur-xl rounded-3xl border border-white/20">
+        <div className="z-10 flex flex-wrap gap-2 md:gap-4 justify-center max-w-4xl p-4 md:p-6 bg-black/50 backdrop-blur-xl rounded-3xl border borderwhite/20">
           <button
             onClick={() => drawCard(false)}
             disabled={hasDrawn}
