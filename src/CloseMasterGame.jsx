@@ -32,6 +32,14 @@ function NeonFloatingCards() {
   );
 }
 
+// helper: try to read "current round points" from player object
+function getRoundPoints(p) {
+  if (!p) return 0;
+  if (typeof p.roundPoints === "number") return p.roundPoints;
+  if (typeof p.lastRoundScore === "number") return p.lastRoundScore;
+  return typeof p.score === "number" ? p.score : 0;
+}
+
 export default function CloseMasterGame() {
   const [socket, setSocket] = useState(null);
   const [screen, setScreen] = useState("welcome");
@@ -42,6 +50,10 @@ export default function CloseMasterGame() {
   const [isHost, setIsHost] = useState(false);
   const [showPoints, setShowPoints] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // NEW: close winner splash (fireworks)
+  const [showWinnerSplash, setShowWinnerSplash] = useState(false);
+  const [winnerName, setWinnerName] = useState("");
 
   // permanent playerId (device-based)
   const [playerId] = useState(() => {
@@ -176,9 +188,29 @@ export default function CloseMasterGame() {
     }
   }, [game?.roomId, playerName]);
 
+  // 🔥 CLOSE → winner fireworks → after 1.5s round-points popup
   useEffect(() => {
-    if (game?.closeCalled) setShowPoints(true);
-  }, [game?.closeCalled]);
+    if (!game?.closeCalled) return;
+    // already showing something, avoid re-trigger
+    if (showPoints || showWinnerSplash) return;
+
+    const players = game.players || [];
+    const currentIndex = game.currentIndex ?? 0;
+
+    // assume current turn player is the one who closed (most common case)
+    const closer = players[currentIndex] || players[0];
+    const name = closer?.name || "CLOSE";
+
+    setWinnerName(name);
+    setShowWinnerSplash(true);
+
+    const t = setTimeout(() => {
+      setShowWinnerSplash(false);
+      setShowPoints(true);
+    }, 1500);
+
+    return () => clearTimeout(t);
+  }, [game?.closeCalled, game?.players, game?.currentIndex, showPoints, showWinnerSplash]);
 
   // Page visibility and reconnect handling
   useEffect(() => {
@@ -320,6 +352,7 @@ export default function CloseMasterGame() {
     if (!socket || !roomId || !myTurn) return;
     if (!window.confirm("CLOSE cheyala?")) return;
     socket.emit("action_close", { roomId });
+    // NOTE: winner splash + points popup handling useEffect lo untundi (game.closeCalled)
   };
 
   const toggleSelect = (id) => {
@@ -341,11 +374,14 @@ export default function CloseMasterGame() {
       setSelectedIds([]);
       setIsHost(false);
       setShowPoints(false);
+      setShowWinnerSplash(false);
       setLoading(false);
     }
   };
 
   const handleContinue = () => {
+    // ROUND complete → back to lobby, fireworks off, popup close
+    setShowWinnerSplash(false);
     setShowPoints(false);
     setScreen("lobby");
   };
@@ -433,6 +469,27 @@ export default function CloseMasterGame() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/30 to-blue-900/30 text-white p-4 md:p-6 flex flex-col items-center gap-4 md:gap-6 relative overflow-hidden">
         <NeonFloatingCards />
+
+        {/* 🔥 Winner fireworks overlay (if previous round just finished) */}
+        {showWinnerSplash && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50">
+            <div className="relative px-8 py-6 bg-black/80 rounded-3xl border border-amber-400 shadow-[0_0_40px_rgba(251,191,36,0.8)]">
+              <div className="absolute -top-4 left-6 w-4 h-4 rounded-full bg-amber-400 animate-ping" />
+              <div className="absolute -top-4 right-6 w-4 h-4 rounded-full bg-sky-400 animate-ping" />
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-emerald-400 animate-ping" />
+              <p className="text-xs md:text-sm font-semibold tracking-[0.3em] text-amber-300 text-center mb-2">
+                ROUND WINNER
+              </p>
+              <p className="text-2xl md:text-3xl font-black text-amber-400 text-center drop-shadow-lg">
+                {winnerName}
+              </p>
+              <p className="mt-2 text-sm md:text-base text-amber-100 text-center">
+                CLOSE SUCCESS 🎉
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="z-10 w-full max-w-5xl text-center p-4 md:p-6 bg-black/60 backdrop-blur-xl rounded-3xl border border-emerald-500/50 shadow-2xl">
           <h1 className="mb-3 md:mb-4 text-2xl md:text-4xl font-black bg-gradient-to-r from-emerald-400 to-emerald-600 bg-clip-text text-transparent">
             Room: {roomId?.toUpperCase()}
@@ -509,7 +566,7 @@ export default function CloseMasterGame() {
           <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
             <div className="bg-white/95 text-black rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl">
               <h3 className="text-2xl md:text-3xl font-black text-center mb-4 md:mb-6 text-gray-900">
-                SCORES
+                ROUND POINTS
               </h3>
               {players.map((p, i) => (
                 <div
@@ -522,7 +579,7 @@ export default function CloseMasterGame() {
                     {p.name}
                   </span>
                   <span className="font-black text-xl md:text-2xl px-3 md:px-4 py-1 md:py-2 rounded-xl">
-                    {p.score}
+                    {getRoundPoints(p)}
                   </span>
                 </div>
               ))}
@@ -543,6 +600,26 @@ export default function CloseMasterGame() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/30 to-blue-900/30 text-white p-4 md:p-6 flex flex-col items-center gap-4 md:gap-6 relative overflow-hidden">
       <NeonFloatingCards />
+
+      {/* 🔥 Winner fireworks overlay for game screen */}
+      {showWinnerSplash && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50">
+          <div className="relative px-8 py-6 bg-black/80 rounded-3xl border border-amber-400 shadow-[0_0_40px_rgba(251,191,36,0.8)]">
+            <div className="absolute -top-4 left-6 w-4 h-4 rounded-full bg-amber-400 animate-ping" />
+            <div className="absolute -top-4 right-6 w-4 h-4 rounded-full bg-sky-400 animate-ping" />
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-emerald-400 animate-ping" />
+            <p className="text-xs md:text-sm font-semibold tracking-[0.3em] text-amber-300 text-center mb-2">
+              ROUND WINNER
+            </p>
+            <p className="text-2xl md:text-3xl font-black text-amber-400 text-center drop-shadow-lg">
+              {winnerName}
+            </p>
+            <p className="mt-2 text-sm md:text-base text-amber-100 text-center">
+              CLOSE SUCCESS 🎉
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="z-10 w-full max-w-5xl text-center p-4 md:p-6 bg-black/60 backdrop-blur-xl rounded-3xl border border-emerald-500/50 shadow-2xl">
         <h1 className="mb-3 md:mb-4 text-2xl md:text-4xl font-black bg-gradient-to-r from-emerald-400 to-emerald-600 bg-clip-text text-transparent">
@@ -662,8 +739,9 @@ export default function CloseMasterGame() {
               <p className="font-bold text-center text-sm md:text-base truncate">
                 {p.name}
               </p>
+              {/* 🔄 Remaining cards text remove chesam – only points */}
               <p className="text-xs md:text-sm text-gray-400 text-center">
-                {p.handSize} cards | {p.score} pts
+                {p.score} pts
               </p>
               {p.hasDrawn && (
                 <p className="text-xs text-emerald-400 text-center">Drew</p>
@@ -762,7 +840,7 @@ export default function CloseMasterGame() {
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
           <div className="bg-white/95 text-black rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl">
             <h3 className="text-2xl md:text-3xl font-black text-center mb-4 md:mb-6 text-gray-900">
-              SCORES
+              ROUND POINTS
             </h3>
             {players.map((p, i) => (
               <div
@@ -775,7 +853,7 @@ export default function CloseMasterGame() {
                   {p.name}
                 </span>
                 <span className="font-black text-xl md:text-2xl px-3 md:px-4 py-1 md:py-2 rounded-xl">
-                  {p.score}
+                  {getRoundPoints(p)}
                 </span>
               </div>
             ))}
