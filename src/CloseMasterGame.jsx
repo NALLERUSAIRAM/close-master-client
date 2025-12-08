@@ -53,6 +53,10 @@ export default function CloseMasterGame() {
   const [showPoints, setShowPoints] = useState(false); // lobby SCORES button
   const [loading, setLoading] = useState(false);
 
+  // 🔥 NEW: TURN TIMER STATE
+  const [turnTimeLeft, setTurnTimeLeft] = useState(60);
+  const turnTimerRef = useRef(null);
+
   // CLOSE result overlay
   const [showResultOverlay, setShowResultOverlay] = useState(false);
   const [winnerName, setWinnerName] = useState("");
@@ -263,6 +267,64 @@ export default function CloseMasterGame() {
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
     };
   }, [socket, game?.roomId, playerName, screen, playerId]);
+
+  // 🔥 NEW: clear turn timer interval on unmount
+  useEffect(() => {
+    return () => {
+      if (turnTimerRef.current) {
+        clearInterval(turnTimerRef.current);
+      }
+    };
+  }, []);
+
+  // 🔥 NEW: 60s TURN TIMER (client-side display + server notify)
+  useEffect(() => {
+    const startedNow = !!game?.started;
+    const players = game?.players || [];
+    const currentIndex = game?.currentIndex ?? 0;
+    const currentPlayer = players[currentIndex];
+    const isMyTurn = startedNow && currentPlayer?.id === game?.youId;
+
+    // not started or not my turn → reset & stop
+    if (!startedNow || !isMyTurn) {
+      setTurnTimeLeft(60);
+      if (turnTimerRef.current) {
+        clearInterval(turnTimerRef.current);
+        turnTimerRef.current = null;
+      }
+      return;
+    }
+
+    // my turn start
+    setTurnTimeLeft(60);
+    if (turnTimerRef.current) {
+      clearInterval(turnTimerRef.current);
+    }
+
+    turnTimerRef.current = setInterval(() => {
+      setTurnTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(turnTimerRef.current);
+          turnTimerRef.current = null;
+
+          // 1 min ayyaka server ki info
+          if (socket && game?.roomId) {
+            socket.emit("turn_timeout", { roomId: game.roomId });
+          }
+
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (turnTimerRef.current) {
+        clearInterval(turnTimerRef.current);
+        turnTimerRef.current = null;
+      }
+    };
+  }, [game, socket]);
 
   const roomId = game?.roomId;
   const youId = game?.youId;
@@ -708,6 +770,26 @@ export default function CloseMasterGame() {
         </div>
       </div>
 
+      {/* 🔥 NEW: TURN TIMER UI */}
+      {started && (
+        <div className="z-10 flex flex-col items-center gap-2 mt-2">
+          <div
+            className={`relative w-20 h-20 md:w-24 md:h-24 rounded-full border-4 flex items-center justify-center ${
+              myTurn ? "border-yellow-400 animate-ping-slow" : "border-gray-600"
+            }`}
+          >
+            <span className="text-xl md:text-2xl font-extrabold">
+              {myTurn ? turnTimeLeft : "--"}
+            </span>
+          </div>
+          <p className="text-xs md:text-sm font-semibold text-yellow-200">
+            {myTurn
+              ? "Mee turn, 60s lopala aadandi"
+              : "Inko player turn lo vunnadu"}
+          </p>
+        </div>
+      )}
+
       {started && (
         <div className="z-10 w-full max-w-4xl p-3 md:p-4 bg-gray-900/50 rounded-2xl border border-gray-700">
           <div className="flex flex-wrap justify-between items-center gap-2 text-sm md:text-base">
@@ -897,6 +979,18 @@ export default function CloseMasterGame() {
         </div>
       )}
 
+      {/* 🔥 NEW: EXIT BUTTON IN GAME SCREEN */}
+      {started && (
+        <div className="z-10 mt-4">
+          <button
+            onClick={exitGame}
+            className="px-6 py-3 bg-gradient-to-r from-gray-700 to-gray-900 hover:from-gray-800 hover:to-gray-900 rounded-2xl font-bold text-lg shadow-xl"
+          >
+            EXIT GAME
+          </button>
+        </div>
+      )}
+
       <style jsx>{`
         @keyframes float {
           0%, 100% { transform: translateY(0) rotate(0); }
@@ -919,6 +1013,16 @@ export default function CloseMasterGame() {
         }
         .animate-neon-rotate {
           animation: neon-rotate 1.5s ease-in-out infinite;
+        }
+
+        /* 🔥 NEW: turn timer pulse */
+        @keyframes ping-slow {
+          0% { transform: scale(1); opacity: 1; }
+          75% { transform: scale(1.15); opacity: 0.6; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-ping-slow {
+          animation: ping-slow 1.5s ease-in-out infinite;
         }
       `}</style>
     </div>
