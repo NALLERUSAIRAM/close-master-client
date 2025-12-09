@@ -4,6 +4,15 @@ import { io } from "socket.io-client";
 const SERVER_URL = "https://close-master-server-production.up.railway.app";
 const MAX_PLAYERS = 7;
 
+// 🔥 GIF LIST – paths match exactly your files
+const GIF_LIST = [
+  { id: "laugh",    name: "Laugh",    file: "/gifs/Laugh.gif" },
+  { id: "husky",    name: "Husky",    file: "/gifs/Husky.gif" },
+  { id: "skeleton", name: "Skeleton", file: "/gifs/Skeleton.gif" },
+  { id: "monkey",   name: "Monkey",   file: "/gifs/monkey_clap.gif" },
+  { id: "horse",    name: "Horse",    file: "/gifs/Horse_run.gif" },
+];
+
 function cardTextColor(card) {
   if (!card) return "text-black";
   if (card.rank === "JOKER") return "text-purple-700 font-bold";
@@ -53,23 +62,13 @@ export default function CloseMasterGame() {
   const [showPoints, setShowPoints] = useState(false); // lobby SCORES button
   const [loading, setLoading] = useState(false);
 
-  // 🔥 GIF REACTION STATE (NEW)
-  const [activeReactions, setActiveReactions] = useState({}); // { playerId: "Laugh.gif" }
-  const [gifPickerOpen, setGifPickerOpen] = useState(false);
-  const [gifTargetPlayerId, setGifTargetPlayerId] = useState(null);
-
-  // GIF options (NEW)
-  const gifOptions = [
-    { id: "laugh", file: "Laugh.gif", label: "Laugh" },
-    { id: "husky", file: "Husky.gif", label: "Husky" },
-    { id: "horse_run", file: "horse_run.gif", label: "Horse" },
-    { id: "monkey_clap", file: "monkey_clap.gif", label: "Monkey" },
-    { id: "skeleton", file: "Skeleton.gif", label: "Skeleton" },
-  ];
-
   // 🔥 TURN TIMER STATE
   const [turnTimeLeft, setTurnTimeLeft] = useState(60);
   const turnTimerRef = useRef(null);
+
+  // 🔥 GIF REACTIONS STATE
+  const [gifPickerTarget, setGifPickerTarget] = useState(null); // playerId
+  const [activeReactions, setActiveReactions] = useState({});   // { playerId: { gifId, until } }
 
   // CLOSE result overlay
   const [showResultOverlay, setShowResultOverlay] = useState(false);
@@ -188,26 +187,19 @@ export default function CloseMasterGame() {
       setLoading(false);
     });
 
+    // 🔥 GIF broadcast from server (optional – server side later)
+    s.on("gif_play", ({ targetId, gifId }) => {
+      const meta = GIF_LIST.find((g) => g.id === gifId);
+      if (!meta) return;
+      setActiveReactions((prev) => ({
+        ...prev,
+        [targetId]: { gifId, until: Date.now() + 4000 },
+      }));
+    });
+
     s.on("error", (e) => {
       alert(e.message || "Server error!");
       setLoading(false);
-    });
-
-    // 🔥 NEW: REACTION LISTENER
-    s.on("play_reaction", ({ targetId, gif }) => {
-      if (!targetId || !gif) return;
-      setActiveReactions((prev) => ({
-        ...prev,
-        [targetId]: gif,
-      }));
-      setTimeout(() => {
-        setActiveReactions((prev) => {
-          if (prev[targetId] !== gif) return prev;
-          const copy = { ...prev };
-          delete copy[targetId];
-          return copy;
-        });
-      }, 2500);
     });
 
     setSocket(s);
@@ -352,6 +344,24 @@ export default function CloseMasterGame() {
     };
   }, [game, socket]);
 
+  // 🔥 cleanup expired GIF reactions
+  useEffect(() => {
+    if (!Object.keys(activeReactions).length) return;
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setActiveReactions((prev) => {
+        const next = { ...prev };
+        Object.keys(next).forEach((pid) => {
+          if (!next[pid] || next[pid].until <= now) {
+            delete next[pid];
+          }
+        });
+        return next;
+      });
+    }, 500);
+    return () => clearInterval(interval);
+  }, [activeReactions]);
+
   const roomId = game?.roomId;
   const youId = game?.youId;
   const players = game?.players || [];
@@ -480,33 +490,27 @@ export default function CloseMasterGame() {
     setScreen("lobby");
   };
 
-  // 🔥 NEW: handle GIF select
-  const handleGifSelect = (fileName) => {
-    if (!socket || !roomId || !gifTargetPlayerId) return;
+  // GIF send handler
+  const handleSendGif = (gifId) => {
+    if (!socket || !roomId || !gifPickerTarget) return;
 
-    // local preview
-    setActiveReactions((prev) => ({
-      ...prev,
-      [gifTargetPlayerId]: fileName,
-    }));
-    setTimeout(() => {
-      setActiveReactions((prev) => {
-        if (prev[gifTargetPlayerId] !== fileName) return prev;
-        const copy = { ...prev };
-        delete copy[gifTargetPlayerId];
-        return copy;
-      });
-    }, 2500);
+    // local show (instant)
+    const meta = GIF_LIST.find((g) => g.id === gifId);
+    if (meta) {
+      setActiveReactions((prev) => ({
+        ...prev,
+        [gifPickerTarget]: { gifId, until: Date.now() + 4000 },
+      }));
+    }
 
-    // send to server
-    socket.emit("send_reaction", {
+    // server broadcast (server needs send_gif handler)
+    socket.emit("send_gif", {
       roomId,
-      targetId: gifTargetPlayerId,
-      gif: fileName,
+      targetId: gifPickerTarget,
+      gifId,
     });
 
-    setGifPickerOpen(false);
-    setGifTargetPlayerId(null);
+    setGifPickerTarget(null);
   };
 
   // FULL-SCREEN RESULT + FIREWORKS OVERLAY
@@ -514,10 +518,8 @@ export default function CloseMasterGame() {
     if (!showResultOverlay || !game?.closeCalled) return null;
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden">
-        {/* dim background */}
         <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
 
-        {/* fireworks bursts */}
         <div className="absolute inset-0 pointer-events-none">
           {Array.from({ length: 12 }).map((_, i) => (
             <div
@@ -537,7 +539,6 @@ export default function CloseMasterGame() {
           ))}
         </div>
 
-        {/* winner card */}
         <div className="relative px-8 py-6 md:px-10 md:py-8 bg-black/90 rounded-3xl border border-amber-400 shadow-[0_0_60px_rgba(251,191,36,1)] max-w-md w-[90%]">
           <p className="text-xs md:text-sm font-semibold tracking-[0.3em] text-amber-300 text-center mb-2">
             ROUND WINNER
@@ -793,37 +794,22 @@ export default function CloseMasterGame() {
       <NeonFloatingCards />
       <ResultOverlay />
 
-      <div className="z-10 w-full max-w-5xl text-center p-4 md:p-6 bg-black/60 backdrop-blur-xl rounded-3xl border border-emerald-500/50 shadow-2xl">
-        {/* Room code remove cheppavu kabatti, title matrame */}
-        <h1 className="mb-3 md:mb-4 text-2xl md:text-4xl font-black bg-gradient-to-r from-emerald-400 to-emerald-600 bg-clip-text text-transparent">
-          CLOSE MASTER
-        </h1>
-        <p className="text-lg md:text-xl mb-4 md:mb-6">
-          You:{" "}
-          <span className="font-bold text-white px-3 py-1 bg-emerald-500/30 rounded-full">
-            {me?.name}
-          </span>
-          {isHost && (
-            <span className="ml-2 md:ml-4 px-3 md:px-4 py-1 md:py-2 bg-yellow-500/90 text-black font-bold rounded-full text-sm md:text-lg animate-pulse">
-              HOST
+      {/* 🔥 GAME HEADER SIMPLIFIED – big card remove chesam */}
+      {started && (
+        <div className="z-10 flex flex-col items-center gap-1 text-sm md:text-base">
+          <div className="flex gap-4 items-center">
+            <span className="text-emerald-300 font-semibold">
+              Players: {players.length}/{MAX_PLAYERS}
             </span>
-          )}
-        </p>
-        <div className="mt-3 md:mt-4 text-sm md:text-lg">
-          Players:{" "}
-          <span className="text-emerald-400 font-bold">
-            {players.length}/{MAX_PLAYERS}
-          </span>{" "}
-          | Turn:{" "}
-          <span
-            className={`font-bold px-2 md:px-3 py-1 rounded-full text-sm md:text-base ${
-              myTurn ? "bg-yellow-500/90 text-black" : "bg-gray-600/50"
-            }`}
-          >
-            {currentPlayer?.name || "None"}
-          </span>
+            <span className="text-gray-300">
+              Turn:{" "}
+              <span className="font-bold text-yellow-300">
+                {currentPlayer?.name || "—"}
+              </span>
+            </span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* TURN TIMER UI */}
       {started && (
@@ -916,41 +902,40 @@ export default function CloseMasterGame() {
         </div>
       )}
 
-      {/* 🔥 GAME SCREEN PLAYERS GRID + GIF BUTTONS + REACTIONS */}
       {started && (
         <div className="z-10 w-full max-w-5xl grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
           {players.map((p) => {
-            const isYou = p.id === youId;
-            const isTurn = currentPlayer?.id === p.id;
-            const reactionGif = activeReactions[p.id];
+            const reaction = activeReactions[p.id];
+            const gifMeta = reaction
+              ? GIF_LIST.find((g) => g.id === reaction.gifId)
+              : null;
 
             return (
               <div
                 key={p.id}
-                className={`relative p-3 md:p-4 rounded-2xl border-2 shadow-lg ${
-                  isYou
+                className={`p-3 md:p-4 rounded-2xl border-2 shadow-lg ${
+                  p.id === youId
                     ? "border-emerald-400 bg-emerald-900/30"
-                    : isTurn
+                    : currentPlayer?.id === p.id
                     ? "border-yellow-400 bg-yellow-900/30"
                     : "border-gray-700 bg-gray-900/30"
                 }`}
               >
-                {/* GIF button (top-right) */}
-                <button
-                  type="button"
-                  className="absolute top-1 right-1 px-2 py-0.5 rounded-full text-[10px] md:text-xs font-bold bg-black/70 border border-white/30 hover:bg-black/90 transition"
-                  onClick={() => {
-                    setGifTargetPlayerId(p.id);
-                    setGifPickerOpen(true);
-                  }}
-                >
-                  GIF
-                </button>
+                <div className="flex items-center justify-between mb-1 gap-2">
+                  <p className="font-bold text-sm md:text-base truncate">
+                    {p.name}
+                  </p>
 
-                {/* Player name & info */}
-                <p className="font-bold text-center text-sm md:text-base truncate">
-                  {p.name}
-                </p>
+                  {/* GIF trigger icon */}
+                  <button
+                    onClick={() => setGifPickerTarget(p.id)}
+                    className="text-lg md:text-xl hover:scale-110 transition-transform"
+                    title="Send GIF"
+                  >
+                    🎭
+                  </button>
+                </div>
+
                 <p className="text-xs md:text-sm text-gray-400 text-center">
                   {p.handSize} cards | {p.score} pts
                 </p>
@@ -958,16 +943,14 @@ export default function CloseMasterGame() {
                   <p className="text-xs text-emerald-400 text-center">Drew</p>
                 )}
 
-                {/* REACTION OVERLAY */}
-                {reactionGif && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="w-24 h-24 md:w-28 md:h-28 rounded-2xl overflow-hidden shadow-2xl animate-pulse bg-black/60">
-                      <img
-                        src={`/gifs/${reactionGif}`}
-                        alt="reaction"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
+                {/* Active GIF reaction display */}
+                {gifMeta && (
+                  <div className="mt-2 flex justify-center">
+                    <img
+                      src={gifMeta.file}
+                      alt={gifMeta.name}
+                      className="w-16 h-16 md:w-20 md:h-20 rounded-xl object-cover border border-white/40 shadow-lg"
+                    />
                   </div>
                 )}
               </div>
@@ -1078,39 +1061,30 @@ export default function CloseMasterGame() {
         </div>
       )}
 
-      {/* GIF PICKER MODAL (CENTER) */}
-      {gifPickerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-          <div className="bg-gray-900 rounded-3xl p-4 md:p-6 border border-white/10 w-[90%] max-w-md">
-            <h3 className="text-lg md:text-xl font-bold mb-3 text-center">
-              Choose GIF
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {gifOptions.map((opt) => (
+      {/* GIF PICKER MODAL */}
+      {gifPickerTarget && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 rounded-3xl w-full max-w-md p-6 shadow-2xl border border-white/10">
+            <h3 className="text-xl font-bold text-center mb-4">Choose GIF</h3>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              {GIF_LIST.map((gif) => (
                 <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => handleGifSelect(opt.file)}
-                  className="bg-gray-800 rounded-2xl p-2 flex flex-col items-center hover:bg-gray-700 transition"
+                  key={gif.id}
+                  onClick={() => handleSendGif(gif.id)}
+                  className="bg-slate-800 rounded-2xl p-2 flex flex-col items-center gap-2 hover:bg-slate-700 transition"
                 >
-                  <div className="w-24 h-24 overflow-hidden rounded-2xl">
-                    <img
-                      src={`/gifs/${opt.file}`}
-                      alt={opt.label}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <span className="mt-1 text-xs md:text-sm">{opt.label}</span>
+                  <img
+                    src={gif.file}
+                    alt={gif.name}
+                    className="w-20 h-20 rounded-xl object-cover border border-white/20"
+                  />
+                  <span className="text-xs text-gray-200">{gif.name}</span>
                 </button>
               ))}
             </div>
             <button
-              type="button"
-              onClick={() => {
-                setGifPickerOpen(false);
-                setGifTargetPlayerId(null);
-              }}
-              className="mt-4 w-full py-2 md:py-3 rounded-2xl bg-gray-700 hover:bg-gray-600 text-sm md:text-base font-semibold"
+              onClick={() => setGifPickerTarget(null)}
+              className="w-full py-2 rounded-2xl bg-slate-700 hover:bg-slate-600 text-sm font-semibold"
             >
               Cancel
             </button>
@@ -1132,7 +1106,6 @@ export default function CloseMasterGame() {
         }
         .firework-burst { animation: firework-burst 1.2s ease-out infinite; }
 
-        /* NEON selected card rotation */
         @keyframes neon-rotate {
           0% { transform: rotate(-4deg) scale(1.25); }
           50% { transform: rotate(4deg) scale(1.25); }
@@ -1142,7 +1115,6 @@ export default function CloseMasterGame() {
           animation: neon-rotate 1.5s ease-in-out infinite;
         }
 
-        /* turn timer pulse */
         @keyframes ping-slow {
           0% { transform: scale(1); opacity: 1; }
           75% { transform: scale(1.15); opacity: 0.6; }
