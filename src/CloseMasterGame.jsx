@@ -4,12 +4,23 @@ import { io } from "socket.io-client";
 const SERVER_URL = "https://close-master-server-production.up.railway.app";
 const MAX_PLAYERS = 7;
 
-// 🔥 GIF LIST – only 4 (Skeleton remove chesam)
+// 🔥 GIF LIST – only 4 GIFs (for reactions)
 const GIF_LIST = [
   { id: "laugh",  name: "Laugh",  file: "/gifs/Laugh.gif" },
   { id: "husky",  name: "Husky",  file: "/gifs/Husky.gif" },
   { id: "monkey", name: "Monkey", file: "/gifs/monkey_clap.gif" },
   { id: "horse",  name: "Horse",  file: "/gifs/Horse_run.gif" },
+];
+
+// 🧑 FACE LIST (PNG avatars) – public/gifs/1.png ... 7.png
+const FACE_LIST = [
+  "/gifs/1.png",
+  "/gifs/2.png",
+  "/gifs/3.png",
+  "/gifs/4.png",
+  "/gifs/5.png",
+  "/gifs/6.png",
+  "/gifs/7.png",
 ];
 
 function cardTextColor(card) {
@@ -61,12 +72,15 @@ export default function CloseMasterGame() {
   const [showPoints, setShowPoints] = useState(false); // lobby SCORES button
   const [loading, setLoading] = useState(false);
 
-  // 🔥 TURN TIMER STATE
+  // 🧑 FACE STATE
+  const [selectedFace, setSelectedFace] = useState("");
+
+  // TURN TIMER STATE
   const [turnTimeLeft, setTurnTimeLeft] = useState(60);
   const turnTimerRef = useRef(null);
 
-  // 🔥 GIF REACTION STATE
-  const [showGifPickerFor, setShowGifPickerFor] = useState(null); // playerId or null
+  // GIF REACTION STATE
+  const [showGifPickerFor, setShowGifPickerFor] = useState(null); // playerId | null
   const [activeReactions, setActiveReactions] = useState({}); // { [playerId]: gifId }
 
   // CLOSE result overlay
@@ -143,6 +157,7 @@ export default function CloseMasterGame() {
             roomId: roomIdToUse,
             name: nameToUse,
             playerId,
+            // face rejoin ki optional; server daggara already store untundi
           });
         }, 500);
       }
@@ -191,7 +206,7 @@ export default function CloseMasterGame() {
       setLoading(false);
     });
 
-    // 🔥 GIF PLAY listener (anni players ki broadcast avvadani ki)
+    // GIF PLAY listener (anni players ki broadcast)
     s.on("gif_play", ({ targetId, gifId }) => {
       if (!targetId || !gifId) return;
       setActiveReactions((prev) => ({
@@ -199,7 +214,7 @@ export default function CloseMasterGame() {
         [targetId]: gifId,
       }));
 
-      // 4 seconds taruvata auto clear
+      // 4s taruvata auto-clear
       setTimeout(() => {
         setActiveReactions((prev) => {
           if (prev[targetId] !== gifId) return prev;
@@ -215,7 +230,6 @@ export default function CloseMasterGame() {
     return () => {
       s.disconnect();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // store roomId & name in localStorage
@@ -306,7 +320,7 @@ export default function CloseMasterGame() {
     };
   }, []);
 
-  // 🔥 60s TURN TIMER (all players see countdown, only current player notifies server)
+  // 60s TURN TIMER
   useEffect(() => {
     const startedNow = !!game?.started;
     const players = game?.players || [];
@@ -325,7 +339,6 @@ export default function CloseMasterGame() {
       return;
     }
 
-    // new turn → reset and start timer
     setTurnTimeLeft(60);
     if (turnTimerRef.current) {
       clearInterval(turnTimerRef.current);
@@ -337,7 +350,6 @@ export default function CloseMasterGame() {
           clearInterval(turnTimerRef.current);
           turnTimerRef.current = null;
 
-          // only current turn player notifies server
           if (isMyTurn && socket && game?.roomId) {
             socket.emit("turn_timeout", { roomId: game.roomId });
           }
@@ -396,15 +408,16 @@ export default function CloseMasterGame() {
 
   const closeDisabled = !myTurn || hasDrawn || discardTop?.rank === "7";
 
+  // CREATE / JOIN – face compulsory
   const createRoom = () => {
-    if (!socket || !playerName.trim()) {
-      alert("Name enter cheyali");
+    if (!socket || !playerName.trim() || !selectedFace) {
+      alert("Name and face select cheyali");
       return;
     }
     setLoading(true);
     socket.emit(
       "create_room",
-      { name: playerName.trim(), playerId },
+      { name: playerName.trim(), playerId, face: selectedFace },
       (res) => {
         setLoading(false);
         if (!res || res.error) {
@@ -415,8 +428,8 @@ export default function CloseMasterGame() {
   };
 
   const joinRoom = () => {
-    if (!socket || !playerName.trim() || !joinCode.trim()) {
-      alert("Name & Room ID enter cheyali");
+    if (!socket || !playerName.trim() || !joinCode.trim() || !selectedFace) {
+      alert("Name, Room ID and face select cheyali");
       return;
     }
     setLoading(true);
@@ -426,6 +439,7 @@ export default function CloseMasterGame() {
         name: playerName.trim(),
         roomId: joinCode.toUpperCase().trim(),
         playerId,
+        face: selectedFace,
       },
       (res) => {
         setLoading(false);
@@ -483,17 +497,17 @@ export default function CloseMasterGame() {
       setShowPoints(false);
       setShowResultOverlay(false);
       setLoading(false);
+      setSelectedFace("");
     }
   };
 
   const handleContinue = () => {
-    // overlay close → go to lobby
     setShowResultOverlay(false);
     setScreen("lobby");
   };
 
   const handleGifClick = (playerId) => {
-    setShowGifPickerFor((prev) => (prev === playerId ? null : playerId));
+    setShowGifPickerFor(playerId);
   };
 
   const handleSelectGif = (gifId) => {
@@ -506,15 +520,11 @@ export default function CloseMasterGame() {
     setShowGifPickerFor(null);
   };
 
-  // FULL-SCREEN RESULT + FIREWORKS OVERLAY
   const ResultOverlay = () => {
     if (!showResultOverlay || !game?.closeCalled) return null;
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden">
-        {/* dim background */}
         <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
-
-        {/* fireworks bursts */}
         <div className="absolute inset-0 pointer-events-none">
           {Array.from({ length: 12 }).map((_, i) => (
             <div
@@ -534,7 +544,6 @@ export default function CloseMasterGame() {
           ))}
         </div>
 
-        {/* winner card */}
         <div className="relative px-8 py-6 md:px-10 md:py-8 bg-black/90 rounded-3xl border border-amber-400 shadow-[0_0_60px_rgba(251,191,36,1)] max-w-md w-[90%]">
           <p className="text-xs md:text-sm font-semibold tracking-[0.3em] text-amber-300 text-center mb-2">
             ROUND WINNER
@@ -542,6 +551,15 @@ export default function CloseMasterGame() {
           <p className="text-2xl md:text-3xl font-black text-amber-400 text-center mb-1 capitalize">
             {winnerName}
           </p>
+
+          <div className="flex justify-center mb-3">
+            <img
+              src="/gifs/chimpanzee.gif"
+              alt="Winner celebration"
+              className="w-32 h-32 md:w-40 md:h-40 rounded-2xl shadow-xl object-cover"
+            />
+          </div>
+
           <p className="text-sm md:text-base text-amber-100 text-center mb-4">
             CLOSE SUCCESS 🎉
           </p>
@@ -559,7 +577,16 @@ export default function CloseMasterGame() {
                     : "bg-gray-900/70 text-gray-100"
                 }`}
               >
-                <span className="font-semibold truncate">{p.name}</span>
+                <span className="font-semibold truncate flex items-center gap-2">
+                  {p.face && (
+                    <img
+                      src={p.face}
+                      className="w-6 h-6 rounded-full"
+                      alt=""
+                    />
+                  )}
+                  {p.name}
+                </span>
                 <span className="font-black text-lg md:text-xl">
                   {getRoundPointsForPlayer(p, roundBaseScores)}
                 </span>
@@ -580,6 +607,10 @@ export default function CloseMasterGame() {
 
   // WELCOME SCREEN
   if (screen === "welcome") {
+    const canCreate = !!playerName.trim() && !!selectedFace && !loading;
+    const canJoin =
+      !!playerName.trim() && !!joinCode.trim() && !!selectedFace && !loading;
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/20 to-blue-900/20 flex items-center justify-center px-4 relative overflow-hidden">
         <NeonFloatingCards />
@@ -603,6 +634,34 @@ export default function CloseMasterGame() {
                 maxLength={15}
               />
             </div>
+
+            {/* FACE SELECTION GRID */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-200 mb-3">
+                Choose Avatar
+              </label>
+              <div className="grid grid-cols-4 gap-3 mb-1">
+                {FACE_LIST.map((f) => (
+                  <img
+                    key={f}
+                    src={f}
+                    onClick={() => setSelectedFace(f)}
+                    className={`w-14 h-14 rounded-full cursor-pointer border-2 transition-transform ${
+                      selectedFace === f
+                        ? "border-emerald-400 scale-110"
+                        : "border-transparent opacity-70 hover:opacity-100"
+                    }`}
+                    alt=""
+                  />
+                ))}
+              </div>
+              {!selectedFace && (
+                <p className="text-xs text-red-400 mt-1">
+                  Please select a face to continue
+                </p>
+              )}
+            </div>
+
             <div>
               <label className="block text-sm font-semibold text-gray-200 mb-3">
                 Room ID
@@ -616,11 +675,12 @@ export default function CloseMasterGame() {
                 maxLength={4}
               />
             </div>
+
             <button
               onClick={createRoom}
-              disabled={!playerName.trim() || loading}
+              disabled={!canCreate}
               className={`w-full py-4 rounded-2xl text-xl font-black shadow-2xl transition-all ${
-                playerName.trim() && !loading
+                canCreate
                   ? "bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 hover:scale-105"
                   : "bg-gray-800/50 border-2 border-gray-600 cursor-not-allowed opacity-50"
               }`}
@@ -629,9 +689,9 @@ export default function CloseMasterGame() {
             </button>
             <button
               onClick={joinRoom}
-              disabled={!playerName.trim() || !joinCode.trim() || loading}
+              disabled={!canJoin}
               className={`w-full py-4 rounded-2xl text-xl font-black shadow-2xl transition-all ${
-                playerName.trim() && joinCode.trim() && !loading
+                canJoin
                   ? "bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 hover:scale-105"
                   : "bg-gray-800/50 border-2 border-gray-600 cursor-not-allowed opacity-50"
               }`}
@@ -668,17 +728,28 @@ export default function CloseMasterGame() {
           <h1 className="mb-3 md:mb-4 text-2xl md:text-4xl font-black bg-gradient-to-r from-emerald-400 to-emerald-600 bg-clip-text text-transparent">
             Room: {roomId?.toUpperCase()}
           </h1>
-          <p className="text-lg md:text-xl mb-4 md:mb-6">
-            You:{" "}
-            <span className="font-bold text-white px-3 py-1 bg-emerald-500/30 rounded-full">
-              {me?.name}
-            </span>
+          <div className="flex flex-col items-center mb-4 md:mb-6">
+            <div className="flex items-center gap-3 mb-2">
+              {me?.face && (
+                <img
+                  src={me.face}
+                  className="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-emerald-400"
+                  alt=""
+                />
+              )}
+              <p className="text-lg md:text-xl">
+                You:{" "}
+                <span className="font-bold text-white px-3 py-1 bg-emerald-500/30 rounded-full">
+                  {me?.name}
+                </span>
+              </p>
+            </div>
             {isHost && (
-              <span className="ml-2 md:ml-4 px-3 md:px-4 py-1 md:py-2 bg-yellow-500/90 text-black font-bold rounded-full text-sm md:text-lg animate-pulse">
+              <span className="px-3 md:px-4 py-1 md:py-2 bg-yellow-500/90 text-black font-bold rounded-full text-sm md:text-lg animate-pulse">
                 HOST
               </span>
             )}
-          </p>
+          </div>
           <div className="flex flex-wrap gap-2 md:gap-4 justify-center">
             {isHost && (
               <button
@@ -726,9 +797,18 @@ export default function CloseMasterGame() {
                   : "border-gray-700 bg-gray-900/30"
               }`}
             >
-              <p className="font-bold text-center text-sm md:text-base truncate">
-                {p.name}
-              </p>
+              <div className="flex items-center justify-center gap-2 mb-1">
+                {p.face && (
+                  <img
+                    src={p.face}
+                    className="w-7 h-7 md:w-8 md:h-8 rounded-full"
+                    alt=""
+                  />
+                )}
+                <p className="font-bold text-center text-sm md:text-base truncate">
+                  {p.name}
+                </p>
+              </div>
               <p className="text-xs md:text-sm text-gray-400 text-center">
                 {p.score} pts
               </p>
@@ -749,7 +829,14 @@ export default function CloseMasterGame() {
                     i === 0 ? "bg-emerald-500 text-white" : "bg-gray-100 text-black"
                   }`}
                 >
-                  <span className="font-bold truncate text-sm md:text-base">
+                  <span className="font-bold truncate flex items-center gap-2 text-sm md:text-base">
+                    {p.face && (
+                      <img
+                        src={p.face}
+                        className="w-6 h-6 rounded-full"
+                        alt=""
+                      />
+                    )}
                     {p.name}
                   </span>
                   <span className="font-black text-xl md:text-2xl px-3 md:px-4 py-1 md:py-2 rounded-xl">
@@ -790,7 +877,7 @@ export default function CloseMasterGame() {
       <NeonFloatingCards />
       <ResultOverlay />
 
-      {/* 🔥 TURN TIMER – GAME TOP */}
+      {/* TURN TIMER – TOP */}
       {started && (
         <div className="z-10 flex flex-col items-center gap-2 mt-2">
           <div
@@ -813,10 +900,19 @@ export default function CloseMasterGame() {
       {started && (
         <div className="z-10 w-full max-w-4xl p-3 md:p-4 bg-gray-900/50 rounded-2xl border border-gray-700">
           <div className="flex flex-wrap justify-between items-center gap-2 text-sm md:text-base">
-            <div>
-              Turn:{" "}
-              <span className="text-xl md:text-2xl font-bold text-yellow-400">
-                {currentPlayer?.name}
+            <div className="flex items-center gap-2">
+              {currentPlayer?.face && (
+                <img
+                  src={currentPlayer.face}
+                  className="w-8 h-8 rounded-full"
+                  alt=""
+                />
+              )}
+              <span>
+                Turn:{" "}
+                <span className="text-xl md:text-2xl font-bold text-yellow-400">
+                  {currentPlayer?.name}
+                </span>
               </span>
               {myTurn && (
                 <span
@@ -881,7 +977,7 @@ export default function CloseMasterGame() {
         </div>
       )}
 
-      {/* 🔥 PLAYERS LIST + GIF ICONS + GIF OVERLAY */}
+      {/* PLAYERS LIST + GIF ICONS + ACTIVE GIF BUBBLE */}
       {started && (
         <div className="z-10 w-full max-w-5xl grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
           {players.map((p) => {
@@ -901,7 +997,6 @@ export default function CloseMasterGame() {
                     : "border-gray-700 bg-gray-900/30"
                 }`}
               >
-                {/* GIF overlay on player card */}
                 {activeGif && (
                   <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden border-2 border-white shadow-lg bg-black/70">
                     <img
@@ -912,17 +1007,27 @@ export default function CloseMasterGame() {
                   </div>
                 )}
 
-                <p className="font-bold text-center text-sm md:text-base truncate mt-2">
-                  {p.name}
-                </p>
-                <p className="text-xs md:text-sm text-gray-400 text-center">
-                  {p.handSize} cards | {p.score} pts
-                </p>
-                {p.hasDrawn && (
-                  <p className="text-xs text-emerald-400 text-center">Drew</p>
-                )}
+                <div className="mt-2 flex flex-col items-center">
+                  <div className="flex items-center gap-2 mb-1">
+                    {p.face && (
+                      <img
+                        src={p.face}
+                        className="w-7 h-7 md:w-8 md:h-8 rounded-full"
+                        alt=""
+                      />
+                    )}
+                    <p className="font-bold text-center text-sm md:text-base truncate">
+                      {p.name}
+                    </p>
+                  </div>
+                  <p className="text-xs md:text-sm text-gray-400 text-center">
+                    {p.handSize} cards | {p.score} pts
+                  </p>
+                  {p.hasDrawn && (
+                    <p className="text-xs text-emerald-400 text-center">Drew</p>
+                  )}
+                </div>
 
-                {/* GIF trigger button (only in game screen) */}
                 <div className="mt-2 flex justify-center">
                   <button
                     type="button"
@@ -933,37 +1038,52 @@ export default function CloseMasterGame() {
                     <span>🎭</span>
                   </button>
                 </div>
-
-                {/* GIF picker dropdown for this player */}
-                {showGifPickerFor === p.id && (
-                  <div className="absolute z-20 left-1/2 -translate-x-1/2 top-full mt-2 bg-black/90 border border-white/20 rounded-2xl p-2 shadow-2xl w-40 md:w-48">
-                    <p className="text-xs text-gray-300 mb-2 text-center">
-                      {p.name} ki GIF pettandi
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {GIF_LIST.map((gif) => (
-                        <button
-                          key={gif.id}
-                          type="button"
-                          onClick={() => handleSelectGif(gif.id)}
-                          className="flex flex-col items-center gap-1 bg-gray-800/80 hover:bg-gray-700/90 rounded-xl p-1"
-                        >
-                          <img
-                            src={gif.file}
-                            alt={gif.name}
-                            className="w-14 h-14 object-cover rounded-lg"
-                          />
-                          <span className="text-[10px] md:text-xs text-gray-200">
-                            {gif.name}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* GIF PICKER */}
+      {showGifPickerFor && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/80 backdrop-blur-md">
+          <div className="bg-slate-950/95 border border-white/10 rounded-3xl w-[90%] max-w-sm p-4 md:p-6 shadow-2xl">
+            <p className="text-center text-base md:text-lg font-bold mb-1 text-white">
+              Choose GIF
+            </p>
+            <p className="text-center text-xs md:text-sm text-gray-300 mb-4">
+              {(players.find((p) => p.id === showGifPickerFor)?.name) || "Player"}{" "}
+              ki GIF pettandi
+            </p>
+
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              {GIF_LIST.map((gif) => (
+                <button
+                  key={gif.id}
+                  type="button"
+                  onClick={() => handleSelectGif(gif.id)}
+                  className="flex flex-col items-center gap-1 bg-gray-900/80 hover:bg-gray-800 rounded-2xl p-2"
+                >
+                  <img
+                    src={gif.file}
+                    alt={gif.name}
+                    className="w-20 h-20 md:w-24 md:h-24 object-cover rounded-xl"
+                  />
+                  <span className="text-xs md:text-sm text-gray-100">
+                    {gif.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowGifPickerFor(null)}
+              className="w-full py-2.5 md:py-3 rounded-2xl bg-gray-800 hover:bg-gray-700 text-sm md:text-base font-semibold text-white"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
@@ -1059,7 +1179,7 @@ export default function CloseMasterGame() {
         </div>
       )}
 
-      {/* EXIT BUTTON IN GAME SCREEN */}
+      {/* EXIT BUTTON */}
       {started && (
         <div className="z-10 mt-4">
           <button
@@ -1085,7 +1205,6 @@ export default function CloseMasterGame() {
         }
         .firework-burst { animation: firework-burst 1.2s ease-out infinite; }
 
-        /* NEON selected card rotation */
         @keyframes neon-rotate {
           0% { transform: rotate(-4deg) scale(1.25); }
           50% { transform: rotate(4deg) scale(1.25); }
@@ -1095,7 +1214,6 @@ export default function CloseMasterGame() {
           animation: neon-rotate 1.5s ease-in-out infinite;
         }
 
-        /* turn timer pulse */
         @keyframes ping-slow {
           0% { transform: scale(1); opacity: 1; }
           75% { transform: scale(1.15); opacity: 0.6; }
