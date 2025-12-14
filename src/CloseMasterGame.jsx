@@ -24,10 +24,12 @@ const FACE_LIST = [
 ];
 
 function cardTextColor(card) {
-  if (!card) return "text-black";
-  if (card.rank === "JOKER") return "text-purple-700 font-bold";
-  if (card.suit === "♥" || card.suit === "♦") return "text-red-200";
-  return "text-black";
+  if (!card) return "text-white";
+  if (card.rank === "JOKER")
+    return "text-yellow-200 drop-shadow-[0_0_6px_rgba(250,250,150,0.9)] font-extrabold";
+  if (card.suit === "♥" || card.suit === "♦")
+    return "text-red-50 drop-shadow-[0_0_6px_rgba(248,113,113,0.9)] font-bold";
+  return "text-cyan-50 drop-shadow-[0_0_6px_rgba(56,189,248,0.9)] font-bold";
 }
 
 function NeonFloatingCards() {
@@ -1094,25 +1096,37 @@ export default function CloseMasterGame() {
             Your Hand ({me.hand.length})
           </h3>
           <div className="flex gap-2 md:gap-3 flex-wrap justify-center p-3 md:p-4 bg-gray-900/50 rounded-2xl">
-            {me.hand.map((c) => {
-              const selected = selectedIds.includes(c.id);
-              return (
+           {me.hand.map((c) => {
+  const selected = selectedIds.includes(c.id);
+
+  const isRed = c.suit === "♥" || c.suit === "♦";
+  const suitBg = isRed
+    ? "bg-gradient-to-br from-pink-500 via-red-500 to-orange-400"
+    : "bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-700";
+  const neonGlow = isRed
+    ? "shadow-[0_0_20px_rgba(248,113,113,0.8)]"
+    : "shadow-[0_0_20px_rgba(56,189,248,0.8)]";
+
+  return (
+
                 <button
                   key={c.id}
                   onClick={() => toggleSelect(c.id)}
                   disabled={!myTurn}
-                  className={`
-                    w-16 md:w-20 h-24 md:h-28
-                    bg-white rounded-2xl shadow-xl border-4
-                    flex flex-col p-1 md:p-2 justify-between transition-all
-                    ${
-                      selected
-                        ? "scale-125 border-cyan-300 shadow-[0_0_25px_rgba(0,255,255,0.9)] animate-neon-rotate"
-                        : myTurn
-                        ? "border-gray-200 hover:border-blue-400 hover:scale-105"
-                        : "border-gray-300 opacity-50"
-                    }
-                  `}
+                 className={`
+  w-16 md:w-20 h-24 md:h-28
+  rounded-2xl border-4
+  flex flex-col p-1 md:p-2 justify-between transition-all
+  ${suitBg} ${neonGlow}
+  ${
+    selected
+      ? "scale-125 border-cyan-300 shadow-[0_0_25px_rgba(0,255,255,1)] animate-neon-rotate"
+      : myTurn
+      ? "border-white/70 hover:border-cyan-300 hover:scale-105"
+      : "border-white/30 opacity-60"
+  }
+`}
+
                 >
                   <div
                     className={`text-sm md:text-lg font-bold ${cardTextColor(c)}`}
