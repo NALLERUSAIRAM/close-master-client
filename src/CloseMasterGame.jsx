@@ -26,7 +26,7 @@ const FACE_LIST = [
 function cardTextColor(card) {
   if (!card) return "text-black";
   if (card.rank === "JOKER") return "text-purple-700 font-bold";
-  if (card.suit === "♥" || card.suit === "♦") return "text-red-600";
+  if (card.suit === "♥" || card.suit === "♦") return "text-red-200";
   return "text-black";
 }
 
@@ -76,7 +76,7 @@ export default function CloseMasterGame() {
   const [selectedFace, setSelectedFace] = useState("");
 
   // TURN TIMER STATE
-  const [turnTimeLeft, setTurnTimeLeft] = useState(60);
+  const [turnTimeLeft, setTurnTimeLeft] = useState(20);
   const turnTimerRef = useRef(null);
 
   // GIF REACTION STATE
@@ -320,7 +320,7 @@ export default function CloseMasterGame() {
     };
   }, []);
 
-  // 60s TURN TIMER
+  // 20s TURN TIMER
   useEffect(() => {
     const startedNow = !!game?.started;
     const players = game?.players || [];
@@ -331,7 +331,7 @@ export default function CloseMasterGame() {
       startedNow && currentPlayer && currentPlayer.id === game?.youId;
 
     if (!startedNow || !currentPlayer) {
-      setTurnTimeLeft(60);
+      setTurnTimeLeft(20);
       if (turnTimerRef.current) {
         clearInterval(turnTimerRef.current);
         turnTimerRef.current = null;
@@ -339,7 +339,7 @@ export default function CloseMasterGame() {
       return;
     }
 
-    setTurnTimeLeft(60);
+    setTurnTimeLeft(20);
     if (turnTimerRef.current) {
       clearInterval(turnTimerRef.current);
     }
@@ -544,7 +544,7 @@ export default function CloseMasterGame() {
           ))}
         </div>
 
-        <div className="relative px-8 py-6 md:px-10 md:py-8 bg-black/90 rounded-3xl border border-amber-400 shadow-[0_0_60px_rgba(251,191,36,1)] max-w-md w-[90%]">
+        <div className="relative px-8 py-6 md:px-10 md:py-8 bg-black/90 rounded-3xl border border-amber-400 shadow-[0_0_20px_rgba(251,191,36,1)] max-w-md w-[90%]">
           <p className="text-xs md:text-sm font-semibold tracking-[0.3em] text-amber-300 text-center mb-2">
             ROUND WINNER
           </p>
@@ -564,7 +564,7 @@ export default function CloseMasterGame() {
             CLOSE SUCCESS 🎉
           </p>
 
-          <div className="bg-white/5 rounded-2xl p-3 md:p-4 mb-4 max-h-60 overflow-y-auto">
+          <div className="bg-white/5 rounded-2xl p-3 md:p-4 mb-4 max-h-20 overflow-y-auto">
             <p className="text-xs md:text-sm text-amber-200 font-semibold mb-2 text-center">
               CURRENT ROUND POINTS
             </p>
@@ -596,7 +596,7 @@ export default function CloseMasterGame() {
 
           <button
             onClick={handleContinue}
-            className="w-full py-3 md:py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 rounded-2xl font-bold text-base md:text-lg text-black shadow-xl"
+            className="w-full py-3 md:py-4 bg-gradient-to-r from-amber-500 to-amber-200 hover:from-amber-200 hover:to-amber-700 rounded-2xl font-bold text-base md:text-lg text-black shadow-xl"
           >
             CONTINUE
           </button>
@@ -627,7 +627,7 @@ export default function CloseMasterGame() {
               </label>
               <input
                 type="text"
-                className="w-full p-4 bg-gray-900/80 border-2 border-gray-600 rounded-2xl text-lg font-semibold text-white placeholder-gray-500 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/30 transition-all"
+                className="w-full p-4 bg-gray-900/80 border-2 border-gray-200 rounded-2xl text-lg font-semibold text-white placeholder-gray-500 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/30 transition-all"
                 placeholder=""
                 value={playerName}
                 onChange={(e) => setPlayerName(e.target.value)}
@@ -668,7 +668,7 @@ export default function CloseMasterGame() {
               </label>
               <input
                 type="text"
-                className="w-full p-4 bg-gray-900/80 border-2 border-gray-600 rounded-2xl text-lg font-semibold text-white placeholder-gray-500 uppercase focus:border-sky-400 focus:ring-4 focus:ring-sky-500/30 transition-all"
+                className="w-full p-4 bg-gray-900/80 border-2 border-gray-200 rounded-2xl text-lg font-semibold text-white placeholder-gray-500 uppercase focus:border-sky-400 focus:ring-4 focus:ring-sky-500/30 transition-all"
                 placeholder=""
                 value={joinCode}
                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
@@ -681,8 +681,8 @@ export default function CloseMasterGame() {
               disabled={!canCreate}
               className={`w-full py-4 rounded-2xl text-xl font-black shadow-2xl transition-all ${
                 canCreate
-                  ? "bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 hover:scale-105"
-                  : "bg-gray-800/50 border-2 border-gray-600 cursor-not-allowed opacity-50"
+                  ? "bg-gradient-to-r from-emerald-500 to-emerald-200 hover:from-emerald-200 hover:to-emerald-700 hover:scale-105"
+                  : "bg-gray-800/50 border-2 border-gray-200 cursor-not-allowed opacity-50"
               }`}
             >
               {loading ? "Creating..." : "CREATE ROOM"}
@@ -692,8 +692,8 @@ export default function CloseMasterGame() {
               disabled={!canJoin}
               className={`w-full py-4 rounded-2xl text-xl font-black shadow-2xl transition-all ${
                 canJoin
-                  ? "bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 hover:scale-105"
-                  : "bg-gray-800/50 border-2 border-gray-600 cursor-not-allowed opacity-50"
+                  ? "bg-gradient-to-r from-sky-500 to-sky-200 hover:from-sky-200 hover:to-sky-700 hover:scale-105"
+                  : "bg-gray-800/50 border-2 border-gray-200 cursor-not-allowed opacity-50"
               }`}
             >
               {loading ? "Joining..." : "JOIN ROOM"}
@@ -708,7 +708,7 @@ export default function CloseMasterGame() {
           .animate-float-slow { animation: float 15s ease-in-out infinite; }
           @keyframes firework-burst {
             0% { transform: scale(0); opacity: 1; }
-            60% { transform: scale(1); opacity: 1; }
+            20% { transform: scale(1); opacity: 1; }
             100% { transform: scale(1.6); opacity: 0; }
           }
           .firework-burst { animation: firework-burst 1.2s ease-out infinite; }
@@ -724,8 +724,8 @@ export default function CloseMasterGame() {
         <NeonFloatingCards />
         <ResultOverlay />
 
-        <div className="z-10 w-full max-w-5xl text-center p-4 md:p-6 bg-black/60 backdrop-blur-xl rounded-3xl border border-emerald-500/50 shadow-2xl">
-          <h1 className="mb-3 md:mb-4 text-2xl md:text-4xl font-black bg-gradient-to-r from-emerald-400 to-emerald-600 bg-clip-text text-transparent">
+        <div className="z-10 w-full max-w-5xl text-center p-4 md:p-6 bg-black/20 backdrop-blur-xl rounded-3xl border border-emerald-500/50 shadow-2xl">
+          <h1 className="mb-3 md:mb-4 text-2xl md:text-4xl font-black bg-gradient-to-r from-emerald-400 to-emerald-200 bg-clip-text text-transparent">
             Room: {roomId?.toUpperCase()}
           </h1>
           <div className="flex flex-col items-center mb-4 md:mb-6">
@@ -757,8 +757,8 @@ export default function CloseMasterGame() {
                 disabled={players.length < 2}
                 className={`px-4 md:px-8 py-3 md:py-4 rounded-3xl text-base md:text-xl font-black shadow-2xl ${
                   players.length < 2
-                    ? "bg-gray-700/50 border-2 border-gray-600 cursor-not-allowed opacity-60"
-                    : "bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 hover:scale-105"
+                    ? "bg-gray-700/50 border-2 border-gray-200 cursor-not-allowed opacity-20"
+                    : "bg-gradient-to-r from-emerald-500 to-emerald-200 hover:from-emerald-200 hover:to-emerald-700 hover:scale-105"
                 }`}
               >
                 {players.length < 2
@@ -768,7 +768,7 @@ export default function CloseMasterGame() {
             )}
             <button
               onClick={() => setShowPoints(true)}
-              className="px-4 md:px-8 py-3 md:py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 rounded-3xl font-bold text-base md:text-xl shadow-2xl"
+              className="px-4 md:px-8 py-3 md:py-4 bg-gradient-to-r from-amber-500 to-amber-200 hover:from-amber-200 hover:to-amber-700 rounded-3xl font-bold text-base md:text-xl shadow-2xl"
             >
               SCORES ({players.length})
             </button>
@@ -862,7 +862,7 @@ export default function CloseMasterGame() {
           .animate-float-slow { animation: float 15s ease-in-out infinite; }
           @keyframes firework-burst {
             0% { transform: scale(0); opacity: 1; }
-            60% { transform: scale(1); opacity: 1; }
+            20% { transform: scale(1); opacity: 1; }
             100% { transform: scale(1.6); opacity: 0; }
           }
           .firework-burst { animation: firework-burst 1.2s ease-out infinite; }
@@ -882,7 +882,7 @@ export default function CloseMasterGame() {
         <div className="z-10 flex flex-col items-center gap-2 mt-2">
           <div
             className={`relative w-20 h-20 md:w-24 md:h-24 rounded-full border-4 flex items-center justify-center ${
-              myTurn ? "border-yellow-400 animate-ping-slow" : "border-gray-600"
+              myTurn ? "border-yellow-400 animate-ping-slow" : "border-gray-200"
             }`}
           >
             <span className="text-xl md:text-2xl font-extrabold">
@@ -891,7 +891,7 @@ export default function CloseMasterGame() {
           </div>
           <p className="text-xs md:text-sm font-semibold text-yellow-200">
             {myTurn
-              ? "Mee turn, 60s lopala aadandi"
+              ? "Mee turn, 20s lopala aadandi"
               : `${currentPlayer?.name || "Player"} turn lo vunnadu`}
           </p>
         </div>
@@ -970,7 +970,7 @@ export default function CloseMasterGame() {
               </div>
             </button>
           ) : (
-            <div className="w-20 md:w-24 h-28 md:h-36 bg-gray-800 border-2 border-dashed border-gray-600 rounded-2xl flex items-center justify-center text-gray-500 text-xs md:text-sm">
+            <div className="w-20 md:w-24 h-28 md:h-36 bg-gray-800 border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center text-gray-500 text-xs md:text-sm">
               Empty
             </div>
           )}
@@ -1032,7 +1032,7 @@ export default function CloseMasterGame() {
                   <button
                     type="button"
                     onClick={() => handleGifClick(p.id)}
-                    className="text-xs md:text-sm px-2 py-1 rounded-full bg-black/60 border border-white/30 flex items-center gap-1 hover:bg-black/80"
+                    className="text-xs md:text-sm px-2 py-1 rounded-full bg-black/20 border border-white/30 flex items-center gap-1 hover:bg-black/80"
                   >
                     <span>GIF</span>
                     <span>🎭</span>
@@ -1149,7 +1149,7 @@ export default function CloseMasterGame() {
             className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${
               hasDrawn
                 ? "bg-gray-700/50 cursor-not-allowed opacity-50"
-                : "bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800"
+                : "bg-gradient-to-r from-purple-200 to-purple-700 hover:from-purple-700 hover:to-purple-800"
             }`}
           >
             DECK
@@ -1159,7 +1159,7 @@ export default function CloseMasterGame() {
             disabled={!allowDrop}
             className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${
               allowDrop
-                ? "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                ? "bg-gradient-to-r from-green-200 to-green-700 hover:from-green-700 hover:to-green-800"
                 : "bg-gray-700/50 cursor-not-allowed opacity-50"
             }`}
           >
@@ -1171,7 +1171,7 @@ export default function CloseMasterGame() {
             className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${
               closeDisabled
                 ? "bg-gray-700/50 cursor-not-allowed opacity-50"
-                : "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 hover:scale-105"
+                : "bg-gradient-to-r from-red-200 to-red-700 hover:from-red-700 hover:to-red-800 hover:scale-105"
             }`}
           >
             CLOSE
@@ -1200,7 +1200,7 @@ export default function CloseMasterGame() {
 
         @keyframes firework-burst {
           0% { transform: scale(0); opacity: 1; }
-          60% { transform: scale(1); opacity: 1; }
+          20% { transform: scale(1); opacity: 1; }
           100% { transform: scale(1.6); opacity: 0; }
         }
         .firework-burst { animation: firework-burst 1.2s ease-out infinite; }
