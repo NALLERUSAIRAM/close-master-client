@@ -1,3 +1,5 @@
+// FULL CloseMasterGame.jsx
+
 import React, { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 
@@ -394,7 +396,8 @@ export default function CloseMasterGame() {
     ? me.hand.filter((c) => selectedIds.includes(c.id))
     : [];
   const selectedRanks = [...new Set(selectedCards.map((c) => c.rank))];
-  const selectedSingleRank = selectedRanks.length === 1 ? selectedRanks[0] : null;
+  const selectedSingleRank =
+    selectedRanks.length === 1 ? selectedRanks[0] : null;
   const openCardRank = discardTop?.rank;
 
   let canDropWithoutDraw = false;
@@ -566,6 +569,7 @@ export default function CloseMasterGame() {
             CLOSE SUCCESS 🎉
           </p>
 
+          {/* height updated here */}
           <div className="bg-white/5 rounded-2xl p-3 md:p-4 mb-4 max-h-[60vh] overflow-y-auto">
             <p className="text-xs md:text-sm text-amber-200 font-semibold mb-2 text-center">
               CURRENT ROUND POINTS
@@ -883,17 +887,6 @@ export default function CloseMasterGame() {
       <NeonFloatingCards />
       <ResultOverlay />
 
-      {/* NEON TITLE – STATIC */}
-      <div className="z-10 mt-1 mb-2">
-        <div className="relative px-6 md:px-10 py-2 md:py-3 rounded-full border-2 border-transparent bg-gradient-to-r from-emerald-400 via-sky-400 to-purple-500">
-          <div className="rounded-full px-6 md:px-10 py-2 md:py-3 bg-black">
-            <h1 className="text-lg md:text-2xl font-black tracking-[0.25em] text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-sky-300 to-purple-300 drop-shadow-[0_0_15px_rgba(59,130,246,0.9)]">
-              CLOSE MASTER
-            </h1>
-          </div>
-        </div>
-      </div>
-
       {/* TURN TIMER – TOP */}
       {started && (
         <div className="z-10 flex flex-col items-center gap-2 mt-2">
@@ -1045,18 +1038,14 @@ export default function CloseMasterGame() {
                   )}
                 </div>
 
-                <div className="absolute top-1 right-1 flex items-center gap-1">
-                  {isTurn && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] md:text-xs bg-yellow-500/20 text-yellow-200 border border-yellow-400/60">
-                      ⏱ {turnTimeLeft}s
-                    </span>
-                  )}
+                <div className="mt-2 flex justify-center">
                   <button
                     type="button"
                     onClick={() => handleGifClick(p.id)}
-                    className="text-[10px] md:text-xs px-1.5 py-0.5 rounded-full bg-black/60 border border-white/30 hover:bg-black/80"
+                    className="text-xs md:text-sm px-2 py-1 rounded-full bg-black/20 border border-white/30 flex items-center gap-1 hover:bg-black/80"
                   >
-                    GIF 🎭
+                    <span>GIF</span>
+                    <span>🎭</span>
                   </button>
                 </div>
               </div>
@@ -1073,10 +1062,8 @@ export default function CloseMasterGame() {
               Choose GIF
             </p>
             <p className="text-center text-xs md:text-sm text-gray-300 mb-4">
-              {(
-                players.find((p) => p.id === showGifPickerFor)?.name ||
-                "Player"
-              )}{" "}
+              {(players.find((p) => p.id === showGifPickerFor)?.name) ||
+                "Player"}{" "}
               ki GIF pettandi
             </p>
 
@@ -1121,53 +1108,52 @@ export default function CloseMasterGame() {
             {me.hand.map((c) => {
               const selected = selectedIds.includes(c.id);
 
-              const isRed = c.suit === "♥" || c.suit === "♦";
-              const suitBg = isRed
-                ? "bg-gradient-to-br from-pink-500 via-red-500 to-orange-400"
-                : "bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-700";
-              const neonGlow = isRed
-                ? "shadow-[0_0_20px_rgba(248,113,113,0.8)]"
-                : "shadow-[0_0_20px_rgba(56,189,248,0.8)]";
-
               return (
                 <button
                   key={c.id}
                   onClick={() => toggleSelect(c.id)}
                   disabled={!myTurn}
                   className={`
-  w-16 md:w-20 h-24 md:h-28
-  rounded-2xl border-4
-  flex flex-col p-1 md:p-2 justify-between transition-all
-  ${suitBg} ${neonGlow}
-  ${
-    selected
-      ? "scale-125 border-cyan-300 shadow-[0_0_25px_rgba(0,255,255,1)] animate-neon-rotate"
-      : myTurn
-      ? "border-white/70 hover:border-cyan-300 hover:scale-105"
-      : "border-white/30 opacity-60"
-  }
-`}
+                    relative
+                    w-16 md:w-20 h-24 md:h-28
+                    rounded-2xl border
+                    flex flex-col justify-between
+                    px-2 py-1.5 md:px-2.5 md:py-2
+                    transition-all duration-150
+                    bg-slate-900/60 backdrop-blur
+                    ${
+                      selected
+                        ? "scale-110 border-cyan-300 shadow-[0_0_16px_rgba(34,211,238,0.9)]"
+                        : myTurn
+                        ? "hover:scale-105 border-slate-300/80 shadow-[0_0_10px_rgba(148,163,184,0.8)]"
+                        : "opacity-70 border-slate-500/60 shadow-[0_0_6px_rgba(15,23,42,0.9)]"
+                    }
+                  `}
                 >
-                  <div
-                    className={`text-sm md:text-lg font-bold ${cardTextColor(
-                      c
-                    )}`}
-                  >
-                    {c.rank}
-                  </div>
-                  <div
-                    className={`text-2xl md:text-3xl text-center ${cardTextColor(
-                      c
-                    )}`}
-                  >
-                    {c.rank === "JOKER" ? "🃏" : c.suit}
-                  </div>
-                  <div
-                    className={`text-sm md:text-lg font-bold text-right ${cardTextColor(
-                      c
-                    )}`}
-                  >
-                    {c.rank}
+                  <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_20%_20%,rgba(248,250,252,0.18),transparent_55%),radial-gradient(circle_at_80%_80%,rgba(248,250,252,0.12),transparent_55%)]" />
+
+                  <div className="relative flex flex-col h-full justify-between">
+                    <div
+                      className={`text-sm md:text-lg font-bold ${cardTextColor(
+                        c
+                      )}`}
+                    >
+                      {c.rank}
+                    </div>
+                    <div
+                      className={`text-2xl md:text-3xl text-center ${cardTextColor(
+                        c
+                      )}`}
+                    >
+                      {c.rank === "JOKER" ? "🃏" : c.suit}
+                    </div>
+                    <div
+                      className={`text-sm md:text-lg font-bold text-right ${cardTextColor(
+                        c
+                      )}`}
+                    >
+                      {c.rank}
+                    </div>
                   </div>
                 </button>
               );
@@ -1240,15 +1226,6 @@ export default function CloseMasterGame() {
           100% { transform: scale(1.6); opacity: 0; }
         }
         .firework-burst { animation: firework-burst 1.2s ease-out infinite; }
-
-        @keyframes neon-rotate {
-          0% { transform: rotate(-4deg) scale(1.25); }
-          50% { transform: rotate(4deg) scale(1.25); }
-          100% { transform: rotate(-4deg) scale(1.25); }
-        }
-        .animate-neon-rotate {
-          animation: neon-rotate 1.5s ease-in-out infinite;
-        }
 
         @keyframes ping-slow {
           0% { transform: scale(1); opacity: 1; }
