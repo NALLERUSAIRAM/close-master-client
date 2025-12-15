@@ -103,7 +103,6 @@ export default function CloseMasterGame() {
     }
   });
 
-  // load stored name
   useEffect(() => {
     try {
       const storedName = localStorage.getItem("cmp_player_name");
@@ -151,14 +150,14 @@ export default function CloseMasterGame() {
     });
 
     s.on("disconnect", (reason) => {
-      console.log("Disconnected:", reason);
+      console.log("🔌 Disconnected:", reason);
       if (reason === "io server disconnect") {
         s.disconnect();
       }
     });
 
     s.on("connect_error", (err) => {
-      console.log("Connect error:", err.message);
+      console.log("❌ Connect error:", err.message);
       reconnectAttempts++;
       if (reconnectAttempts >= MAX_RECONNECTS) {
         alert("Connection failed. Check internet & try again.");
@@ -206,7 +205,7 @@ export default function CloseMasterGame() {
     };
   }, []);
 
-  // store room id + name
+  // store roomId & name
   useEffect(() => {
     if (game?.roomId && playerName) {
       try {
@@ -273,14 +272,13 @@ export default function CloseMasterGame() {
     };
   }, [socket, game?.roomId, playerName, screen, playerId]);
 
-  // clear timer on unmount
   useEffect(() => {
     return () => {
       if (turnTimerRef.current) clearInterval(turnTimerRef.current);
     };
   }, []);
 
-  // 20s turn timer
+  // 20s TURN TIMER
   useEffect(() => {
     const startedNow = !!game?.started;
     const players = game?.players || [];
@@ -299,7 +297,9 @@ export default function CloseMasterGame() {
     }
 
     setTurnTimeLeft(20);
-    if (turnTimerRef.current) clearInterval(turnTimerRef.current);
+    if (turnTimerRef.current) {
+      clearInterval(turnTimerRef.current);
+    }
 
     turnTimerRef.current = setInterval(() => {
       setTurnTimeLeft((prev) => {
@@ -783,8 +783,13 @@ export default function CloseMasterGame() {
                 {p.score} pts
               </p>
 
-              {/* tiny GIF button top-right */}
-              <div className="absolute top-1 right-1">
+              <div className="absolute top-1 right-1 flex items-center gap-1">
+                {/* timer only for current turn */}
+                {currentPlayer?.id === p.id && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] md:text-xs bg-yellow-500/20 text-yellow-200 border border-yellow-400/60">
+                    ⏱ {turnTimeLeft}s
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={() => handleGifClick(p.id)}
@@ -878,8 +883,7 @@ export default function CloseMasterGame() {
       <NeonFloatingCards />
       <ResultOverlay />
 
-      {/* top timer circle removed */}
-
+      {/* top circle timer removed; info bar only */}
       {started && (
         <div className="z-10 w-full max-w-4xl p-3 md:p-4 bg-gray-900/50 rounded-2xl border border-gray-700">
           <div className="flex flex-wrap justify-between items-center gap-2 text-sm md:text-base">
@@ -1006,14 +1010,14 @@ export default function CloseMasterGame() {
                   {p.hasDrawn && (
                     <p className="text-xs text-emerald-400 text-center">Drew</p>
                   )}
+                </div>
+
+                <div className="absolute top-1 right-1 flex items-center gap-1">
                   {isTurn && (
-                    <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] md:text-xs bg-yellow-500/20 text-yellow-200 border border-yellow-400/60">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] md:text-xs bg-yellow-500/20 text-yellow-200 border border-yellow-400/60">
                       ⏱ {turnTimeLeft}s
                     </span>
                   )}
-                </div>
-
-                <div className="absolute top-1 right-1">
                   <button
                     type="button"
                     onClick={() => handleGifClick(p.id)}
