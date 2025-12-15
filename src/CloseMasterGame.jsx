@@ -1,3 +1,4 @@
+// CLOSEMASTERGAME.NEON.jsx
 import React, { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 
@@ -6,13 +7,13 @@ const MAX_PLAYERS = 7;
 
 // 🔥 GIF LIST – only 4 GIFs (for reactions)
 const GIF_LIST = [
-  { id: "laugh",  name: "Laugh",  file: "/gifs/Laugh.gif" },
-  { id: "husky",  name: "Husky",  file: "/gifs/Husky.gif" },
+  { id: "laugh", name: "Laugh", file: "/gifs/Laugh.gif" },
+  { id: "husky", name: "Husky", file: "/gifs/Husky.gif" },
   { id: "monkey", name: "Monkey", file: "/gifs/monkey_clap.gif" },
-  { id: "horse",  name: "Horse",  file: "/gifs/Horse_run.gif" },
+  { id: "horse", name: "Horse", file: "/gifs/Horse_run.gif" },
 ];
 
-// 🧑 FACE LIST (PNG avatars) – public/gifs/1.png ... 7.png
+// 🧑 FACE LIST (PNG avatars)
 const FACE_LIST = [
   "/gifs/1.png",
   "/gifs/2.png",
@@ -53,7 +54,7 @@ function NeonFloatingCards() {
   );
 }
 
-// round-points helper (total - base for that round)
+// round-points helper
 function getRoundPointsForPlayer(p, baseScores) {
   if (!p) return 0;
   const total = typeof p.score === "number" ? p.score : 0;
@@ -71,29 +72,23 @@ export default function CloseMasterGame() {
   const [game, setGame] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [isHost, setIsHost] = useState(false);
-  const [showPoints, setShowPoints] = useState(false); // lobby SCORES button
+  const [showPoints, setShowPoints] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // 🧑 FACE STATE
   const [selectedFace, setSelectedFace] = useState("");
 
-  // TURN TIMER STATE
   const [turnTimeLeft, setTurnTimeLeft] = useState(20);
   const turnTimerRef = useRef(null);
 
-  // GIF REACTION STATE
-  const [showGifPickerFor, setShowGifPickerFor] = useState(null); // playerId | null
-  const [activeReactions, setActiveReactions] = useState({}); // { [playerId]: gifId }
+  const [showGifPickerFor, setShowGifPickerFor] = useState(null);
+  const [activeReactions, setActiveReactions] = useState({});
 
-  // CLOSE result overlay
   const [showResultOverlay, setShowResultOverlay] = useState(false);
   const [winnerName, setWinnerName] = useState("");
 
-  // round base scores (total before round start)
   const [roundBaseScores, setRoundBaseScores] = useState({});
   const prevStartedRef = useRef(false);
 
-  // permanent playerId (device-based)
   const [playerId] = useState(() => {
     if (typeof window === "undefined") return "";
     try {
@@ -112,7 +107,6 @@ export default function CloseMasterGame() {
     }
   });
 
-  // load stored name (optional)
   useEffect(() => {
     try {
       const storedName = localStorage.getItem("cmp_player_name");
@@ -120,7 +114,6 @@ export default function CloseMasterGame() {
     } catch {}
   }, []);
 
-  // socket setup
   useEffect(() => {
     const s = io(SERVER_URL, {
       transports: ["websocket"],
@@ -136,10 +129,8 @@ export default function CloseMasterGame() {
     const MAX_RECONNECTS = 10;
 
     s.on("connect", () => {
-      console.log("✅ Connected:", s.id);
       reconnectAttempts = 0;
 
-      // try to rejoin using stored info
       let roomIdToUse = game?.roomId;
       let nameToUse = playerName;
 
@@ -159,21 +150,18 @@ export default function CloseMasterGame() {
             roomId: roomIdToUse,
             name: nameToUse,
             playerId,
-            // face rejoin ki optional; server daggara already store untundi
           });
         }, 500);
       }
     });
 
     s.on("disconnect", (reason) => {
-      console.log("🔌 Disconnected:", reason);
       if (reason === "io server disconnect") {
         s.disconnect();
       }
     });
 
     s.on("connect_error", (err) => {
-      console.log("❌ Connect error:", err.message);
       reconnectAttempts++;
       if (reconnectAttempts >= MAX_RECONNECTS) {
         alert("Connection failed. Check internet & try again.");
@@ -181,13 +169,11 @@ export default function CloseMasterGame() {
     });
 
     s.on("rejoin_success", (state) => {
-      console.log("🔄 Rejoined game:", state.roomId);
       setGame(state);
       setScreen(state.started ? "game" : "lobby");
     });
 
-    s.on("rejoin_error", (error) => {
-      console.log("❌ Rejoin failed:", error);
+    s.on("rejoin_error", () => {
       setScreen("welcome");
     });
 
@@ -195,11 +181,7 @@ export default function CloseMasterGame() {
       setGame(state);
       setIsHost(state.hostId === state.youId);
       setSelectedIds([]);
-      if (!state.started) {
-        setScreen("lobby");
-      } else {
-        setScreen("game");
-      }
+      setScreen(state.started ? "game" : "lobby");
       setLoading(false);
     });
 
@@ -208,15 +190,12 @@ export default function CloseMasterGame() {
       setLoading(false);
     });
 
-    // GIF PLAY listener (anni players ki broadcast)
     s.on("gif_play", ({ targetId, gifId }) => {
       if (!targetId || !gifId) return;
       setActiveReactions((prev) => ({
         ...prev,
         [targetId]: gifId,
       }));
-
-      // 4s taruvata auto-clear
       setTimeout(() => {
         setActiveReactions((prev) => {
           if (prev[targetId] !== gifId) return prev;
@@ -228,13 +207,11 @@ export default function CloseMasterGame() {
     });
 
     setSocket(s);
-
     return () => {
       s.disconnect();
     };
   }, []);
 
-  // store roomId & name in localStorage
   useEffect(() => {
     if (game?.roomId && playerName) {
       try {
@@ -244,7 +221,6 @@ export default function CloseMasterGame() {
     }
   }, [game?.roomId, playerName]);
 
-  // ROUND START detect → save base scores
   useEffect(() => {
     const startedNow = !!game?.started;
     if (startedNow && !prevStartedRef.current) {
@@ -257,78 +233,59 @@ export default function CloseMasterGame() {
     prevStartedRef.current = startedNow;
   }, [game?.started, game?.players]);
 
-  // CLOSE called → show overlay with winner & round points
   useEffect(() => {
     if (!game?.closeCalled) return;
-
     const players = game.players || [];
     const currentIndex = game.currentIndex ?? 0;
     const closer = players[currentIndex] || players[0];
-
     setWinnerName(closer?.name || "Winner");
     setShowResultOverlay(true);
   }, [game?.closeCalled, game?.players, game?.currentIndex]);
 
-  // Page visibility / reconnect
   useEffect(() => {
     let reconnectTimeout;
-
     const handleVisibilityChange = () => {
-      if (document.hidden) {
-        console.log("📱 App background");
-      } else {
-        console.log("📱 App foreground");
-        if (socket && screen !== "welcome") {
-          let roomIdToUse = game?.roomId;
-          let nameToUse = playerName;
-
-          try {
-            if (!roomIdToUse) {
-              roomIdToUse = localStorage.getItem("cmp_room_id");
-            }
-            if (!nameToUse) {
-              const storedName = localStorage.getItem("cmp_player_name");
-              if (storedName) nameToUse = storedName;
-            }
-          } catch {}
-
-          if (roomIdToUse && nameToUse) {
-            reconnectTimeout = setTimeout(() => {
-              socket.emit("rejoin_room", {
-                roomId: roomIdToUse,
-                name: nameToUse,
-                playerId,
-              });
-            }, 1000);
+      if (!document.hidden && socket && screen !== "welcome") {
+        let roomIdToUse = game?.roomId;
+        let nameToUse = playerName;
+        try {
+          if (!roomIdToUse) {
+            roomIdToUse = localStorage.getItem("cmp_room_id");
           }
+          if (!nameToUse) {
+            const storedName = localStorage.getItem("cmp_player_name");
+            if (storedName) nameToUse = storedName;
+          }
+        } catch {}
+        if (roomIdToUse && nameToUse) {
+          reconnectTimeout = setTimeout(() => {
+            socket.emit("rejoin_room", {
+              roomId: roomIdToUse,
+              name: nameToUse,
+              playerId,
+            });
+          }, 1000);
         }
       }
     };
-
     document.addEventListener("visibilitychange", handleVisibilityChange);
-
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
     };
   }, [socket, game?.roomId, playerName, screen, playerId]);
 
-  // clear turn timer interval on unmount
   useEffect(() => {
     return () => {
-      if (turnTimerRef.current) {
-        clearInterval(turnTimerRef.current);
-      }
+      if (turnTimerRef.current) clearInterval(turnTimerRef.current);
     };
   }, []);
 
-  // 20s TURN TIMER
   useEffect(() => {
     const startedNow = !!game?.started;
     const players = game?.players || [];
     const currentIndex = game?.currentIndex ?? 0;
     const currentPlayer = players[currentIndex];
-
     const isMyTurn =
       startedNow && currentPlayer && currentPlayer.id === game?.youId;
 
@@ -342,16 +299,13 @@ export default function CloseMasterGame() {
     }
 
     setTurnTimeLeft(20);
-    if (turnTimerRef.current) {
-      clearInterval(turnTimerRef.current);
-    }
+    if (turnTimerRef.current) clearInterval(turnTimerRef.current);
 
     turnTimerRef.current = setInterval(() => {
       setTurnTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(turnTimerRef.current);
           turnTimerRef.current = null;
-
           if (isMyTurn && socket && game?.roomId) {
             socket.emit("turn_timeout", { roomId: game.roomId });
           }
@@ -394,23 +348,22 @@ export default function CloseMasterGame() {
     ? me.hand.filter((c) => selectedIds.includes(c.id))
     : [];
   const selectedRanks = [...new Set(selectedCards.map((c) => c.rank))];
-  const selectedSingleRank = selectedRanks.length === 1 ? selectedRanks[0] : null;
+  const selectedSingleRank =
+    selectedRanks.length === 1 ? selectedRanks[0] : null;
   const openCardRank = discardTop?.rank;
 
   let canDropWithoutDraw = false;
   if (!hasDrawn && selectedCards.length > 0 && selectedSingleRank) {
     const sameAsOpen = openCardRank && selectedSingleRank === openCardRank;
-    if (sameAsOpen) {
-      canDropWithoutDraw = true;
-    } else if (selectedCards.length >= 3) {
+    if (sameAsOpen || selectedCards.length >= 3) {
       canDropWithoutDraw = true;
     }
   }
-  const allowDrop = selectedCards.length > 0 && (hasDrawn || canDropWithoutDraw);
+  const allowDrop =
+    selectedCards.length > 0 && (hasDrawn || canDropWithoutDraw);
 
   const closeDisabled = !myTurn || hasDrawn || discardTop?.rank === "7";
 
-  // CREATE / JOIN – face compulsory
   const createRoom = () => {
     if (!socket || !playerName.trim() || !selectedFace) {
       alert("Name and face select cheyali");
@@ -508,8 +461,8 @@ export default function CloseMasterGame() {
     setScreen("lobby");
   };
 
-  const handleGifClick = (playerId) => {
-    setShowGifPickerFor(playerId);
+  const handleGifClick = (pid) => {
+    setShowGifPickerFor(pid);
   };
 
   const handleSelectGif = (gifId) => {
@@ -630,14 +583,12 @@ export default function CloseMasterGame() {
               <input
                 type="text"
                 className="w-full p-4 bg-gray-900/80 border-2 border-gray-200 rounded-2xl text-lg font-semibold text-white placeholder-gray-500 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/30 transition-all"
-                placeholder=""
                 value={playerName}
                 onChange={(e) => setPlayerName(e.target.value)}
                 maxLength={15}
               />
             </div>
 
-            {/* FACE SELECTION GRID */}
             <div>
               <label className="block text-sm font-semibold text-gray-200 mb-3">
                 Choose Avatar
@@ -671,7 +622,6 @@ export default function CloseMasterGame() {
               <input
                 type="text"
                 className="w-full p-4 bg-gray-900/80 border-2 border-gray-200 rounded-2xl text-lg font-semibold text-white placeholder-gray-500 uppercase focus:border-sky-400 focus:ring-4 focus:ring-sky-500/30 transition-all"
-                placeholder=""
                 value={joinCode}
                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                 maxLength={4}
@@ -702,18 +652,37 @@ export default function CloseMasterGame() {
             </button>
           </div>
         </div>
+
         <style jsx>{`
           @keyframes float {
-            0%, 100% { transform: translateY(0) rotate(0); }
-            50% { transform: translateY(-20px) rotate(5deg); }
+            0%,
+            100% {
+              transform: translateY(0) rotate(0);
+            }
+            50% {
+              transform: translateY(-20px) rotate(5deg);
+            }
           }
-          .animate-float-slow { animation: float 15s ease-in-out infinite; }
+          .animate-float-slow {
+            animation: float 15s ease-in-out infinite;
+          }
           @keyframes firework-burst {
-            0% { transform: scale(0); opacity: 1; }
-            20% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(1.6); opacity: 0; }
+            0% {
+              transform: scale(0);
+              opacity: 1;
+            }
+            20% {
+              transform: scale(1);
+              opacity: 1;
+            }
+            100% {
+              transform: scale(1.6);
+              opacity: 0;
+            }
           }
-          .firework-burst { animation: firework-burst 1.2s ease-out infinite; }
+          .firework-burst {
+            animation: firework-burst 1.2s ease-out infinite;
+          }
         `}</style>
       </div>
     );
@@ -721,6 +690,7 @@ export default function CloseMasterGame() {
 
   // LOBBY SCREEN
   if (screen === "lobby") {
+    const meLobby = players.find((p) => p.id === youId);
     return (
       <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/30 to-blue-900/30 text-white p-4 md:p-6 flex flex-col items-center gap-4 md:gap-6 relative overflow-hidden">
         <NeonFloatingCards />
@@ -732,17 +702,17 @@ export default function CloseMasterGame() {
           </h1>
           <div className="flex flex-col items-center mb-4 md:mb-6">
             <div className="flex items-center gap-3 mb-2">
-              {me?.face && (
+              {meLobby?.face && (
                 <img
-                  src={me.face}
+                  src={meLobby.face}
                   className="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-emerald-400"
                   alt=""
                 />
               )}
               <p className="text-lg md:text-xl">
-                You{" "}
+                You:{" "}
                 <span className="font-bold text-white px-3 py-1 bg-emerald-500/30 rounded-full">
-                  {me?.name}
+                  {meLobby?.name}
                 </span>
               </p>
             </div>
@@ -782,7 +752,7 @@ export default function CloseMasterGame() {
             </button>
           </div>
           <div className="mt-3 md:mt-4 text-sm md:text-lg">
-            Players{" "}
+            Players:{" "}
             <span className="text-emerald-400 font-bold">
               {players.length}/{MAX_PLAYERS}
             </span>
@@ -860,16 +830,34 @@ export default function CloseMasterGame() {
 
         <style jsx>{`
           @keyframes float {
-            0%, 100% { transform: translateY(0) rotate(0); }
-            50% { transform: translateY(-20px) rotate(5deg); }
+            0%,
+            100% {
+              transform: translateY(0) rotate(0);
+            }
+            50% {
+              transform: translateY(-20px) rotate(5deg);
+            }
           }
-          .animate-float-slow { animation: float 15s ease-in-out infinite; }
+          .animate-float-slow {
+            animation: float 15s ease-in-out infinite;
+          }
           @keyframes firework-burst {
-            0% { transform: scale(0); opacity: 1; }
-            20% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(1.6); opacity: 0; }
+            0% {
+              transform: scale(0);
+              opacity: 1;
+            }
+            20% {
+              transform: scale(1);
+              opacity: 1;
+            }
+            100% {
+              transform: scale(1.6);
+              opacity: 0;
+            }
           }
-          .firework-burst { animation: firework-burst 1.2s ease-out infinite; }
+          .firework-burst {
+            animation: firework-burst 1.2s ease-out infinite;
+          }
         `}</style>
       </div>
     );
@@ -881,7 +869,6 @@ export default function CloseMasterGame() {
       <NeonFloatingCards />
       <ResultOverlay />
 
-      {/* TURN TIMER – TOP */}
       {started && (
         <div className="z-10 flex flex-col items-center gap-2 mt-2">
           <div
@@ -913,7 +900,7 @@ export default function CloseMasterGame() {
                 />
               )}
               <span>
-                Turn{" "}
+                Turn:{" "}
                 <span className="text-xl md:text-2xl font-bold text-yellow-400">
                   {currentPlayer?.name}
                 </span>
@@ -931,57 +918,63 @@ export default function CloseMasterGame() {
               )}
             </div>
             <div className="text-sm md:text-base">
-              Draw <span className="font-bold">{pendingDraw || 1}</span> | Skip{" "}
+              Draw: <span className="font-bold">{pendingDraw || 1}</span> | Skip:{" "}
               <span className="font-bold">{pendingSkips}</span>
             </div>
           </div>
         </div>
       )}
 
+      {/* OPEN CARD – NEON STYLE */}
       {started && (
         <div className="z-10 text-center">
-          <h3 className="text-lg md:text-xl mb-3 md:mb-4 font-bold">OPEN CARD</h3>
+          <h3 className="text-lg md:text-xl mb-3 md:mb-4 font-bold">
+            OPEN CARD
+          </h3>
           {discardTop ? (
             <button
               onClick={() => drawCard(true)}
               disabled={!myTurn || hasDrawn}
-              className={`w-20 md:w-24 h-28 md:h-36 bg-white rounded-2xl shadow-2xl border-4 p-2 md:p-3 flex flex-col justify-between ${
+              className={[
+                "relative w-24 md:w-28 h-32 md:h-40 rounded-3xl border border-pink-500/80",
+                "bg-black/80 shadow-[0_0_25px_rgba(236,72,153,0.9)]",
+                "flex flex-col justify-between p-2 md:p-3 transition-transform",
                 myTurn && !hasDrawn
-                  ? "hover:scale-105 cursor-pointer border-blue-400"
-                  : "border-gray-300 opacity-70"
-              }`}
+                  ? "hover:scale-105 cursor-pointer"
+                  : "opacity-60 cursor-not-allowed",
+              ].join(" ")}
             >
-              <div
-                className={`text-base md:text-lg font-bold ${cardTextColor(
-                  discardTop
-                )}`}
-              >
-                {discardTop.rank}
+              <div className="pointer-events-none absolute inset-0 rounded-3xl border border-white/60 shadow-[0_0_30px_rgba(248,250,252,0.9)]" />
+
+              <div className="relative text-base md:text-lg font-bold uppercase">
+                <span className={cardTextColor(discardTop)}>
+                  {discardTop.rank}
+                </span>
               </div>
-              <div
-                className={`text-3xl md:text-4xl text-center ${cardTextColor(
-                  discardTop
-                )}`}
-              >
-                {discardTop.rank === "JOKER" ? "🃏" : discardTop.suit}
+
+              <div className="relative text-3xl md:text-4xl text-center">
+                <span className={cardTextColor(discardTop)}>
+                  {discardTop.rank === "JOKER"
+                    ? discardTop.suit
+                    : discardTop.suit}
+                </span>
               </div>
-              <div
-                className={`text-base md:text-lg font-bold text-right ${cardTextColor(
-                  discardTop
-                )}`}
-              >
-                {discardTop.rank}
+
+              <div className="relative text-base md:text-lg font-bold text-right uppercase">
+                <span className={cardTextColor(discardTop)}>
+                  {discardTop.rank}
+                </span>
               </div>
             </button>
           ) : (
-            <div className="w-20 md:w-24 h-28 md:h-36 bg-gray-800 border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center text-gray-500 text-xs md:text-sm">
+            <div className="w-24 md:w-28 h-32 md:h-40 bg-black/70 border border-white/20 rounded-3xl flex items-center justify-center text-gray-400 text-xs md:text-sm">
               Empty
             </div>
           )}
         </div>
       )}
 
-      {/* PLAYERS LIST + GIF ICONS + ACTIVE GIF BUBBLE */}
+      {/* PLAYERS LIST + GIFS */}
       {started && (
         <div className="z-10 w-full max-w-5xl grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
           {players.map((p) => {
@@ -1056,9 +1049,9 @@ export default function CloseMasterGame() {
               Choose GIF
             </p>
             <p className="text-center text-xs md:text-sm text-gray-300 mb-4">
-              {(players.find((p) => p.id === showGifPickerFor)?.name) ||
-                "Player"}{" "}
-              ki GIF pettandi
+              {(
+                players.find((p) => p.id === showGifPickerFor)?.name || "Player"
+              ) + " ki GIF pettandi"}
             </p>
 
             <div className="grid grid-cols-2 gap-3 mb-4">
@@ -1092,63 +1085,48 @@ export default function CloseMasterGame() {
         </div>
       )}
 
-      {/* YOUR HAND */}
+      {/* YOUR HAND – NEON STYLE */}
       {me && started && (
         <div className="z-10 w-full max-w-5xl">
           <h3 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-emerald-400 text-center">
             Your Hand ({me.hand.length})
           </h3>
-          <div className="flex gap-2 md:gap-3 flex-wrap justify-center p-3 md:p-4 bg-gray-900/50 rounded-2xl">
+
+          <div className="flex gap-2 md:gap-3 flex-wrap justify-center p-3 md:p-4 bg-black/40 rounded-3xl border border-white/10">
             {me.hand.map((c) => {
               const selected = selectedIds.includes(c.id);
-
-              const isRed = c.suit === "♥" || c.suit === "♦";
-              const suitBg = isRed
-                ? "bg-gradient-to-br from-pink-500 via-red-500 to-orange-400"
-                : "bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-700";
-              const neonGlow = isRed
-                ? "shadow-[0_0_20px_rgba(248,113,113,0.8)]"
-                : "shadow-[0_0_20px_rgba(56,189,248,0.8)]";
-
               return (
                 <button
                   key={c.id}
                   onClick={() => toggleSelect(c.id)}
                   disabled={!myTurn}
-                  className={`
-                    w-16 md:w-20 h-24 md:h-28
-                    rounded-2xl border-4
-                    flex flex-col p-1 md:p-2 justify-between transition-all
-                    ${suitBg} ${neonGlow}
-                    ${
-                      selected
-                        ? "scale-125 border-cyan-300 shadow-[0_0_25px_rgba(0,255,255,1)] animate-neon-rotate"
-                        : myTurn
-                        ? "border-white/70 hover:border-cyan-300 hover:scale-105"
-                        : "border-white/30 opacity-60"
-                    }
-                  `}
+                  className={[
+                    "relative w-16 md:w-20 h-24 md:h-28 rounded-3xl",
+                    "bg-black/80 border border-pink-500/70",
+                    "shadow-[0_0_22px_rgba(236,72,153,0.9)]",
+                    "flex flex-col justify-between p-1.5 md:p-2 transition-transform",
+                    "backdrop-blur-sm",
+                    selected
+                      ? "scale-125 border-cyan-300 shadow-[0_0_28px_rgba(34,211,238,1)] animate-neon-rotate"
+                      : myTurn
+                      ? "hover:scale-105 hover:border-cyan-300"
+                      : "opacity-60 cursor-not-allowed",
+                  ].join(" ")}
                 >
-                  <div
-                    className={`text-sm md:text-lg font-bold ${cardTextColor(
-                      c
-                    )}`}
-                  >
-                    {c.rank}
+                  <div className="pointer-events-none absolute inset-0 rounded-3xl border border-white/70 shadow-[0_0_26px_rgba(248,250,252,0.95)]" />
+
+                  <div className="relative text-sm md:text-base font-bold uppercase">
+                    <span className={cardTextColor(c)}>{c.rank}</span>
                   </div>
-                  <div
-                    className={`text-2xl md:text-3xl text-center ${cardTextColor(
-                      c
-                    )}`}
-                  >
-                    {c.rank === "JOKER" ? "🃏" : c.suit}
+
+                  <div className="relative text-2xl md:text-3xl text-center">
+                    <span className={cardTextColor(c)}>
+                      {c.rank === "JOKER" ? c.suit : c.suit}
+                    </span>
                   </div>
-                  <div
-                    className={`text-sm md:text-lg font-bold text-right ${cardTextColor(
-                      c
-                    )}`}
-                  >
-                    {c.rank}
+
+                  <div className="relative text-sm md:text-base font-bold text-right uppercase">
+                    <span className={cardTextColor(c)}>{c.rank}</span>
                   </div>
                 </button>
               );
@@ -1196,7 +1174,6 @@ export default function CloseMasterGame() {
         </div>
       )}
 
-      {/* EXIT BUTTON */}
       {started && (
         <div className="z-10 mt-4">
           <button
@@ -1210,31 +1187,64 @@ export default function CloseMasterGame() {
 
       <style jsx>{`
         @keyframes float {
-          0%, 100% { transform: translateY(0) rotate(0); }
-          50% { transform: translateY(-20px) rotate(5deg); }
+          0%,
+          100% {
+            transform: translateY(0) rotate(0);
+          }
+          50% {
+            transform: translateY(-20px) rotate(5deg);
+          }
         }
-        .animate-float-slow { animation: float 15s ease-in-out infinite; }
+        .animate-float-slow {
+          animation: float 15s ease-in-out infinite;
+        }
 
         @keyframes firework-burst {
-          0% { transform: scale(0); opacity: 1; }
-          20% { transform: scale(1); opacity: 1; }
-          100% { transform: scale(1.6); opacity: 0; }
+          0% {
+            transform: scale(0);
+            opacity: 1;
+          }
+          20% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          100% {
+            transform: scale(1.6);
+            opacity: 0;
+          }
         }
-        .firework-burst { animation: firework-burst 1.2s ease-out infinite; }
+        .firework-burst {
+          animation: firework-burst 1.2s ease-out infinite;
+        }
 
         @keyframes neon-rotate {
-          0% { transform: rotate(-4deg) scale(1.25); }
-          50% { transform: rotate(4deg) scale(1.25); }
-          100% { transform: rotate(-4deg) scale(1.25); }
+          0% {
+            transform: rotate(-4deg) scale(1.25);
+          }
+          50% {
+            transform: rotate(4deg) scale(1.25);
+          }
+          100% {
+            transform: rotate(-4deg) scale(1.25);
+          }
         }
         .animate-neon-rotate {
           animation: neon-rotate 1.5s ease-in-out infinite;
         }
 
         @keyframes ping-slow {
-          0% { transform: scale(1); opacity: 1; }
-          75% { transform: scale(1.15); opacity: 0.6; }
-          100% { transform: scale(1); opacity: 1; }
+          0% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          75% {
+            transform: scale(1.15);
+            opacity: 0.6;
+          }
+          100% {
+            transform: scale(1);
+            opacity: 1;
+          }
         }
         .animate-ping-slow {
           animation: ping-slow 1.5s ease-in-out infinite;
