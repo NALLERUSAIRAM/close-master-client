@@ -103,6 +103,7 @@ export default function CloseMasterGame() {
     }
   });
 
+  // load stored name
   useEffect(() => {
     try {
       const storedName = localStorage.getItem("cmp_player_name");
@@ -110,6 +111,7 @@ export default function CloseMasterGame() {
     } catch {}
   }, []);
 
+  // socket setup
   useEffect(() => {
     const s = io(SERVER_URL, {
       transports: ["websocket"],
@@ -187,10 +189,7 @@ export default function CloseMasterGame() {
 
     s.on("gif_play", ({ targetId, gifId }) => {
       if (!targetId || !gifId) return;
-      setActiveReactions((prev) => ({
-        ...prev,
-        [targetId]: gifId,
-      }));
+      setActiveReactions((prev) => ({ ...prev, [targetId]: gifId }));
       setTimeout(() => {
         setActiveReactions((prev) => {
           if (prev[targetId] !== gifId) return prev;
@@ -207,6 +206,7 @@ export default function CloseMasterGame() {
     };
   }, []);
 
+  // store room id + name
   useEffect(() => {
     if (game?.roomId && playerName) {
       try {
@@ -216,6 +216,7 @@ export default function CloseMasterGame() {
     }
   }, [game?.roomId, playerName]);
 
+  // round base scores
   useEffect(() => {
     const startedNow = !!game?.started;
     if (startedNow && !prevStartedRef.current) {
@@ -228,6 +229,7 @@ export default function CloseMasterGame() {
     prevStartedRef.current = startedNow;
   }, [game?.started, game?.players]);
 
+  // close overlay
   useEffect(() => {
     if (!game?.closeCalled) return;
     const players = game.players || [];
@@ -237,6 +239,7 @@ export default function CloseMasterGame() {
     setShowResultOverlay(true);
   }, [game?.closeCalled, game?.players, game?.currentIndex]);
 
+  // visibility / reconnect
   useEffect(() => {
     let reconnectTimeout;
     const handleVisibilityChange = () => {
@@ -270,14 +273,14 @@ export default function CloseMasterGame() {
     };
   }, [socket, game?.roomId, playerName, screen, playerId]);
 
+  // clear timer on unmount
   useEffect(() => {
     return () => {
-      if (turnTimerRef.current) {
-        clearInterval(turnTimerRef.current);
-      }
+      if (turnTimerRef.current) clearInterval(turnTimerRef.current);
     };
   }, []);
 
+  // 20s turn timer
   useEffect(() => {
     const startedNow = !!game?.started;
     const players = game?.players || [];
@@ -296,9 +299,7 @@ export default function CloseMasterGame() {
     }
 
     setTurnTimeLeft(20);
-    if (turnTimerRef.current) {
-      clearInterval(turnTimerRef.current);
-    }
+    if (turnTimerRef.current) clearInterval(turnTimerRef.current);
 
     turnTimerRef.current = setInterval(() => {
       setTurnTimeLeft((prev) => {
@@ -354,9 +355,7 @@ export default function CloseMasterGame() {
   let canDropWithoutDraw = false;
   if (!hasDrawn && selectedCards.length > 0 && selectedSingleRank) {
     const sameAsOpen = openCardRank && selectedSingleRank === openCardRank;
-    if (sameAsOpen || selectedCards.length >= 3) {
-      canDropWithoutDraw = true;
-    }
+    if (sameAsOpen || selectedCards.length >= 3) canDropWithoutDraw = true;
   }
   const allowDrop = selectedCards.length > 0 && (hasDrawn || canDropWithoutDraw);
   const closeDisabled = !myTurn || hasDrawn || discardTop?.rank === "7";
@@ -372,9 +371,7 @@ export default function CloseMasterGame() {
       { name: playerName.trim(), playerId, face: selectedFace },
       (res) => {
         setLoading(false);
-        if (!res || res.error) {
-          alert(res?.error || "Create failed");
-        }
+        if (!res || res.error) alert(res?.error || "Create failed");
       }
     );
   };
@@ -395,9 +392,7 @@ export default function CloseMasterGame() {
       },
       (res) => {
         setLoading(false);
-        if (res?.error) {
-          alert(res.error);
-        }
+        if (res?.error) alert(res.error);
       }
     );
   };
@@ -766,7 +761,7 @@ export default function CloseMasterGame() {
           {players.map((p) => (
             <div
               key={p.id}
-              className={`p-3 md:p-4 rounded-2xl border-2 shadow-lg ${
+              className={`relative p-3 md:p-4 rounded-2xl border-2 shadow-lg ${
                 p.id === youId
                   ? "border-emerald-400 bg-emerald-900/30"
                   : "border-gray-700 bg-gray-900/30"
@@ -787,6 +782,17 @@ export default function CloseMasterGame() {
               <p className="text-xs md:text-sm text-gray-400 text-center">
                 {p.score} pts
               </p>
+
+              {/* tiny GIF button top-right */}
+              <div className="absolute top-1 right-1">
+                <button
+                  type="button"
+                  onClick={() => handleGifClick(p.id)}
+                  className="text-[10px] md:text-xs px-1.5 py-0.5 rounded-full bg-black/60 border border-white/30 hover:bg-black/80"
+                >
+                  GIF 🎭
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -872,24 +878,7 @@ export default function CloseMasterGame() {
       <NeonFloatingCards />
       <ResultOverlay />
 
-      {started && (
-        <div className="z-10 flex flex-col items-center gap-2 mt-2">
-          <div
-            className={`relative w-20 h-20 md:w-24 md:h-24 rounded-full border-4 flex items-center justify-center ${
-              myTurn ? "border-yellow-400 animate-ping-slow" : "border-gray-200"
-            }`}
-          >
-            <span className="text-xl md:text-2xl font-extrabold">
-              {started ? turnTimeLeft : "--"}
-            </span>
-          </div>
-          <p className="text-xs md:text-sm font-semibold text-yellow-200">
-            {myTurn
-              ? "Mee turn, 20s lopala aadandi"
-              : `${currentPlayer?.name || "Player"} turn lo vunnadu`}
-          </p>
-        </div>
-      )}
+      {/* top timer circle removed */}
 
       {started && (
         <div className="z-10 w-full max-w-4xl p-3 md:p-4 bg-gray-900/50 rounded-2xl border border-gray-700">
@@ -921,8 +910,12 @@ export default function CloseMasterGame() {
               )}
             </div>
             <div className="text-sm md:text-base">
-              Draw: <span className="font-bold">{pendingDraw || 1}</span> | Skip:{" "}
-              <span className="font-bold">{pendingSkips}</span>
+              Time:{" "}
+              <span className="font-bold text-yellow-300">
+                {turnTimeLeft}s
+              </span>{" "}
+              | Draw: <span className="font-bold">{pendingDraw || 1}</span> |
+              Skip: <span className="font-bold">{pendingSkips}</span>
             </div>
           </div>
         </div>
@@ -934,17 +927,9 @@ export default function CloseMasterGame() {
             OPEN CARD
           </h3>
           {discardTop ? (
-            <button
-              onClick={() => drawCard(true)}
-              disabled={!myTurn || hasDrawn}
-              className={`w-20 md:w-24 h-28 md:h-36 bg-white rounded-2xl shadow-2xl border-4 p-2 md:p-3 flex flex-col justify-between ${
-                myTurn && !hasDrawn
-                  ? "hover:scale-105 cursor-pointer border-blue-400"
-                  : "border-gray-300 opacity-70"
-              }`}
-            >
+            <div className="w-24 md:w-28 h-32 md:h-40 rounded-3xl border-2 border-cyan-300/70 bg-white/5 shadow-[0_0_25px_rgba(34,211,238,0.6)] flex flex-col justify-between p-2 md:p-3 backdrop-blur-md">
               <div
-                className={`text-base md:text-lg font-bold ${cardTextColor(
+                className={`text-sm md:text-lg font-bold ${cardTextColor(
                   discardTop
                 )}`}
               >
@@ -958,15 +943,15 @@ export default function CloseMasterGame() {
                 {discardTop.rank === "JOKER" ? "🃏" : discardTop.suit}
               </div>
               <div
-                className={`text-base md:text-lg font-bold text-right ${cardTextColor(
+                className={`text-sm md:text-lg font-bold text-right ${cardTextColor(
                   discardTop
                 )}`}
               >
                 {discardTop.rank}
               </div>
-            </button>
+            </div>
           ) : (
-            <div className="w-20 md:w-24 h-28 md:h-36 bg-gray-800 border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center text-gray-500 text-xs md:text-sm">
+            <div className="w-24 md:w-28 h-32 md:h-40 rounded-3xl border-2 border-dashed border-cyan-200/40 bg-white/5 flex items-center justify-center text-xs md:text-sm text-cyan-100/70">
               Empty
             </div>
           )}
@@ -1021,16 +1006,20 @@ export default function CloseMasterGame() {
                   {p.hasDrawn && (
                     <p className="text-xs text-emerald-400 text-center">Drew</p>
                   )}
+                  {isTurn && (
+                    <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] md:text-xs bg-yellow-500/20 text-yellow-200 border border-yellow-400/60">
+                      ⏱ {turnTimeLeft}s
+                    </span>
+                  )}
                 </div>
 
-                <div className="mt-2 flex justify-center">
+                <div className="absolute top-1 right-1">
                   <button
                     type="button"
                     onClick={() => handleGifClick(p.id)}
-                    className="text-xs md:text-sm px-2 py-1 rounded-full bg-black/20 border border-white/30 flex items-center gap-1 hover:bg-black/80"
+                    className="text-[10px] md:text-xs px-1.5 py-0.5 rounded-full bg-black/60 border border-white/30 hover:bg-black/80"
                   >
-                    <span>GIF</span>
-                    <span>🎭</span>
+                    GIF 🎭
                   </button>
                 </div>
               </div>
@@ -1090,14 +1079,9 @@ export default function CloseMasterGame() {
             Your Hand ({me.hand.length})
           </h3>
 
-          <div className="flex gap-2 md:gap-3 flex-wrap justify-center p-3 md:p-4 bg-black/60 rounded-3xl border border-cyan-500/30">
+          <div className="flex gap-2 md:gap-3 flex-wrap justify-center p-3 md:p-4 bg-black/40 rounded-3xl border border-cyan-500/30">
             {me.hand.map((c) => {
               const selected = selectedIds.includes(c.id);
-              const isRed = c.suit === "♥" || c.suit === "♦";
-
-              const baseBg = isRed
-                ? "from-pink-500 via-fuchsia-500 to-red-500"
-                : "from-cyan-400 via-blue-500 to-indigo-700";
 
               return (
                 <button
@@ -1107,21 +1091,21 @@ export default function CloseMasterGame() {
                   className={`
                     relative
                     w-16 md:w-20 h-24 md:h-28
-                    rounded-2xl border-2
+                    rounded-2xl border
                     flex flex-col justify-between
                     px-2 py-1.5 md:px-2.5 md:py-2
-                    transition-all duration-200
-                    bg-gradient-to-br ${baseBg}
+                    transition-all duration-150
+                    bg-slate-900/60 backdrop-blur
                     ${
                       selected
-                        ? "scale-110 border-cyan-300 shadow-[0_0_20px_rgba(34,211,238,1)] animate-neon-rotate"
+                        ? "scale-110 border-cyan-300 shadow-[0_0_16px_rgba(34,211,238,0.9)]"
                         : myTurn
-                        ? "hover:scale-105 border-white/80 shadow-[0_0_12px_rgba(148,163,184,0.8)]"
-                        : "opacity-70 border-white/30 shadow-[0_0_6px_rgba(15,23,42,0.9)]"
+                        ? "hover:scale-105 border-slate-300/80 shadow-[0_0_10px_rgba(148,163,184,0.8)]"
+                        : "opacity-70 border-slate-500/60 shadow-[0_0_6px_rgba(15,23,42,0.9)]"
                     }
                   `}
                 >
-                  <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_20%_20%,rgba(248,250,252,0.25),transparent_55%),radial-gradient(circle_at_80%_80%,rgba(248,250,252,0.15),transparent_55%)]" />
+                  <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_20%_20%,rgba(248,250,252,0.18),transparent_55%),radial-gradient(circle_at_80%_80%,rgba(248,250,252,0.12),transparent_55%)]" />
 
                   <div className="relative flex flex-col h-full justify-between">
                     <div
@@ -1150,6 +1134,44 @@ export default function CloseMasterGame() {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {myTurn && started && (
+        <div className="z-10 flex flex-wrap gap-2 md:gap-4 justify-center max-w-4xl p-4 md:p-6 bg-black/50 backdrop-blur-xl rounded-3xl border border-white/20">
+          <button
+            onClick={() => drawCard(false)}
+            disabled={hasDrawn}
+            className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${
+              hasDrawn
+                ? "bg-gray-700/50 cursor-not-allowed opacity-50"
+                : "bg-gradient-to-r from-purple-200 to-purple-700 hover:from-purple-700 hover:to-purple-800"
+            }`}
+          >
+            DECK
+          </button>
+          <button
+            onClick={dropCards}
+            disabled={!allowDrop}
+            className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${
+              allowDrop
+                ? "bg-gradient-to-r from-green-200 to-green-700 hover:from-green-700 hover:to-green-800"
+                : "bg-gray-700/50 cursor-not-allowed opacity-50"
+            }`}
+          >
+            DROP ({selectedIds.length})
+          </button>
+          <button
+            onClick={callClose}
+            disabled={closeDisabled}
+            className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${
+              closeDisabled
+                ? "bg-gray-700/50 cursor-not-allowed opacity-50"
+                : "bg-gradient-to-r from-red-200 to-red-700 hover:from-red-700 hover:to-red-800 hover:scale-105"
+            }`}
+          >
+            CLOSE
+          </button>
         </div>
       )}
 
