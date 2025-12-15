@@ -110,7 +110,7 @@ export default function CloseMasterGame() {
     } catch {}
   }, []);
 
-  // socket setup
+  // SOCKET SETUP
   useEffect(() => {
     const s = io(SERVER_URL, {
       transports: ["websocket"],
@@ -205,7 +205,7 @@ export default function CloseMasterGame() {
     };
   }, []);
 
-  // store roomId & name
+  // STORE ROOM ID + NAME
   useEffect(() => {
     if (game?.roomId && playerName) {
       try {
@@ -215,7 +215,7 @@ export default function CloseMasterGame() {
     }
   }, [game?.roomId, playerName]);
 
-  // round base scores
+  // ROUND BASE SCORES
   useEffect(() => {
     const startedNow = !!game?.started;
     if (startedNow && !prevStartedRef.current) {
@@ -228,7 +228,7 @@ export default function CloseMasterGame() {
     prevStartedRef.current = startedNow;
   }, [game?.started, game?.players]);
 
-  // close overlay
+  // CLOSE OVERLAY
   useEffect(() => {
     if (!game?.closeCalled) return;
     const players = game.players || [];
@@ -238,7 +238,7 @@ export default function CloseMasterGame() {
     setShowResultOverlay(true);
   }, [game?.closeCalled, game?.players, game?.currentIndex]);
 
-  // visibility / reconnect
+  // VISIBILITY / REJOIN
   useEffect(() => {
     let reconnectTimeout;
     const handleVisibilityChange = () => {
@@ -297,9 +297,7 @@ export default function CloseMasterGame() {
     }
 
     setTurnTimeLeft(20);
-    if (turnTimerRef.current) {
-      clearInterval(turnTimerRef.current);
-    }
+    if (turnTimerRef.current) clearInterval(turnTimerRef.current);
 
     turnTimerRef.current = setInterval(() => {
       setTurnTimeLeft((prev) => {
@@ -511,7 +509,7 @@ export default function CloseMasterGame() {
             CLOSE SUCCESS 🎉
           </p>
 
-          <div className="bg-white/5 rounded-2xl p-3 md:p-4 mb-4 max-h-20 overflow-y-auto">
+          <div className="bg-white/5 rounded-2xl p-3 md:p-4 mb-4 max-h-[60vh] overflow-y-auto">
             <p className="text-xs md:text-sm text-amber-200 font-semibold mb-2 text-center">
               CURRENT ROUND POINTS
             </p>
@@ -784,7 +782,6 @@ export default function CloseMasterGame() {
               </p>
 
               <div className="absolute top-1 right-1 flex items-center gap-1">
-                {/* timer only for current turn */}
                 {currentPlayer?.id === p.id && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] md:text-xs bg-yellow-500/20 text-yellow-200 border border-yellow-400/60">
                     ⏱ {turnTimeLeft}s
@@ -883,7 +880,17 @@ export default function CloseMasterGame() {
       <NeonFloatingCards />
       <ResultOverlay />
 
-      {/* top circle timer removed; info bar only */}
+      {/* NEON TITLE */}
+      <div className="z-10 mt-1 mb-2">
+        <div className="relative px-6 md:px-10 py-2 md:py-3 rounded-full border-2 border-transparent bg-gradient-to-r from-emerald-400 via-sky-400 to-purple-500 animate-spin-slow">
+          <div className="rounded-full px-6 md:px-10 py-2 md:py-3 bg-black">
+            <h1 className="text-lg md:text-2xl font-black tracking-[0.25em] text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-sky-300 to-purple-300 drop-shadow-[0_0_15px_rgba(59,130,246,0.9)]">
+              CLOSE MASTER
+            </h1>
+          </div>
+        </div>
+      </div>
+
       {started && (
         <div className="z-10 w-full max-w-4xl p-3 md:p-4 bg-gray-900/50 rounded-2xl border border-gray-700">
           <div className="flex flex-wrap justify-between items-center gap-2 text-sm md:text-base">
@@ -931,7 +938,17 @@ export default function CloseMasterGame() {
             OPEN CARD
           </h3>
           {discardTop ? (
-            <div className="w-24 md:w-28 h-32 md:h-40 rounded-3xl border-2 border-cyan-300/70 bg-white/5 shadow-[0_0_25px_rgba(34,211,238,0.6)] flex flex-col justify-between p-2 md:p-3 backdrop-blur-md">
+            <button
+              type="button"
+              onClick={() => drawCard(true)}
+              disabled={!myTurn || hasDrawn || pendingDraw === 0}
+              className={`w-24 md:w-28 h-32 md:h-40 rounded-3xl border-2 p-2 md:p-3 flex flex-col justify-between bg-white/5 backdrop-blur-md shadow-[0_0_20px_rgba(34,211,238,0.6)]
+                ${
+                  myTurn && !hasDrawn && pendingDraw > 0
+                    ? "border-cyan-300 hover:scale-105 cursor-pointer"
+                    : "border-gray-400/60 opacity-70 cursor-not-allowed"
+                }`}
+            >
               <div
                 className={`text-sm md:text-lg font-bold ${cardTextColor(
                   discardTop
@@ -953,7 +970,7 @@ export default function CloseMasterGame() {
               >
                 {discardTop.rank}
               </div>
-            </div>
+            </button>
           ) : (
             <div className="w-24 md:w-28 h-32 md:h-40 rounded-3xl border-2 border-dashed border-cyan-200/40 bg-white/5 flex items-center justify-center text-xs md:text-sm text-cyan-100/70">
               Empty
@@ -1221,6 +1238,17 @@ export default function CloseMasterGame() {
         }
         .animate-ping-slow {
           animation: ping-slow 1.5s ease-in-out infinite;
+        }
+        @keyframes spin-slow {
+          0% {
+            transform: rotate(0deg);
+          }
+          100% {
+            transform: rotate(360deg);
+          }
+        }
+        .animate-spin-slow {
+          animation: spin-slow 12s linear infinite;
         }
       `}</style>
     </div>
