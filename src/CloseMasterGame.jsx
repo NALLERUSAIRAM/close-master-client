@@ -163,7 +163,7 @@ export default function CloseMasterGame() {
       }
     });
 
-    s.on("connect_error", (err) => {
+    s.on("connect_error", () => {
       reconnectAttempts++;
       if (reconnectAttempts >= MAX_RECONNECTS) {
         alert("Connection failed. Check internet & try again.");
@@ -883,25 +883,14 @@ export default function CloseMasterGame() {
       <NeonFloatingCards />
       <ResultOverlay />
 
-      {started && (
-        <div className="z-10 flex flex-col items-center gap-2 mt-2">
-          <div
-            className={`relative w-20 h-20 md:w-24 md:h-24 rounded-full border-4 flex items-center justify-center ${
-              myTurn ? "border-yellow-400 animate-ping-slow" : "border-gray-200"
-            }`}
-          >
-            <span className="text-xl md:text-2xl font-extrabold">
-              {started ? turnTimeLeft : "--"}
-            </span>
-          </div>
-          <p className="text-xs md:text-sm font-semibold text-yellow-200">
-            {myTurn
-              ? "Mee turn, 20s lopala aadandi"
-              : `${currentPlayer?.name || "Player"} turn lo vunnadu`}
-          </p>
-        </div>
-      )}
+      {/* TITLE INSTEAD OF BIG TIMER */}
+      <div className="z-10 mt-2 mb-1 text-center">
+        <h1 className="text-2xl md:text-3xl font-black tracking-wide bg-gradient-to-r from-emerald-400 via-blue-400 to-purple-500 bg-clip-text text-transparent drop-shadow-2xl">
+          CLOSE MASTER
+        </h1>
+      </div>
 
+      {/* INFO BAR (current player, draw/skip) */}
       {started && (
         <div className="z-10 w-full max-w-4xl p-3 md:p-4 bg-gray-900/50 rounded-2xl border border-gray-700">
           <div className="flex flex-wrap justify-between items-center gap-2 text-sm md:text-base">
@@ -988,7 +977,7 @@ export default function CloseMasterGame() {
         </div>
       )}
 
-      {/* PLAYERS LIST + GIFS */}
+      {/* PLAYERS LIST + GIF + TIMER INSIDE CARD */}
       {started && (
         <div className="z-10 w-full max-w-5xl grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
           {players.map((p) => {
@@ -996,6 +985,7 @@ export default function CloseMasterGame() {
             const isTurn = currentPlayer?.id === p.id;
             const activeGifId = activeReactions[p.id];
             const activeGif = GIF_LIST.find((g) => g.id === activeGifId);
+            const isMyCard = p.id === youId;
 
             return (
               <div
@@ -1008,8 +998,35 @@ export default function CloseMasterGame() {
                     : "border-gray-700 bg-gray-900/30"
                 }`}
               >
+                {/* TOP BAR: LEFT GIF BUTTON, RIGHT TIMER (ONLY FOR YOU) */}
+                <div className="flex items-center justify-between mb-2">
+                  <button
+                    type="button"
+                    onClick={() => handleGifClick(p.id)}
+                    className="text-[10px] md:text-xs px-2 py-1 rounded-full bg-black/30 border border-white/40 flex items-center gap-1 hover:bg-black/70"
+                  >
+                    <span>GIF</span>
+                    <span>🎭</span>
+                  </button>
+
+                  {isMyCard && started && (
+                    <div className="flex items-center gap-1">
+                      <div
+                        className={`w-7 h-7 md:w-8 md:h-8 rounded-full border-2 flex items-center justify-center text-[10px] md:text-xs font-bold ${
+                          myTurn
+                            ? "border-yellow-400 text-yellow-200 animate-ping-slow"
+                            : "border-gray-300 text-gray-200"
+                        }`}
+                      >
+                        {turnTimeLeft}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* ACTIVE GIF BUBBLE (TOP-RIGHT) */}
                 {activeGif && (
-                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden border-2 border-white shadow-lg bg-black/70">
+                  <div className="absolute -top-5 right-2 w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden border-2 border-white shadow-lg bg-black/70">
                     <img
                       src={activeGif.file}
                       alt={activeGif.name}
@@ -1018,7 +1035,8 @@ export default function CloseMasterGame() {
                   </div>
                 )}
 
-                <div className="mt-2 flex flex-col items-center">
+                {/* PLAYER INFO */}
+                <div className="mt-1 flex flex-col items-center">
                   <div className="flex items-center gap-2 mb-1">
                     {p.face && (
                       <img
@@ -1037,17 +1055,6 @@ export default function CloseMasterGame() {
                   {p.hasDrawn && (
                     <p className="text-xs text-emerald-400 text-center">Drew</p>
                   )}
-                </div>
-
-                <div className="mt-2 flex justify-center">
-                  <button
-                    type="button"
-                    onClick={() => handleGifClick(p.id)}
-                    className="text-xs md:text-sm px-2 py-1 rounded-full bg-black/20 border border-white/30 flex items-center gap-1 hover:bg-black/80"
-                  >
-                    <span>GIF</span>
-                    <span>🎭</span>
-                  </button>
                 </div>
               </div>
             );
