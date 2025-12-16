@@ -73,7 +73,7 @@ export default function CloseMasterGame() {
   const [roundBaseScores, setRoundBaseScores] = useState({});
   const prevStartedRef = useRef(false);
 
-  // NEW: Firework Colors setup
+  // NEW: Firework Colors setup (Requested Tapakayalu effect)
   const FIREWORK_COLORS = [
     "rgba(255, 0, 255, 1)", // Magenta
     "rgba(0, 255, 255, 1)", // Cyan
@@ -564,9 +564,10 @@ export default function CloseMasterGame() {
             ))}
           </div>
 
+          {/* RESULT OVERLAY CONTINUE BUTTON (Updated Styling) */}
           <button
             onClick={handleContinue}
-            className="w-full py-3 md:py-4 bg-gradient-to-r from-amber-500 to-amber-200 hover:from-amber-200 hover:to-amber-700 rounded-2xl font-bold text-base md:text-lg text-black shadow-xl"
+            className="w-full py-3 md:py-4 bg-gradient-to-r from-amber-500 to-amber-300 hover:from-amber-300 hover:to-amber-700 rounded-2xl font-black text-base md:text-lg text-black shadow-xl transition-all border-2 border-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.9)]"
           >
             CONTINUE
           </button>
@@ -652,24 +653,26 @@ export default function CloseMasterGame() {
                 />
               </div>
 
+              {/* WELCOME - CREATE ROOM BUTTON (Updated Styling) */}
               <button
                 onClick={createRoom}
                 disabled={!canCreate}
-                className={`w-full py-4 rounded-2xl text-xl font-black shadow-2xl transition-all ${
+                className={`w-full py-4 rounded-2xl text-xl font-black shadow-2xl transition-all border-2 border-transparent ${
                   canCreate
-                    ? "bg-gradient-to-r from-emerald-500 to-emerald-200 hover:from-emerald-200 hover:to-emerald-700 hover:scale-105"
-                    : "bg-gray-800/50 border-2 border-gray-200 cursor-not-allowed opacity-50"
+                    ? "bg-gradient-to-r from-emerald-500 to-emerald-300 text-black shadow-[0_0_15px_rgba(56,189,248,0.7)] hover:from-emerald-300 hover:to-emerald-700 hover:scale-[1.01]"
+                    : "bg-gray-800/50 border-2 border-gray-200 cursor-not-allowed opacity-50 text-gray-400"
                 }`}
               >
                 {loading ? "Creating..." : "CREATE ROOM"}
               </button>
+              {/* WELCOME - JOIN ROOM BUTTON (Updated Styling) */}
               <button
                 onClick={joinRoom}
                 disabled={!canJoin}
-                className={`w-full py-4 rounded-2xl text-xl font-black shadow-2xl transition-all ${
+                className={`w-full py-4 rounded-2xl text-xl font-black shadow-2xl transition-all border-2 border-transparent ${
                   canJoin
-                    ? "bg-gradient-to-r from-sky-500 to-sky-200 hover:from-sky-200 hover:to-sky-700 hover:scale-105"
-                    : "bg-gray-800/50 border-2 border-gray-200 cursor-not-allowed opacity-50"
+                    ? "bg-gradient-to-r from-sky-500 to-sky-300 text-black shadow-[0_0_15px_rgba(34,211,238,0.7)] hover:from-sky-300 hover:to-sky-700 hover:scale-[1.01]"
+                    : "bg-gray-800/50 border-2 border-gray-200 cursor-not-allowed opacity-50 text-gray-400"
                 }`}
               >
                 {loading ? "Joining..." : "JOIN ROOM"}
@@ -725,14 +728,15 @@ export default function CloseMasterGame() {
               )}
             </div>
             <div className="flex flex-wrap gap-2 md:gap-4 justify-center">
+              {/* LOBBY - START GAME BUTTON (Updated Styling) */}
               {isHost && (
                 <button
                   onClick={startRound}
                   disabled={players.length < 2}
-                  className={`px-4 md:px-8 py-3 md:py-4 rounded-3xl text-base md:text-xl font-black shadow-2xl ${
+                  className={`px-4 md:px-8 py-3 md:py-4 rounded-3xl text-base md:text-xl font-black shadow-2xl transition-all border-2 border-transparent ${
                     players.length < 2
-                      ? "bg-gray-700/50 border-2 border-gray-200 cursor-not-allowed opacity-20"
-                      : "bg-gradient-to-r from-emerald-500 to-emerald-200 hover:from-emerald-200 hover:to-emerald-700 hover:scale-105"
+                      ? "bg-gray-700/50 border-2 border-gray-200 cursor-not-allowed opacity-20 text-gray-400"
+                      : "bg-gradient-to-r from-emerald-500 to-emerald-300 text-black shadow-[0_0_15px_rgba(56,189,248,0.7)] hover:from-emerald-300 hover:to-emerald-700 hover:scale-[1.01]"
                   }`}
                 >
                   {players.length < 2
@@ -740,15 +744,17 @@ export default function CloseMasterGame() {
                     : "START GAME"}
                 </button>
               )}
+              {/* LOBBY - SCORES BUTTON (Updated Styling) */}
               <button
                 onClick={() => setShowPoints(true)}
-                className="px-4 md:px-8 py-3 md:py-4 bg-gradient-to-r from-amber-500 to-amber-200 hover:from-amber-200 hover:to-amber-700 rounded-3xl font-bold text-base md:text-xl shadow-2xl"
+                className="px-4 md:px-8 py-3 md:py-4 bg-gradient-to-r from-amber-500 to-amber-300 hover:from-amber-300 hover:to-amber-700 rounded-3xl font-black text-base md:text-xl text-black shadow-2xl transition-all border-2 border-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.9)] hover:scale-[1.01]"
               >
                 SCORES ({players.length})
               </button>
+              {/* LOBBY - EXIT BUTTON (Updated Styling) */}
               <button
                 onClick={exitGame}
-                className="px-4 md:px-8 py-3 md:py-4 bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 rounded-3xl font-bold text-base md:text-xl shadow-2xl"
+                className="px-4 md:px-8 py-3 md:py-4 bg-gray-800 border border-gray-600 hover:bg-gray-700 rounded-3xl font-bold text-base md:text-xl text-white shadow-2xl transition-all shadow-[0_0_10px_rgba(107,114,128,0.5)] hover:scale-[1.01]"
               >
                 EXIT
               </button>
@@ -1127,35 +1133,38 @@ export default function CloseMasterGame() {
         {/* ACTION BUTTONS */}
         {myTurn && started && (
           <div className="z-10 flex flex-wrap gap-2 md:gap-4 justify-center max-w-4xl p-4 md:p-6 bg-black/70 backdrop-blur-xl rounded-3xl border border-white/20">
+            {/* GAME - DECK BUTTON (Updated Styling) */}
             <button
               onClick={() => drawCard(false)}
               disabled={hasDrawn}
-              className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${
+              className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-black text-base md:text-xl shadow-2xl transition-all border-2 border-transparent ${
                 hasDrawn
-                  ? "bg-gray-700/50 cursor-not-allowed opacity-50"
-                  : "bg-gradient-to-r from-purple-200 to-purple-700 hover:from-purple-700 hover:to-purple-800"
+                  ? "bg-gray-700/50 cursor-not-allowed opacity-50 text-gray-400"
+                  : "bg-gradient-to-r from-purple-500 to-purple-300 text-black shadow-[0_0_15px_rgba(192,132,252,0.7)] hover:from-purple-300 hover:to-purple-700 hover:scale-[1.01]"
               }`}
             >
               DECK
             </button>
+            {/* GAME - DROP BUTTON (Updated Styling) */}
             <button
               onClick={dropCards}
               disabled={!allowDrop}
-              className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${
+              className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-black text-base md:text-xl shadow-2xl transition-all border-2 border-transparent ${
                 allowDrop
-                  ? "bg-gradient-to-r from-green-200 to-green-700 hover:from-green-700 hover:to-green-800"
-                  : "bg-gray-700/50 cursor-not-allowed opacity-50"
+                  ? "bg-gradient-to-r from-green-500 to-green-300 text-black shadow-[0_0_15px_rgba(16,185,129,0.7)] hover:from-green-300 hover:to-green-700 hover:scale-[1.01]"
+                  : "bg-gray-700/50 cursor-not-allowed opacity-50 text-gray-400"
               }`}
             >
               DROP ({selectedIds.length})
             </button>
+            {/* GAME - CLOSE BUTTON (Updated Styling) */}
             <button
               onClick={callClose}
               disabled={closeDisabled}
-              className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl transition-all ${
+              className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-black text-base md:text-xl shadow-2xl transition-all border-2 border-transparent ${
                 closeDisabled
-                  ? "bg-gray-700/50 cursor-not-allowed opacity-50"
-                  : "bg-gradient-to-r from-red-200 to-red-700 hover:from-red-700 hover:to-red-800 hover:scale-105"
+                  ? "bg-gray-700/50 cursor-not-allowed opacity-50 text-gray-400"
+                  : "bg-gradient-to-r from-red-500 to-red-300 text-black shadow-[0_0_15px_rgba(248,113,113,0.7)] hover:from-red-300 hover:to-red-700 hover:scale-[1.01]"
               }`}
             >
               CLOSE
@@ -1165,9 +1174,10 @@ export default function CloseMasterGame() {
 
         {started && (
           <div className="z-10 mt-4">
+            {/* GAME - EXIT GAME BUTTON (Updated Styling) */}
             <button
               onClick={exitGame}
-              className="px-6 py-3 bg-gradient-to-r from-gray-700 to-gray-900 hover:from-gray-800 hover:to-gray-900 rounded-2xl font-bold text-lg shadow-xl"
+              className="px-6 py-3 bg-gray-800 border border-gray-600 hover:bg-gray-700 rounded-2xl font-bold text-lg text-white shadow-xl transition-all shadow-[0_0_10px_rgba(107,114,128,0.5)] hover:scale-[1.01]"
             >
               EXIT GAME
             </button>
