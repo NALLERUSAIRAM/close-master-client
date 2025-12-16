@@ -76,6 +76,18 @@ export default function CloseMasterGame() {
 
   const [roundBaseScores, setRoundBaseScores] = useState({});
   const prevStartedRef = useRef(false);
+  
+  // NEW: Firework Colors setup (Requested Tapakayalu effect)
+  const FIREWORK_COLORS = [
+    "rgba(255, 0, 255, 1)", // Magenta
+    "rgba(0, 255, 255, 1)", // Cyan
+    "rgba(255, 255, 0, 1)", // Yellow
+    "rgba(255, 105, 180, 1)", // Hot Pink
+    "rgba(0, 255, 127, 1)", // Spring Green
+    "rgba(255, 165, 0, 1)", // Orange
+  ];
+  const randomColor = () => FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)];
+
 
   const [playerId] = useState(() => {
     if (typeof window === "undefined") return "";
@@ -482,22 +494,28 @@ export default function CloseMasterGame() {
       <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
         <div className="absolute inset-0 pointer-events-none">
-          {Array.from({ length: 12 }).map((_, i) => (
-            <div
-              key={i}
-              className="absolute rounded-full firework-burst"
-              style={{
-                width: "6rem",
-                height: "6rem",
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                boxShadow: "0 0 40px 10px rgba(251,191,36,0.95)",
-                background:
-                  "radial-gradient(circle, rgba(251,191,36,1) 0%, rgba(0,0,0,0) 70%)",
-                animationDelay: `${Math.random() * 0.8}s`,
-              }}
-            />
-          ))}
+          {/* MODIFIED: Firework Burst Effect (Multi-color, Fast-burst) */}
+          {Array.from({ length: 20 }).map((_, i) => { // Increased count to 20
+            const color = randomColor();
+            const size = 4 + Math.random() * 4; // size 4rem to 8rem
+            return (
+              <div
+                key={i}
+                className="absolute rounded-full firework-burst"
+                style={{
+                  width: `${size}rem`,
+                  height: `${size}rem`,
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                  // Stronger glow based on size and use random color
+                  boxShadow: `0 0 ${size * 5}px 10px ${color.replace('1)', '0.99)')}`, 
+                  background:
+                    `radial-gradient(circle, ${color} 0%, rgba(0,0,0,0) 70%)`,
+                  animationDelay: `${Math.random() * 0.9}s`,
+                }}
+              />
+            );
+          })}
         </div>
 
         <div className="relative px-8 py-6 md:px-10 md:py-8 bg-black/90 rounded-3xl border border-amber-400 shadow-[0_0_20px_rgba(251,191,36,1)] max-w-md w-[90%]">
@@ -551,9 +569,10 @@ export default function CloseMasterGame() {
             ))}
           </div>
 
+          {/* UPDATED: RESULT OVERLAY CONTINUE BUTTON (Neon Style) */}
           <button
             onClick={handleContinue}
-            className="w-full py-3 md:py-4 bg-gradient-to-r from-amber-500 to-amber-200 hover:from-amber-200 hover:to-amber-700 rounded-2xl font-bold text-base md:text-lg text-black shadow-xl"
+            className="w-full py-3 md:py-4 bg-black/70 border-2 border-amber-400 text-amber-200 shadow-[0_0_20px_rgba(251,191,36,0.8)] hover:shadow-[0_0_30px_rgba(251,191,36,1)] rounded-2xl font-black text-base md:text-lg transition-all hover:scale-[1.01]"
           >
             CONTINUE
           </button>
@@ -639,24 +658,26 @@ export default function CloseMasterGame() {
                 />
               </div>
 
+              {/* UPDATED: WELCOME - CREATE ROOM BUTTON (Intense Green Neon) */}
               <button
                 onClick={createRoom}
                 disabled={!canCreate}
-                className={`w-full py-4 rounded-2xl text-xl font-black shadow-2xl transition-all ${
+                className={`w-full py-4 rounded-2xl text-xl font-black shadow-2xl transition-all border-2 border-transparent ${
                   canCreate
-                    ? "bg-gradient-to-r from-emerald-500 to-emerald-200 hover:from-emerald-200 hover:to-emerald-700 hover:scale-105"
-                    : "bg-gray-800/50 border-2 border-gray-200 cursor-not-allowed opacity-50"
+                    ? "bg-black/70 border-2 border-emerald-400 text-emerald-200 shadow-[0_0_20px_rgba(52,211,167,0.8)] hover:shadow-[0_0_30px_rgba(52,211,167,1)] hover:scale-[1.01]"
+                    : "bg-gray-800/50 border-2 border-gray-200 cursor-not-allowed opacity-50 text-gray-400"
                 }`}
               >
                 {loading ? "Creating..." : "CREATE ROOM"}
               </button>
+              {/* UPDATED: WELCOME - JOIN ROOM BUTTON (Intense Blue Neon) */}
               <button
                 onClick={joinRoom}
                 disabled={!canJoin}
-                className={`w-full py-4 rounded-2xl text-xl font-black shadow-2xl transition-all ${
+                className={`w-full py-4 rounded-2xl text-xl font-black shadow-2xl transition-all border-2 border-transparent ${
                   canJoin
-                    ? "bg-gradient-to-r from-sky-500 to-sky-200 hover:from-sky-200 hover:to-sky-700 hover:scale-105"
-                    : "bg-gray-800/50 border-2 border-gray-200 cursor-not-allowed opacity-50"
+                    ? "bg-black/70 border-2 border-sky-400 text-sky-200 shadow-[0_0_20px_rgba(56,189,248,0.8)] hover:shadow-[0_0_30px_rgba(56,189,248,1)] hover:scale-[1.01]"
+                    : "bg-gray-800/50 border-2 border-gray-200 cursor-not-allowed opacity-50 text-gray-400"
                 }`}
               >
                 {loading ? "Joining..." : "JOIN ROOM"}
@@ -712,14 +733,15 @@ export default function CloseMasterGame() {
               )}
             </div>
             <div className="flex flex-wrap gap-2 md:gap-4 justify-center">
+              {/* UPDATED: LOBBY - START GAME BUTTON (Intense Green Neon) */}
               {isHost && (
                 <button
                   onClick={startRound}
                   disabled={players.length < 2}
-                  className={`px-4 md:px-8 py-3 md:py-4 rounded-3xl text-base md:text-xl font-black shadow-2xl ${
+                  className={`px-4 md:px-8 py-3 md:py-4 rounded-3xl text-base md:text-xl font-black shadow-2xl transition-all border-2 border-transparent ${
                     players.length < 2
-                      ? "bg-gray-700/50 border-2 border-gray-200 cursor-not-allowed opacity-20"
-                      : "bg-gradient-to-r from-emerald-500 to-emerald-200 hover:from-emerald-200 hover:to-emerald-700 hover:scale-105"
+                      ? "bg-gray-700/50 border-2 border-gray-200 cursor-not-allowed opacity-20 text-gray-400"
+                      : "bg-black/70 border-2 border-emerald-400 text-emerald-200 shadow-[0_0_20px_rgba(52,211,167,0.8)] hover:shadow-[0_0_30px_rgba(52,211,167,1)] hover:scale-[1.01]"
                   }`}
                 >
                   {players.length < 2
@@ -727,15 +749,17 @@ export default function CloseMasterGame() {
                     : "START GAME"}
                 </button>
               )}
+              {/* UPDATED: LOBBY - SCORES BUTTON (Intense Amber Neon) */}
               <button
                 onClick={() => setShowPoints(true)}
-                className="px-4 md:px-8 py-3 md:py-4 bg-gradient-to-r from-amber-500 to-amber-200 hover:from-amber-200 hover:to-amber-700 rounded-3xl font-bold text-base md:text-xl shadow-2xl"
+                className="px-4 md:px-8 py-3 md:py-4 bg-black/70 border-2 border-amber-400 text-amber-200 shadow-[0_0_20px_rgba(251,191,36,0.8)] hover:shadow-[0_0_30px_rgba(251,191,36,1)] rounded-3xl font-black text-base md:text-xl transition-all hover:scale-[1.01]"
               >
                 SCORES ({players.length})
               </button>
+              {/* UPDATED: LOBBY - EXIT BUTTON (Dark Neon) */}
               <button
                 onClick={exitGame}
-                className="px-4 md:px-8 py-3 md:py-4 bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 rounded-3xl font-bold text-base md:text-xl shadow-2xl"
+                className="px-4 md:px-8 py-3 md:py-4 bg-black/70 border-2 border-gray-600 hover:border-gray-400 rounded-3xl font-bold text-base md:text-xl text-gray-300 shadow-lg transition-all hover:scale-[1.01]"
               >
                 EXIT
               </button>
@@ -891,9 +915,7 @@ export default function CloseMasterGame() {
                 onClick={() => drawCard(true)}
                 disabled={!myTurn || hasDrawn}
                 className={[
-                  // Reverted to animate-neon-pulse for standby glow
                   "relative w-24 md:w-28 h-32 md:h-40 rounded-3xl border-2 border-fuchsia-500",
-                  // Reverted to animate-neon-pulse
                   "bg-black/80 shadow-[0_0_35px_rgba(236,72,153,0.9)] animate-neon-pulse",
                   "flex flex-col justify-between p-2 md:p-3 transition-transform",
                   myTurn && !hasDrawn
@@ -901,7 +923,7 @@ export default function CloseMasterGame() {
                     : "opacity-70 cursor-not-allowed",
                 ].join(" ")}
               >
-                {/* UPDATED: Inner glow effect (stronger shadow) */}
+                {/* Inner glow effect (stronger shadow) */}
                 <div className="pointer-events-none absolute inset-0 rounded-3xl border border-white/60 shadow-[0_0_40px_rgba(248,250,252,0.6)]" />
 
                 <div className="relative text-base md:text-lg font-bold uppercase">
@@ -942,7 +964,7 @@ export default function CloseMasterGame() {
               const activeGif = GIF_LIST.find((g) => g.id === activeGifId);
               const isTimerCard = isTurn; // timer only for current-turn player
 
-              // UPDATED: Player Card Styling for Neon Glow and Turn Indicator (Simplified class array construction)
+              // Player Card Styling for Neon Glow and Turn Indicator
               const playerClasses = [
                 "relative p-2 md:p-3 rounded-2xl border-2 shadow-lg transition-all duration-300",
               ];
@@ -1133,37 +1155,37 @@ export default function CloseMasterGame() {
         {/* ACTION BUTTONS */}
         {myTurn && started && (
           <div className="z-10 flex flex-wrap gap-2 md:gap-4 justify-center max-w-4xl p-4 md:p-6 bg-black/70 backdrop-blur-xl rounded-3xl border border-white/20">
+            {/* GAME - DECK BUTTON (Intense Blue Neon Style) */}
             <button
               onClick={() => drawCard(false)}
               disabled={hasDrawn}
-              className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl transition-all ${
+              className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl transition-all border-2 border-transparent ${
                 hasDrawn
                   ? "bg-gray-700/50 cursor-not-allowed opacity-50"
-                  // UPDATED: Intense Neon Blue style
                   : "bg-black/70 border-2 border-sky-400 text-sky-200 shadow-[0_0_20px_rgba(56,189,248,0.8)] hover:shadow-[0_0_30px_rgba(56,189,248,1)] hover:scale-[1.03]" 
               }`}
             >
               DECK
             </button>
+            {/* GAME - DROP BUTTON (Intense Green Neon Style) */}
             <button
               onClick={dropCards}
               disabled={!allowDrop}
-              className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl transition-all ${
+              className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl transition-all border-2 border-transparent ${
                 allowDrop
-                  // UPDATED: Intense Neon Green style
                   ? "bg-black/70 border-2 border-emerald-400 text-emerald-200 shadow-[0_0_20px_rgba(52,211,167,0.8)] hover:shadow-[0_0_30px_rgba(52,211,167,1)] hover:scale-[1.03]"
                   : "bg-gray-700/50 cursor-not-allowed opacity-50"
               }`}
             >
               DROP ({selectedIds.length})
             </button>
+            {/* GAME - CLOSE BUTTON (Intense Pink Neon Style) */}
             <button
               onClick={callClose}
               disabled={closeDisabled}
-              className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl transition-all ${
+              className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl transition-all border-2 border-transparent ${
                 closeDisabled
                   ? "bg-gray-700/50 cursor-not-allowed opacity-50"
-                  // UPDATED: Intense Neon Red/Pink style
                   : "bg-black/70 border-2 border-pink-500 text-pink-300 shadow-[0_0_20px_rgba(236,72,153,0.8)] hover:shadow-[0_0_30px_rgba(236,72,153,1)] hover:scale-[1.03]"
               }`}
             >
@@ -1174,9 +1196,10 @@ export default function CloseMasterGame() {
 
         {started && (
           <div className="z-10 mt-4">
+            {/* UPDATED: GAME - EXIT GAME BUTTON (Dark Neon) */}
             <button
               onClick={exitGame}
-              className="px-6 py-3 bg-gradient-to-r from-gray-700 to-gray-900 hover:from-gray-800 hover:to-gray-900 rounded-2xl font-bold text-lg shadow-xl"
+              className="px-6 py-3 bg-black/70 border-2 border-gray-600 hover:border-gray-400 rounded-2xl font-bold text-lg text-gray-300 shadow-xl transition-all hover:scale-[1.01]"
             >
               EXIT GAME
             </button>
@@ -1185,14 +1208,23 @@ export default function CloseMasterGame() {
       </div>
 
       <style jsx>{`
-        /* Existing Firework Burst */
+        /* MODIFIED: Firework Burst Animation (now a quick explosion/pop) */
         @keyframes firework-burst {
-          0% { transform: scale(0); opacity: 1; }
-          20% { transform: scale(1); opacity: 1; }
-          100% { transform: scale(1.6); opacity: 0; }
+          0% {
+            transform: scale(0);
+            opacity: 1;
+          }
+          15% {
+            transform: scale(1.2); /* Quick expansion for the burst */
+            opacity: 1;
+          }
+          100% {
+            transform: scale(1.8); /* Fades out while scaling slightly larger */
+            opacity: 0;
+          }
         }
         .firework-burst {
-          animation: firework-burst 1.2s ease-out infinite;
+          animation: firework-burst 0.7s ease-out infinite; /* Faster animation for a 'pop' effect */
         }
 
         /* Re-added: Pulsing Neon Glow for Open Card (Standby) */
