@@ -24,14 +24,20 @@ const FACE_LIST = [
   "/gifs/7.png",
 ];
 
+// **********************************************
+// ********* MODIFIED cardTextColor *************
+// **********************************************
+// Note: The Tailwind classes returned here (text-*-outline) are defined
+// in the <style jsx> block below to create the transparent neon outline effect.
 function cardTextColor(card) {
   if (!card) return "text-white";
   if (card.rank === "JOKER")
-    return "text-yellow-200 drop-shadow-[0_0_6px_rgba(250,250,150,0.9)] font-extrabold";
+    return "text-joker-outline font-extrabold";
   if (card.suit === "♥" || card.suit === "♦")
-    return "text-red-50 drop-shadow-[0_0_6px_rgba(248,113,113,0.9)] font-bold";
-  return "text-cyan-50 drop-shadow-[0_0_6px_rgba(56,189,248,0.9)] font-bold";
+    return "text-red-outline font-bold";
+  return "text-blue-outline font-bold";
 }
+// **********************************************
 
 // Placeholder – not using floating cards now
 function NeonFloatingCards() {
@@ -885,16 +891,18 @@ export default function CloseMasterGame() {
               <button
                 onClick={() => drawCard(true)}
                 disabled={!myTurn || hasDrawn}
+                // *******************************************************************
+                // ******** MODIFIED: Applied neon-card-base styles ******************
+                // *******************************************************************
                 className={[
-                  "relative w-24 md:w-28 h-32 md:h-40 rounded-3xl border border-pink-500/80",
-                  "bg-black/80 shadow-[0_0_25px_rgba(236,72,153,0.9)]",
-                  "flex flex-col justify-between p-2 md:p-3 transition-transform",
+                  "neon-card-base w-24 md:w-28 h-32 md:h-40 rounded-3xl flex flex-col justify-between p-2 md:p-3 transition-transform",
                   myTurn && !hasDrawn
                     ? "hover:scale-105 cursor-pointer"
                     : "opacity-60 cursor-not-allowed",
                 ].join(" ")}
               >
-                <div className="pointer-events-none absolute inset-0 rounded-3xl border border-white/60 shadow-[0_0_30px_rgba(248,250,252,0.9)]" />
+                {/* REMOVED: Inner white shadow div */}
+                {/* <div className="pointer-events-none absolute inset-0 rounded-3xl border border-white/60 shadow-[0_0_30px_rgba(248,250,252,0.9)]" /> */}
 
                 <div className="relative text-base md:text-lg font-bold uppercase">
                   <span className={cardTextColor(discardTop)}>
@@ -1071,20 +1079,20 @@ export default function CloseMasterGame() {
                     key={c.id}
                     onClick={() => toggleSelect(c.id)}
                     disabled={!myTurn}
+                    // *******************************************************************
+                    // ******** MODIFIED: Applied neon-card-base styles ******************
+                    // *******************************************************************
                     className={[
-                      "relative w-16 md:w-20 h-24 md:h-28 rounded-3xl",
-                      "bg-black/80 border border-pink-500/70",
-                      "shadow-[0_0_22px_rgba(236,72,153,0.9)]",
-                      "flex flex-col justify-between p-1.5 md:p-2 transition-transform",
-                      "backdrop-blur-sm",
+                      "neon-card-base w-16 md:w-20 h-24 md:h-28 rounded-3xl flex flex-col justify-between p-1.5 md:p-2 transition-transform",
                       selected
-                        ? "scale-125 border-cyan-300 shadow-[0_0_28px_rgba(34,211,238,1)] animate-neon-rotate"
+                        ? "selected-neon-card scale-125 animate-neon-rotate"
                         : myTurn
                         ? "hover:scale-105 hover:border-cyan-300"
                         : "opacity-60 cursor-not-allowed",
                     ].join(" ")}
                   >
-                    <div className="pointer-events-none absolute inset-0 rounded-3xl border border-white/70 shadow-[0_0_26px_rgba(248,250,252,0.95)]" />
+                    {/* REMOVED: Inner white shadow div */}
+                    {/* <div className="pointer-events-none absolute inset-0 rounded-3xl border border-white/70 shadow-[0_0_26px_rgba(248,250,252,0.95)]" /> */}
 
                     <div className="relative text-sm md:text-base font-bold uppercase">
                       <span className={cardTextColor(c)}>{c.rank}</span>
@@ -1158,6 +1166,69 @@ export default function CloseMasterGame() {
       </div>
 
       <style jsx>{`
+        /* ******************************************************************* */
+        /* *************** NEW NEON CARD STYLES (Your Request) *************** */
+        /* ******************************************************************* */
+        :root {
+            --neon-blue: #00e5ff;    /* Cyan/Blue for Black Suits */
+            --neon-magenta: #ff00cc; /* Magenta for Card Border */
+            --neon-red: #ff3366;     /* Bright Red for Red Suits */
+            --neon-yellow: #ffe500;  /* Yellow for Joker */
+            --stroke-width: 1.5px;
+        }
+
+        /* Base Card Container Style (Frame and Transparency) */
+        .neon-card-base {
+            background-color: transparent !important; 
+            backdrop-filter: blur(4px); 
+            -webkit-backdrop-filter: blur(4px); 
+            
+            /* Neon Border Effect (Magenta) - Tighter glow */
+            border: 2px solid var(--neon-magenta) !important; 
+            box-shadow: 
+                0 0 5px var(--neon-magenta), 
+                0 0 10px var(--neon-magenta);
+        }
+        
+        /* Selected Card Hover Effect */
+        .selected-neon-card {
+            /* This overrides the base card border/shadow on selection */
+            border: 2px solid var(--neon-blue) !important;
+            box-shadow: 
+                0 0 8px var(--neon-blue),
+                0 0 20px var(--neon-blue) !important;
+        }
+
+        /* Crisp Outline Text Styles (replacing cardTextColor's default classes) */
+        
+        /* Blue Suits (Spade/Club) */
+        .text-blue-outline {
+            text-shadow: none !important; /* NO BRIGHTNESS/FUZZINESS */
+            color: transparent !important; 
+            -webkit-text-stroke: var(--stroke-width) var(--neon-blue) !important;
+            text-stroke: var(--stroke-width) var(--neon-blue) !important;
+        }
+
+        /* Red Suits (Heart/Diamond) */
+        .text-red-outline {
+            text-shadow: none !important;
+            color: transparent !important; 
+            -webkit-text-stroke: var(--stroke-width) var(--neon-red) !important;
+            text-stroke: var(--stroke-width) var(--neon-red) !important;
+        }
+
+        /* Joker */
+        .text-joker-outline {
+            text-shadow: none !important;
+            color: transparent !important; 
+            -webkit-text-stroke: var(--stroke-width) var(--neon-yellow) !important;
+            text-stroke: var(--stroke-width) var(--neon-yellow) !important;
+        }
+        
+        /* ******************************************************************* */
+        /* ************* END OF NEW NEON CARD STYLES ************************* */
+        /* ******************************************************************* */
+
         @keyframes firework-burst {
           0% {
             transform: scale(0);
