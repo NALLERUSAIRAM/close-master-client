@@ -421,6 +421,7 @@ export default function CloseMasterGame() {
       alert("Valid cards select cheyali");
       return;
     }
+    // No need for client-side state change, the socket update will trigger the Open Card animation.
     socket.emit("action_drop", { roomId, selectedIds });
   };
 
@@ -879,7 +880,7 @@ export default function CloseMasterGame() {
           </div>
         )}
 
-        {/* OPEN CARD */}
+        {/* OPEN CARD (Discard Top) */}
         {started && (
           <div className="z-10 text-center">
             <h3 className="text-lg md:text-xl mb-3 md:mb-4 font-bold">
@@ -887,17 +888,19 @@ export default function CloseMasterGame() {
             </h3>
             {discardTop ? (
               <button
+                // Key forces remount when the card changes, triggering the animation
+                key={discardTop.id} 
                 onClick={() => drawCard(true)}
                 disabled={!myTurn || hasDrawn}
                 className={[
-                  // UPDATED: Thicker, brighter pink border (fuchsia) and added pulsing animation
+                  // UPDATED: Added animate-card-arrival for drop animation effect
                   "relative w-24 md:w-28 h-32 md:h-40 rounded-3xl border-2 border-fuchsia-500",
                   // UPDATED: Stronger shadow and added pulsing animation
-                  "bg-black/80 shadow-[0_0_35px_rgba(236,72,153,0.9)] animate-neon-pulse",
+                  "bg-black/80 shadow-[0_0_35px_rgba(236,72,153,0.9)] animate-card-arrival",
                   "flex flex-col justify-between p-2 md:p-3 transition-transform",
                   myTurn && !hasDrawn
                     ? "hover:scale-105 cursor-pointer"
-                    : "opacity-70 cursor-not-allowed", // Opacity changed from 60 to 70
+                    : "opacity-70 cursor-not-allowed",
                 ].join(" ")}
               >
                 {/* UPDATED: Inner glow effect (stronger shadow) */}
@@ -941,16 +944,20 @@ export default function CloseMasterGame() {
               const activeGif = GIF_LIST.find((g) => g.id === activeGifId);
               const isTimerCard = isTurn; // timer only for current-turn player
 
+              // UPDATED: Player Card Styling for Neon Glow and Turn Indicator
+              const playerCardClassName = `relative p-2 md:p-3 rounded-2xl border-2 shadow-lg transition-all duration-300 ${
+                isYou && isTurn
+                  ? "border-fuchsia-400 bg-black/70 shadow-[0_0_18px_rgba(236,72,153,0.9)] animate-pulse-turn" // Me + My Turn (Strong Pink Glow)
+                  : isYou
+                  ? "border-emerald-400 bg-black/70 shadow-[0_0_12px_rgba(52,211,167,0.7)]" // Me (Subtle Green Glow)
+                  : isTurn
+                  ? "border-yellow-400 bg-black/70 shadow-[0_0_18px_rgba(250,204,21,0.9)] animate-pulse-turn" // Other's Turn (Strong Yellow Glow)
+                  : "border-gray-700 bg-black/60 hover:shadow-[0_0_5px_rgba(156,163,175,0.4)]"; // Normal
+              
               return (
                 <div
                   key={p.id}
-                  className={`relative p-2 md:p-3 rounded-2xl border-2 shadow-lg ${
-                    isYou
-                      ? "border-emerald-400 bg-black/70"
-                      : isTurn
-                      ? "border-yellow-400 bg-black/70"
-                      : "border-gray-700 bg-black/60"
-                  }`}
+                  className={playerCardClassName}
                 >
                   {/* TOP BAR */}
                   <div className="flex items-center justify-between mb-1">
@@ -966,9 +973,10 @@ export default function CloseMasterGame() {
                     {isTimerCard && started && (
                       <div className="flex items-center gap-1">
                         <div
-                          className={`w-7 h-7 md:w-8 md:h-8 rounded-full border-2 flex items-center justify-center text-[10px] md:text-xs font-bold ${
+                          // UPDATED: Timer styling for intense red neon look
+                          className={`w-7 h-7 md:w-8 md:h-8 rounded-full border-2 flex items-center justify-center text-[10px] md:text-xs font-black ${
                             isTurn
-                              ? "border-yellow-400 text-yellow-200 animate-ping-slow"
+                              ? "border-red-400 text-red-200 shadow-[0_0_10px_rgba(248,113,113,1)] animate-ping-slow"
                               : "border-gray-300 text-gray-200"
                           }`}
                         >
@@ -1087,7 +1095,7 @@ export default function CloseMasterGame() {
                       "flex flex-col justify-between p-1.5 md:p-2 transition-transform",
                       "backdrop-blur-sm",
                       selected
-                        // UPDATED: Use new border-glow animation and remove internal shadow (shadow-none)
+                        // UPDATED: Re-implemented three-color border glow animation
                         ? "scale-125 border-4 shadow-none animate-neon-border-glow" 
                         : myTurn
                         // UPDATED: Stronger hover effect
@@ -1173,38 +1181,55 @@ export default function CloseMasterGame() {
       </div>
 
       <style jsx>{`
+        /* Existing Firework Burst */
         @keyframes firework-burst {
-          0% {
-            transform: scale(0);
-            opacity: 1;
-          }
-          20% {
-            transform: scale(1);
-            opacity: 1;
-          }
-          100% {
-            transform: scale(1.6);
-            opacity: 0;
-          }
+          0% { transform: scale(0); opacity: 1; }
+          20% { transform: scale(1); opacity: 1; }
+          100% { transform: scale(1.6); opacity: 0; }
         }
         .firework-burst {
           animation: firework-burst 1.2s ease-out infinite;
         }
 
-        // NEW: Pulsing Neon Glow for Open Card
-        @keyframes neon-pulse {
-          0%, 100% {
-            box-shadow: 0 0 10px rgba(255, 0, 255, 0.4), 0 0 20px rgba(236,72,153,0.4); /* Pink */
+        /* Card Drop/Arrival Animation (New Card lands on Discard Pile) */
+        @keyframes card-arrival {
+          0% {
+            transform: scale(0.8);
+            opacity: 0.3;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
           }
           50% {
-            box-shadow: 0 0 30px rgba(255, 0, 255, 1), 0 0 40px rgba(236,72,153,1); /* Strong Pink */
+            transform: scale(1.05);
+            opacity: 1;
+            box-shadow: 0 0 50px rgba(236,72,153,1);
+          }
+          100% {
+            transform: scale(1);
+            opacity: 1;
+            box-shadow: 0 0 35px rgba(236,72,153,0.9);
           }
         }
-        .animate-neon-pulse {
-            animation: neon-pulse 3s ease-in-out infinite;
+        .animate-card-arrival {
+          animation: card-arrival 0.6s ease-out 1;
         }
 
-        // NEW: Tri-Color Border Glow for Selected Card
+        /* Player Card Turn Pulse Animation (New) */
+        @keyframes pulse-turn {
+            0%, 100% {
+                box-shadow: 0 0 5px currentColor;
+                border-color: currentColor;
+            }
+            50% {
+                box-shadow: 0 0 20px currentColor;
+                border-color: currentColor;
+            }
+        }
+        .animate-pulse-turn {
+            animation: pulse-turn 1.5s infinite alternate;
+        }
+
+
+        /* Hand Card Glow (Re-implemented) */
         @keyframes neon-border-glow {
           0% {
             border-color: #ff00ff; /* Magenta */
@@ -1228,22 +1253,8 @@ export default function CloseMasterGame() {
         .animate-neon-border-glow {
           animation: neon-border-glow 2.5s linear infinite;
         }
-
-        @keyframes neon-rotate {
-          0% {
-            transform: rotate(-4deg) scale(1.25);
-          }
-          50% {
-            transform: rotate(4deg) scale(1.25);
-          }
-          100% {
-            transform: rotate(-4deg) scale(1.25);
-          }
-        }
-        .animate-neon-rotate {
-          animation: neon-rotate 1.5s ease-in-out infinite;
-        }
-
+        
+        /* Slow Ping for Timer (Re-implemented) */
         @keyframes ping-slow {
           0% {
             transform: scale(1);
