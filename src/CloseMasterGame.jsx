@@ -888,15 +888,13 @@ export default function CloseMasterGame() {
             </h3>
             {discardTop ? (
               <button
-                // Key forces remount when the card changes, triggering the animation
-                key={discardTop.id} 
                 onClick={() => drawCard(true)}
                 disabled={!myTurn || hasDrawn}
                 className={[
-                  // UPDATED: Added animate-card-arrival for drop animation effect
+                  // Reverted to animate-neon-pulse for standby glow
                   "relative w-24 md:w-28 h-32 md:h-40 rounded-3xl border-2 border-fuchsia-500",
-                  // UPDATED: Stronger shadow and added pulsing animation
-                  "bg-black/80 shadow-[0_0_35px_rgba(236,72,153,0.9)] animate-card-arrival",
+                  // Reverted to animate-neon-pulse
+                  "bg-black/80 shadow-[0_0_35px_rgba(236,72,153,0.9)] animate-neon-pulse",
                   "flex flex-col justify-between p-2 md:p-3 transition-transform",
                   myTurn && !hasDrawn
                     ? "hover:scale-105 cursor-pointer"
@@ -944,20 +942,26 @@ export default function CloseMasterGame() {
               const activeGif = GIF_LIST.find((g) => g.id === activeGifId);
               const isTimerCard = isTurn; // timer only for current-turn player
 
-              // UPDATED: Player Card Styling for Neon Glow and Turn Indicator
-              const playerCardClassName = `relative p-2 md:p-3 rounded-2xl border-2 shadow-lg transition-all duration-300 ${
-                isYou && isTurn
-                  ? "border-fuchsia-400 bg-black/70 shadow-[0_0_18px_rgba(236,72,153,0.9)] animate-pulse-turn" // Me + My Turn (Strong Pink Glow)
-                  : isYou
-                  ? "border-emerald-400 bg-black/70 shadow-[0_0_12px_rgba(52,211,167,0.7)]" // Me (Subtle Green Glow)
-                  : isTurn
-                  ? "border-yellow-400 bg-black/70 shadow-[0_0_18px_rgba(250,204,21,0.9)] animate-pulse-turn" // Other's Turn (Strong Yellow Glow)
-                  : "border-gray-700 bg-black/60 hover:shadow-[0_0_5px_rgba(156,163,175,0.4)]"; // Normal
+              // UPDATED: Player Card Styling for Neon Glow and Turn Indicator (Simplified class array construction)
+              const playerClasses = [
+                "relative p-2 md:p-3 rounded-2xl border-2 shadow-lg transition-all duration-300",
+              ];
               
+              if (isYou && isTurn) {
+                playerClasses.push("border-fuchsia-400 bg-black/70 shadow-[0_0_18px_rgba(236,72,153,0.9)] animate-pulse-turn"); // Me + My Turn (Strong Pink Glow)
+              } else if (isYou) {
+                playerClasses.push("border-emerald-400 bg-black/70 shadow-[0_0_12px_rgba(52,211,167,0.7)]"); // Me (Subtle Green Glow)
+              } else if (isTurn) {
+                playerClasses.push("border-yellow-400 bg-black/70 shadow-[0_0_18px_rgba(250,204,21,0.9)] animate-pulse-turn"); // Other's Turn (Strong Yellow Glow)
+              } else {
+                playerClasses.push("border-gray-700 bg-black/60 hover:shadow-[0_0_5px_rgba(156,163,175,0.4)]"); // Normal
+              }
+
+
               return (
                 <div
                   key={p.id}
-                  className={playerCardClassName}
+                  className={playerClasses.join(" ")}
                 >
                   {/* TOP BAR */}
                   <div className="flex items-center justify-between mb-1">
@@ -1191,29 +1195,20 @@ export default function CloseMasterGame() {
           animation: firework-burst 1.2s ease-out infinite;
         }
 
-        /* Card Drop/Arrival Animation (New Card lands on Discard Pile) */
-        @keyframes card-arrival {
-          0% {
-            transform: scale(0.8);
-            opacity: 0.3;
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
-          }
-          50% {
-            transform: scale(1.05);
-            opacity: 1;
-            box-shadow: 0 0 50px rgba(236,72,153,1);
-          }
-          100% {
-            transform: scale(1);
-            opacity: 1;
-            box-shadow: 0 0 35px rgba(236,72,153,0.9);
-          }
+        /* Re-added: Pulsing Neon Glow for Open Card (Standby) */
+        @keyframes neon-pulse {
+            0%, 100% {
+                box-shadow: 0 0 10px rgba(255, 0, 255, 0.4), 0 0 20px rgba(236,72,153,0.4); /* Pink */
+            }
+            50% {
+                box-shadow: 0 0 30px rgba(255, 0, 255, 1), 0 0 40px rgba(236,72,153,1); /* Strong Pink */
+            }
         }
-        .animate-card-arrival {
-          animation: card-arrival 0.6s ease-out 1;
+        .animate-neon-pulse {
+            animation: neon-pulse 3s ease-in-out infinite;
         }
 
-        /* Player Card Turn Pulse Animation (New) */
+        /* NEW: Player Card Turn Pulse Animation (for Turn Indicator) */
         @keyframes pulse-turn {
             0%, 100% {
                 box-shadow: 0 0 5px currentColor;
@@ -1229,7 +1224,7 @@ export default function CloseMasterGame() {
         }
 
 
-        /* Hand Card Glow (Re-implemented) */
+        /* Hand Card Glow */
         @keyframes neon-border-glow {
           0% {
             border-color: #ff00ff; /* Magenta */
@@ -1254,7 +1249,7 @@ export default function CloseMasterGame() {
           animation: neon-border-glow 2.5s linear infinite;
         }
         
-        /* Slow Ping for Timer (Re-implemented) */
+        /* Slow Ping for Timer */
         @keyframes ping-slow {
           0% {
             transform: scale(1);
