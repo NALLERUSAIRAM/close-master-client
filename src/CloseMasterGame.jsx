@@ -107,6 +107,7 @@ export default function CloseMasterGame() {
     }
   });
 
+  // load stored name
   useEffect(() => {
     try {
       const storedName = localStorage.getItem("cmp_player_name");
@@ -114,6 +115,7 @@ export default function CloseMasterGame() {
     } catch {}
   }, []);
 
+  // socket setup
   useEffect(() => {
     const s = io(SERVER_URL, {
       transports: ["websocket"],
@@ -190,6 +192,7 @@ export default function CloseMasterGame() {
       setLoading(false);
     });
 
+    // GIF broadcast
     s.on("gif_play", ({ targetId, gifId }) => {
       if (!targetId || !gifId) return;
       setActiveReactions((prev) => ({
@@ -212,6 +215,7 @@ export default function CloseMasterGame() {
     };
   }, []);
 
+  // store roomId & name
   useEffect(() => {
     if (game?.roomId && playerName) {
       try {
@@ -221,6 +225,7 @@ export default function CloseMasterGame() {
     }
   }, [game?.roomId, playerName]);
 
+  // round start → base scores
   useEffect(() => {
     const startedNow = !!game?.started;
     if (startedNow && !prevStartedRef.current) {
@@ -233,6 +238,7 @@ export default function CloseMasterGame() {
     prevStartedRef.current = startedNow;
   }, [game?.started, game?.players]);
 
+  // CLOSE → winner overlay
   useEffect(() => {
     if (!game?.closeCalled) return;
     const players = game.players || [];
@@ -242,6 +248,7 @@ export default function CloseMasterGame() {
     setShowResultOverlay(true);
   }, [game?.closeCalled, game?.players, game?.currentIndex]);
 
+  // page visibility / reconnect
   useEffect(() => {
     let reconnectTimeout;
     const handleVisibilityChange = () => {
@@ -275,17 +282,19 @@ export default function CloseMasterGame() {
     };
   }, [socket, game?.roomId, playerName, screen, playerId]);
 
+  // clear timer on unmount
   useEffect(() => {
     return () => {
       if (turnTimerRef.current) clearInterval(turnTimerRef.current);
     };
   }, []);
 
+  // 20s TURN TIMER
   useEffect(() => {
     const startedNow = !!game?.started;
-    const players = game?.players || [];
+    const playersArr = game?.players || [];
     const currentIndex = game?.currentIndex ?? 0;
-    const currentPlayer = players[currentIndex];
+    const currentPlayer = playersArr[currentIndex];
     const isMyTurn =
       startedNow && currentPlayer && currentPlayer.id === game?.youId;
 
@@ -364,6 +373,7 @@ export default function CloseMasterGame() {
 
   const closeDisabled = !myTurn || hasDrawn || discardTop?.rank === "7";
 
+  // CREATE / JOIN
   const createRoom = () => {
     if (!socket || !playerName.trim() || !selectedFace) {
       alert("Name and face select cheyali");
@@ -475,8 +485,10 @@ export default function CloseMasterGame() {
     setShowGifPickerFor(null);
   };
 
+  // RESULT OVERLAY – full list (no scroll)
   const ResultOverlay = () => {
     if (!showResultOverlay || !game?.closeCalled) return null;
+
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
@@ -519,10 +531,11 @@ export default function CloseMasterGame() {
             CLOSE SUCCESS 🎉
           </p>
 
-          <div className="bg-white/5 rounded-2xl p-3 md:p-4 mb-4 max-h-20 overflow-y-auto">
+          <div className="bg-white/5 rounded-2xl p-3 md:p-4 mb-4">
             <p className="text-xs md:text-sm text-amber-200 font-semibold mb-2 text-center">
               CURRENT ROUND POINTS
             </p>
+
             {players.map((p) => (
               <div
                 key={p.id}
@@ -691,6 +704,7 @@ export default function CloseMasterGame() {
   // LOBBY SCREEN
   if (screen === "lobby") {
     const meLobby = players.find((p) => p.id === youId);
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/30 to-blue-900/30 text-white p-4 md:p-6 flex flex-col items-center gap-4 md:gap-6 relative overflow-hidden">
         <NeonFloatingCards />
