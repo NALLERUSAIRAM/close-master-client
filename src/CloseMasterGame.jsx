@@ -33,25 +33,9 @@ function cardTextColor(card) {
   return "text-cyan-50 drop-shadow-[0_0_6px_rgba(56,189,248,0.9)] font-bold";
 }
 
+// background animations remove chesam – just keep placeholder if needed
 function NeonFloatingCards() {
-  return (
-    <div className="fixed inset-0 pointer-events-none -z-10">
-      {Array.from({ length: 20 }).map((_, i) => (
-        <div
-          key={i}
-          className="absolute w-16 h-24 rounded-3xl border border-white/20 shadow-[0_0_20px_#3b82f6] backdrop-blur-md animate-float-slow"
-          style={{
-            left: `${5 + Math.random() * 90}%`,
-            top: `${10 + Math.random() * 80}%`,
-            animationDelay: `${Math.random() * 10}s`,
-            animationDuration: `${12 + Math.random() * 8}s`,
-            boxShadow: "0 0 20px 4px rgba(59,130,246,0.6)",
-            background: "rgba(255,255,255,0.05)",
-          }}
-        />
-      ))}
-    </div>
-  );
+  return null;
 }
 
 // round-points helper
@@ -241,9 +225,9 @@ export default function CloseMasterGame() {
   // CLOSE → winner overlay
   useEffect(() => {
     if (!game?.closeCalled) return;
-    const players = game.players || [];
+    const playersArr = game.players || [];
     const currentIndex = game.currentIndex ?? 0;
-    const closer = players[currentIndex] || players[0];
+    const closer = playersArr[currentIndex] || playersArr[0];
     setWinnerName(closer?.name || "Winner");
     setShowResultOverlay(true);
   }, [game?.closeCalled, game?.players, game?.currentIndex]);
@@ -580,8 +564,15 @@ export default function CloseMasterGame() {
       !!playerName.trim() && !!joinCode.trim() && !!selectedFace && !loading;
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/20 to-blue-900/20 flex items-center justify-center px-4 relative overflow-hidden">
-        <NeonFloatingCards />
+      <div
+        className="min-h-screen text-white flex items-center justify-center px-4 relative overflow-hidden"
+        style={{
+          backgroundImage: 'url("/gifs/15.gif")',
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
         <div className="relative z-10 bg-black/80 backdrop-blur-2xl p-8 rounded-3xl w-full max-w-md border border-white/20 shadow-2xl">
           <div className="text-center mb-8">
             <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-emerald-400 via-blue-400 to-purple-500 bg-clip-text text-transparent drop-shadow-2xl">
@@ -665,38 +656,6 @@ export default function CloseMasterGame() {
             </button>
           </div>
         </div>
-
-        <style jsx>{`
-          @keyframes float {
-            0%,
-            100% {
-              transform: translateY(0) rotate(0);
-            }
-            50% {
-              transform: translateY(-20px) rotate(5deg);
-            }
-          }
-          .animate-float-slow {
-            animation: float 15s ease-in-out infinite;
-          }
-          @keyframes firework-burst {
-            0% {
-              transform: scale(0);
-              opacity: 1;
-            }
-            20% {
-              transform: scale(1);
-              opacity: 1;
-            }
-            100% {
-              transform: scale(1.6);
-              opacity: 0;
-            }
-          }
-          .firework-burst {
-            animation: firework-burst 1.2s ease-out infinite;
-          }
-        `}</style>
       </div>
     );
   }
@@ -706,11 +665,18 @@ export default function CloseMasterGame() {
     const meLobby = players.find((p) => p.id === youId);
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/30 to-blue-900/30 text-white p-4 md:p-6 flex flex-col items-center gap-4 md:gap-6 relative overflow-hidden">
-        <NeonFloatingCards />
+      <div
+        className="min-h-screen text-white p-4 md:p-6 flex flex-col items-center gap-4 md:gap-6 relative overflow-hidden"
+        style={{
+          backgroundImage: 'url("/gifs/15.gif")',
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
         <ResultOverlay />
 
-        <div className="z-10 w-full max-w-5xl text-center p-4 md:p-6 bg-black/20 backdrop-blur-xl rounded-3xl border border-emerald-500/50 shadow-2xl">
+        <div className="z-10 w-full max-w-5xl text-center p-4 md:p-6 bg-black/60 backdrop-blur-xl rounded-3xl border border-emerald-500/50 shadow-2xl">
           <h1 className="mb-3 md:mb-4 text-2xl md:text-4xl font-black bg-gradient-to-r from-emerald-400 to-emerald-200 bg-clip-text text-transparent">
             Room: {roomId?.toUpperCase()}
           </h1>
@@ -777,10 +743,10 @@ export default function CloseMasterGame() {
           {players.map((p) => (
             <div
               key={p.id}
-              className={`p-3 md:p-4 rounded-2xl border-2 shadow-lg ${
+              className={`p-2 md:p-3 rounded-2xl border-2 shadow-lg ${
                 p.id === youId
-                  ? "border-emerald-400 bg-emerald-900/30"
-                  : "border-gray-700 bg-gray-900/30"
+                  ? "border-emerald-400 bg-black/70"
+                  : "border-gray-700 bg-black/60"
               }`}
             >
               <div className="flex items-center justify-center gap-2 mb-1">
@@ -795,7 +761,7 @@ export default function CloseMasterGame() {
                   {p.name}
                 </p>
               </div>
-              <p className="text-xs md:text-sm text-gray-400 text-center">
+              <p className="text-xs md:text-sm text-gray-300 text-center">
                 {p.score} pts
               </p>
             </div>
@@ -841,58 +807,33 @@ export default function CloseMasterGame() {
             </div>
           </div>
         )}
-
-        <style jsx>{`
-          @keyframes float {
-            0%,
-            100% {
-              transform: translateY(0) rotate(0);
-            }
-            50% {
-              transform: translateY(-20px) rotate(5deg);
-            }
-          }
-          .animate-float-slow {
-            animation: float 15s ease-in-out infinite;
-          }
-          @keyframes firework-burst {
-            0% {
-              transform: scale(0);
-              opacity: 1;
-            }
-            20% {
-              transform: scale(1);
-              opacity: 1;
-            }
-            100% {
-              transform: scale(1.6);
-              opacity: 0;
-            }
-          }
-          .firework-burst {
-            animation: firework-burst 1.2s ease-out infinite;
-          }
-        `}</style>
       </div>
     );
   }
 
   // GAME SCREEN
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-purple-900/30 to-blue-900/30 text-white p-4 md:p-6 flex flex-col items-center gap-4 md:gap-6 relative overflow-hidden">
-      <NeonFloatingCards />
+    <div
+      className="min-h-screen text-white p-4 md:p-6 flex flex-col items-center gap-4 md:gap-6 relative overflow-hidden"
+      style={{
+        backgroundImage: 'url("/gifs/15.gif")',
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
+    >
       <ResultOverlay />
 
-      {/* TITLE INSTEAD OF BIG TIMER */}
+      {/* TITLE */}
       <div className="z-10 mt-2 mb-1 text-center">
         <h1 className="text-2xl md:text-3xl font-black tracking-wide bg-gradient-to-r from-emerald-400 via-blue-400 to-purple-500 bg-clip-text text-transparent drop-shadow-2xl">
           CLOSE MASTER
         </h1>
       </div>
 
-      {/* INFO BAR (current player, draw/skip) */}
+      {/* INFO BAR */}
       {started && (
-        <div className="z-10 w-full max-w-4xl p-3 md:p-4 bg-gray-900/50 rounded-2xl border border-gray-700">
+        <div className="z-10 w-full max-w-4xl p-3 md:p-4 bg-black/70 rounded-2xl border border-gray-700">
           <div className="flex flex-wrap justify-between items-center gap-2 text-sm md:text-base">
             <div className="flex items-center gap-2">
               {currentPlayer?.face && (
@@ -928,7 +869,7 @@ export default function CloseMasterGame() {
         </div>
       )}
 
-      {/* OPEN CARD – NEON STYLE */}
+      {/* OPEN CARD */}
       {started && (
         <div className="z-10 text-center">
           <h3 className="text-lg md:text-xl mb-3 md:mb-4 font-bold">
@@ -970,14 +911,14 @@ export default function CloseMasterGame() {
               </div>
             </button>
           ) : (
-            <div className="w-24 md:w-28 h-32 md:h-40 bg-black/70 border border-white/20 rounded-3xl flex items-center justify-center text-gray-400 text-xs md:text-sm">
+            <div className="w-24 md:w-28 h-32 md:h-40 bg-black/70 border border-white/20 rounded-3xl flex items-center justify-center text-gray-300 text-xs md:text-sm">
               Empty
             </div>
           )}
         </div>
       )}
 
-      {/* PLAYERS LIST + GIF + TIMER INSIDE CARD */}
+      {/* PLAYERS LIST + GIF + TIMER */}
       {started && (
         <div className="z-10 w-full max-w-5xl grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
           {players.map((p) => {
@@ -985,35 +926,35 @@ export default function CloseMasterGame() {
             const isTurn = currentPlayer?.id === p.id;
             const activeGifId = activeReactions[p.id];
             const activeGif = GIF_LIST.find((g) => g.id === activeGifId);
-            const isMyCard = p.id === youId;
+            const isTimerCard = isTurn; // timer only turn player ki
 
             return (
               <div
                 key={p.id}
-                className={`relative p-3 md:p-4 rounded-2xl border-2 shadow-lg ${
+                className={`relative p-2 md:p-3 rounded-2xl border-2 shadow-lg ${
                   isYou
-                    ? "border-emerald-400 bg-emerald-900/30"
+                    ? "border-emerald-400 bg-black/70"
                     : isTurn
-                    ? "border-yellow-400 bg-yellow-900/30"
-                    : "border-gray-700 bg-gray-900/30"
+                    ? "border-yellow-400 bg-black/70"
+                    : "border-gray-700 bg-black/60"
                 }`}
               >
-                {/* TOP BAR: LEFT GIF BUTTON, RIGHT TIMER (ONLY FOR YOU) */}
-                <div className="flex items-center justify-between mb-2">
+                {/* TOP BAR: LEFT GIF, RIGHT TIMER (turn player only) */}
+                <div className="flex items-center justify-between mb-1">
                   <button
                     type="button"
                     onClick={() => handleGifClick(p.id)}
-                    className="text-[10px] md:text-xs px-2 py-1 rounded-full bg-black/30 border border-white/40 flex items-center gap-1 hover:bg-black/70"
+                    className="text-[10px] md:text-xs px-2 py-1 rounded-full bg-black/40 border border-white/40 flex items-center gap-1 hover:bg-black/70"
                   >
                     <span>GIF</span>
                     <span>🎭</span>
                   </button>
 
-                  {isMyCard && started && (
+                  {isTimerCard && started && (
                     <div className="flex items-center gap-1">
                       <div
                         className={`w-7 h-7 md:w-8 md:h-8 rounded-full border-2 flex items-center justify-center text-[10px] md:text-xs font-bold ${
-                          myTurn
+                          isTurn
                             ? "border-yellow-400 text-yellow-200 animate-ping-slow"
                             : "border-gray-300 text-gray-200"
                         }`}
@@ -1024,7 +965,7 @@ export default function CloseMasterGame() {
                   )}
                 </div>
 
-                {/* ACTIVE GIF BUBBLE (TOP-RIGHT) */}
+                {/* ACTIVE GIF BUBBLE */}
                 {activeGif && (
                   <div className="absolute -top-5 right-2 w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden border-2 border-white shadow-lg bg-black/70">
                     <img
@@ -1049,7 +990,7 @@ export default function CloseMasterGame() {
                       {p.name}
                     </p>
                   </div>
-                  <p className="text-xs md:text-sm text-gray-400 text-center">
+                  <p className="text-xs md:text-sm text-gray-300 text-center">
                     {p.handSize} cards | {p.score} pts
                   </p>
                   {p.hasDrawn && (
@@ -1106,14 +1047,14 @@ export default function CloseMasterGame() {
         </div>
       )}
 
-      {/* YOUR HAND – NEON STYLE */}
+      {/* YOUR HAND */}
       {me && started && (
         <div className="z-10 w-full max-w-5xl">
-          <h3 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-emerald-400 text-center">
+          <h3 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-emerald-300 text-center">
             Your Hand ({me.hand.length})
           </h3>
 
-          <div className="flex gap-2 md:gap-3 flex-wrap justify-center p-3 md:p-4 bg-black/40 rounded-3xl border border-white/10">
+          <div className="flex gap-2 md:gap-3 flex-wrap justify-center p-3 md:p-4 bg-black/60 rounded-3xl border border-white/10">
             {me.hand.map((c) => {
               const selected = selectedIds.includes(c.id);
               return (
@@ -1158,7 +1099,7 @@ export default function CloseMasterGame() {
 
       {/* ACTION BUTTONS */}
       {myTurn && started && (
-        <div className="z-10 flex flex-wrap gap-2 md:gap-4 justify-center max-w-4xl p-4 md:p-6 bg-black/50 backdrop-blur-xl rounded-3xl border border-white/20">
+        <div className="z-10 flex flex-wrap gap-2 md:gap-4 justify-center max-w-4xl p-4 md:p-6 bg-black/70 backdrop-blur-xl rounded-3xl border border-white/20">
           <button
             onClick={() => drawCard(false)}
             disabled={hasDrawn}
@@ -1207,19 +1148,6 @@ export default function CloseMasterGame() {
       )}
 
       <style jsx>{`
-        @keyframes float {
-          0%,
-          100% {
-            transform: translateY(0) rotate(0);
-          }
-          50% {
-            transform: translateY(-20px) rotate(5deg);
-          }
-        }
-        .animate-float-slow {
-          animation: float 15s ease-in-out infinite;
-        }
-
         @keyframes firework-burst {
           0% {
             transform: scale(0);
