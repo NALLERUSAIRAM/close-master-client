@@ -24,17 +24,13 @@ const FACE_LIST = [
   "/gifs/7.png",
 ];
 
-// UPDATED: Card text glow is now more intense and bright (drop-shadow:[0_0_12px...])
 function cardTextColor(card) {
   if (!card) return "text-white";
-  // JOKER - Intense Yellow Neon
   if (card.rank === "JOKER")
-    return "text-yellow-100 drop-shadow-[0_0_12px_rgba(255,255,0,1)] font-extrabold";
-  // HEART / DIAMOND - Intense Pink/Red Neon
+    return "text-yellow-200 drop-shadow-[0_0_6px_rgba(250,250,150,0.9)] font-extrabold";
   if (card.suit === "♥" || card.suit === "♦")
-    return "text-pink-300 drop-shadow-[0_0_12px_rgba(255,0,255,1)] font-bold";
-  // SPADE / CLUB - Intense Cyan/Blue Neon
-  return "text-cyan-300 drop-shadow-[0_0_12px_rgba(0,255,255,1)] font-bold";
+    return "text-red-50 drop-shadow-[0_0_6px_rgba(248,113,113,0.9)] font-bold";
+  return "text-cyan-50 drop-shadow-[0_0_6px_rgba(56,189,248,0.9)] font-bold";
 }
 
 // Placeholder – not using floating cards now
@@ -76,6 +72,18 @@ export default function CloseMasterGame() {
 
   const [roundBaseScores, setRoundBaseScores] = useState({});
   const prevStartedRef = useRef(false);
+
+  // NEW: Firework Colors setup
+  const FIREWORK_COLORS = [
+    "rgba(255, 0, 255, 1)", // Magenta
+    "rgba(0, 255, 255, 1)", // Cyan
+    "rgba(255, 255, 0, 1)", // Yellow
+    "rgba(255, 105, 180, 1)", // Hot Pink
+    "rgba(0, 255, 127, 1)", // Spring Green
+    "rgba(255, 165, 0, 1)", // Orange
+  ];
+  const randomColor = () => FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)];
+
 
   const [playerId] = useState(() => {
     if (typeof window === "undefined") return "";
@@ -421,7 +429,6 @@ export default function CloseMasterGame() {
       alert("Valid cards select cheyali");
       return;
     }
-    // No need for client-side state change, the socket update will trigger the Open Card animation.
     socket.emit("action_drop", { roomId, selectedIds });
   };
 
@@ -482,22 +489,28 @@ export default function CloseMasterGame() {
       <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
         <div className="absolute inset-0 pointer-events-none">
-          {Array.from({ length: 12 }).map((_, i) => (
-            <div
-              key={i}
-              className="absolute rounded-full firework-burst"
-              style={{
-                width: "6rem",
-                height: "6rem",
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                boxShadow: "0 0 40px 10px rgba(251,191,36,0.95)",
-                background:
-                  "radial-gradient(circle, rgba(251,191,36,1) 0%, rgba(0,0,0,0) 70%)",
-                animationDelay: `${Math.random() * 0.8}s`,
-              }}
-            />
-          ))}
+          {/* MODIFIED: Firework Burst Effect */}
+          {Array.from({ length: 20 }).map((_, i) => { // Increased count to 20
+            const color = randomColor();
+            const size = 4 + Math.random() * 4; // size 4rem to 8rem
+            return (
+              <div
+                key={i}
+                className="absolute rounded-full firework-burst"
+                style={{
+                  width: `${size}rem`,
+                  height: `${size}rem`,
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                  // Stronger glow based on size and use random color
+                  boxShadow: `0 0 ${size * 5}px 10px ${color.replace('1)', '0.99)')}`, 
+                  background:
+                    `radial-gradient(circle, ${color} 0%, rgba(0,0,0,0) 70%)`,
+                  animationDelay: `${Math.random() * 0.9}s`,
+                }}
+              />
+            );
+          })}
         </div>
 
         <div className="relative px-8 py-6 md:px-10 md:py-8 bg-black/90 rounded-3xl border border-amber-400 shadow-[0_0_20px_rgba(251,191,36,1)] max-w-md w-[90%]">
@@ -880,7 +893,7 @@ export default function CloseMasterGame() {
           </div>
         )}
 
-        {/* OPEN CARD (Discard Top) */}
+        {/* OPEN CARD */}
         {started && (
           <div className="z-10 text-center">
             <h3 className="text-lg md:text-xl mb-3 md:mb-4 font-bold">
@@ -891,18 +904,15 @@ export default function CloseMasterGame() {
                 onClick={() => drawCard(true)}
                 disabled={!myTurn || hasDrawn}
                 className={[
-                  // Reverted to animate-neon-pulse for standby glow
-                  "relative w-24 md:w-28 h-32 md:h-40 rounded-3xl border-2 border-fuchsia-500",
-                  // Reverted to animate-neon-pulse
-                  "bg-black/80 shadow-[0_0_35px_rgba(236,72,153,0.9)] animate-neon-pulse",
+                  "relative w-24 md:w-28 h-32 md:h-40 rounded-3xl border border-pink-500/80",
+                  "bg-black/80 shadow-[0_0_25px_rgba(236,72,153,0.9)]",
                   "flex flex-col justify-between p-2 md:p-3 transition-transform",
                   myTurn && !hasDrawn
                     ? "hover:scale-105 cursor-pointer"
-                    : "opacity-70 cursor-not-allowed",
+                    : "opacity-60 cursor-not-allowed",
                 ].join(" ")}
               >
-                {/* UPDATED: Inner glow effect (stronger shadow) */}
-                <div className="pointer-events-none absolute inset-0 rounded-3xl border border-white/60 shadow-[0_0_40px_rgba(248,250,252,0.6)]" />
+                <div className="pointer-events-none absolute inset-0 rounded-3xl border border-white/60 shadow-[0_0_30px_rgba(248,250,252,0.9)]" />
 
                 <div className="relative text-base md:text-lg font-bold uppercase">
                   <span className={cardTextColor(discardTop)}>
@@ -942,26 +952,16 @@ export default function CloseMasterGame() {
               const activeGif = GIF_LIST.find((g) => g.id === activeGifId);
               const isTimerCard = isTurn; // timer only for current-turn player
 
-              // UPDATED: Player Card Styling for Neon Glow and Turn Indicator (Simplified class array construction)
-              const playerClasses = [
-                "relative p-2 md:p-3 rounded-2xl border-2 shadow-lg transition-all duration-300",
-              ];
-              
-              if (isYou && isTurn) {
-                playerClasses.push("border-fuchsia-400 bg-black/70 shadow-[0_0_18px_rgba(236,72,153,0.9)] animate-pulse-turn"); // Me + My Turn (Strong Pink Glow)
-              } else if (isYou) {
-                playerClasses.push("border-emerald-400 bg-black/70 shadow-[0_0_12px_rgba(52,211,167,0.7)]"); // Me (Subtle Green Glow)
-              } else if (isTurn) {
-                playerClasses.push("border-yellow-400 bg-black/70 shadow-[0_0_18px_rgba(250,204,21,0.9)] animate-pulse-turn"); // Other's Turn (Strong Yellow Glow)
-              } else {
-                playerClasses.push("border-gray-700 bg-black/60 hover:shadow-[0_0_5px_rgba(156,163,175,0.4)]"); // Normal
-              }
-
-
               return (
                 <div
                   key={p.id}
-                  className={playerClasses.join(" ")}
+                  className={`relative p-2 md:p-3 rounded-2xl border-2 shadow-lg ${
+                    isYou
+                      ? "border-emerald-400 bg-black/70"
+                      : isTurn
+                      ? "border-yellow-400 bg-black/70"
+                      : "border-gray-700 bg-black/60"
+                  }`}
                 >
                   {/* TOP BAR */}
                   <div className="flex items-center justify-between mb-1">
@@ -977,10 +977,9 @@ export default function CloseMasterGame() {
                     {isTimerCard && started && (
                       <div className="flex items-center gap-1">
                         <div
-                          // UPDATED: Timer styling for intense red neon look
-                          className={`w-7 h-7 md:w-8 md:h-8 rounded-full border-2 flex items-center justify-center text-[10px] md:text-xs font-black ${
+                          className={`w-7 h-7 md:w-8 md:h-8 rounded-full border-2 flex items-center justify-center text-[10px] md:text-xs font-bold ${
                             isTurn
-                              ? "border-red-400 text-red-200 shadow-[0_0_10px_rgba(248,113,113,1)] animate-ping-slow"
+                              ? "border-yellow-400 text-yellow-200 animate-ping-slow"
                               : "border-gray-300 text-gray-200"
                           }`}
                         >
@@ -1092,23 +1091,18 @@ export default function CloseMasterGame() {
                     disabled={!myTurn}
                     className={[
                       "relative w-16 md:w-20 h-24 md:h-28 rounded-3xl",
-                      // UPDATED: Thicker, brighter pink border (fuchsia)
-                      "bg-black/80 border-2 border-fuchsia-500/90", 
-                      // UPDATED: Stronger magenta shadow
-                      "shadow-[0_0_25px_rgba(236,72,153,0.8)]", 
+                      "bg-black/80 border border-pink-500/70",
+                      "shadow-[0_0_22px_rgba(236,72,153,0.9)]",
                       "flex flex-col justify-between p-1.5 md:p-2 transition-transform",
                       "backdrop-blur-sm",
                       selected
-                        // UPDATED: Re-implemented three-color border glow animation
-                        ? "scale-125 border-4 shadow-none animate-neon-border-glow" 
+                        ? "scale-125 border-cyan-300 shadow-[0_0_28px_rgba(34,211,238,1)] animate-neon-rotate"
                         : myTurn
-                        // UPDATED: Stronger hover effect
-                        ? "hover:scale-105 hover:shadow-[0_0_35px_rgba(236,72,153,1)]" 
+                        ? "hover:scale-105 hover:border-cyan-300"
                         : "opacity-60 cursor-not-allowed",
                     ].join(" ")}
                   >
-                    {/* UPDATED: Inner glow effect (stronger shadow) */}
-                    <div className="pointer-events-none absolute inset-0 rounded-3xl border border-white/70 shadow-[0_0_30px_rgba(248,250,252,0.8)]" />
+                    <div className="pointer-events-none absolute inset-0 rounded-3xl border border-white/70 shadow-[0_0_26px_rgba(248,250,252,0.95)]" />
 
                     <div className="relative text-sm md:text-base font-bold uppercase">
                       <span className={cardTextColor(c)}>{c.rank}</span>
@@ -1136,11 +1130,10 @@ export default function CloseMasterGame() {
             <button
               onClick={() => drawCard(false)}
               disabled={hasDrawn}
-              className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl transition-all ${
+              className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${
                 hasDrawn
                   ? "bg-gray-700/50 cursor-not-allowed opacity-50"
-                  // UPDATED: Intense Neon Blue style
-                  : "bg-black/70 border-2 border-sky-400 text-sky-200 shadow-[0_0_20px_rgba(56,189,248,0.8)] hover:shadow-[0_0_30px_rgba(56,189,248,1)] hover:scale-[1.03]" 
+                  : "bg-gradient-to-r from-purple-200 to-purple-700 hover:from-purple-700 hover:to-purple-800"
               }`}
             >
               DECK
@@ -1148,10 +1141,9 @@ export default function CloseMasterGame() {
             <button
               onClick={dropCards}
               disabled={!allowDrop}
-              className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl transition-all ${
+              className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${
                 allowDrop
-                  // UPDATED: Intense Neon Green style
-                  ? "bg-black/70 border-2 border-emerald-400 text-emerald-200 shadow-[0_0_20px_rgba(52,211,167,0.8)] hover:shadow-[0_0_30px_rgba(52,211,167,1)] hover:scale-[1.03]"
+                  ? "bg-gradient-to-r from-green-200 to-green-700 hover:from-green-700 hover:to-green-800"
                   : "bg-gray-700/50 cursor-not-allowed opacity-50"
               }`}
             >
@@ -1163,8 +1155,7 @@ export default function CloseMasterGame() {
               className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl transition-all ${
                 closeDisabled
                   ? "bg-gray-700/50 cursor-not-allowed opacity-50"
-                  // UPDATED: Intense Neon Red/Pink style
-                  : "bg-black/70 border-2 border-pink-500 text-pink-300 shadow-[0_0_20px_rgba(236,72,153,0.8)] hover:shadow-[0_0_30px_rgba(236,72,153,1)] hover:scale-[1.03]"
+                  : "bg-gradient-to-r from-red-200 to-red-700 hover:from-red-700 hover:to-red-800 hover:scale-105"
               }`}
             >
               CLOSE
@@ -1185,71 +1176,40 @@ export default function CloseMasterGame() {
       </div>
 
       <style jsx>{`
-        /* Existing Firework Burst */
+        /* MODIFIED: Firework Burst Animation (now a quick explosion/pop) */
         @keyframes firework-burst {
-          0% { transform: scale(0); opacity: 1; }
-          20% { transform: scale(1); opacity: 1; }
-          100% { transform: scale(1.6); opacity: 0; }
-        }
-        .firework-burst {
-          animation: firework-burst 1.2s ease-out infinite;
-        }
-
-        /* Re-added: Pulsing Neon Glow for Open Card (Standby) */
-        @keyframes neon-pulse {
-            0%, 100% {
-                box-shadow: 0 0 10px rgba(255, 0, 255, 0.4), 0 0 20px rgba(236,72,153,0.4); /* Pink */
-            }
-            50% {
-                box-shadow: 0 0 30px rgba(255, 0, 255, 1), 0 0 40px rgba(236,72,153,1); /* Strong Pink */
-            }
-        }
-        .animate-neon-pulse {
-            animation: neon-pulse 3s ease-in-out infinite;
-        }
-
-        /* NEW: Player Card Turn Pulse Animation (for Turn Indicator) */
-        @keyframes pulse-turn {
-            0%, 100% {
-                box-shadow: 0 0 5px currentColor;
-                border-color: currentColor;
-            }
-            50% {
-                box-shadow: 0 0 20px currentColor;
-                border-color: currentColor;
-            }
-        }
-        .animate-pulse-turn {
-            animation: pulse-turn 1.5s infinite alternate;
-        }
-
-
-        /* Hand Card Glow */
-        @keyframes neon-border-glow {
           0% {
-            border-color: #ff00ff; /* Magenta */
-            box-shadow: 0 0 15px #ff00ff, 0 0 25px #ff00ff;
-            transform: scale(1.25);
+            transform: scale(0);
+            opacity: 1;
           }
-          33% {
-            border-color: #00ffff; /* Cyan */
-            box-shadow: 0 0 15px #00ffff, 0 0 25px #00ffff;
-          }
-          66% {
-            border-color: #00ff00; /* Green */
-            box-shadow: 0 0 15px #00ff00, 0 0 25px #00ff00;
+          15% {
+            transform: scale(1.2); /* Quick expansion for the burst */
+            opacity: 1;
           }
           100% {
-            border-color: #ff00ff; /* Magenta */
-            box-shadow: 0 0 15px #ff00ff, 0 0 25px #ff00ff;
-            transform: scale(1.25);
+            transform: scale(1.8); /* Fades out while scaling slightly larger */
+            opacity: 0;
           }
         }
-        .animate-neon-border-glow {
-          animation: neon-border-glow 2.5s linear infinite;
+        .firework-burst {
+          animation: firework-burst 0.7s ease-out infinite; /* Faster animation for a 'pop' effect */
         }
-        
-        /* Slow Ping for Timer */
+
+        @keyframes neon-rotate {
+          0% {
+            transform: rotate(-4deg) scale(1.25);
+          }
+          50% {
+            transform: rotate(4deg) scale(1.25);
+          }
+          100% {
+            transform: rotate(-4deg) scale(1.25);
+          }
+        }
+        .animate-neon-rotate {
+          animation: neon-rotate 1.5s ease-in-out infinite;
+        }
+
         @keyframes ping-slow {
           0% {
             transform: scale(1);
