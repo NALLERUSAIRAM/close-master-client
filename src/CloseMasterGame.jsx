@@ -24,20 +24,18 @@ const FACE_LIST = [
   "/gifs/7.png",
 ];
 
-// **********************************************
-// ********* MODIFIED cardTextColor *************
-// **********************************************
-// Note: The Tailwind classes returned here (text-*-outline) are defined
-// in the <style jsx> block below to create the transparent neon outline effect.
+// UPDATED: Card text glow is now more intense and bright (drop-shadow:[0_0_12px...])
 function cardTextColor(card) {
   if (!card) return "text-white";
+  // JOKER - Intense Yellow Neon
   if (card.rank === "JOKER")
-    return "text-joker-outline font-extrabold";
+    return "text-yellow-100 drop-shadow-[0_0_12px_rgba(255,255,0,1)] font-extrabold";
+  // HEART / DIAMOND - Intense Pink/Red Neon
   if (card.suit === "♥" || card.suit === "♦")
-    return "text-red-outline font-bold";
-  return "text-blue-outline font-bold";
+    return "text-pink-300 drop-shadow-[0_0_12px_rgba(255,0,255,1)] font-bold";
+  // SPADE / CLUB - Intense Cyan/Blue Neon
+  return "text-cyan-300 drop-shadow-[0_0_12px_rgba(0,255,255,1)] font-bold";
 }
-// **********************************************
 
 // Placeholder – not using floating cards now
 function NeonFloatingCards() {
@@ -891,18 +889,19 @@ export default function CloseMasterGame() {
               <button
                 onClick={() => drawCard(true)}
                 disabled={!myTurn || hasDrawn}
-                // *******************************************************************
-                // ******** MODIFIED: Applied neon-card-base styles ******************
-                // *******************************************************************
                 className={[
-                  "neon-card-base w-24 md:w-28 h-32 md:h-40 rounded-3xl flex flex-col justify-between p-2 md:p-3 transition-transform",
+                  // UPDATED: Thicker, brighter pink border (fuchsia) and added pulsing animation
+                  "relative w-24 md:w-28 h-32 md:h-40 rounded-3xl border-2 border-fuchsia-500",
+                  // UPDATED: Stronger shadow and added pulsing animation
+                  "bg-black/80 shadow-[0_0_35px_rgba(236,72,153,0.9)] animate-neon-pulse",
+                  "flex flex-col justify-between p-2 md:p-3 transition-transform",
                   myTurn && !hasDrawn
                     ? "hover:scale-105 cursor-pointer"
-                    : "opacity-60 cursor-not-allowed",
+                    : "opacity-70 cursor-not-allowed", // Opacity changed from 60 to 70
                 ].join(" ")}
               >
-                {/* REMOVED: Inner white shadow div */}
-                {/* <div className="pointer-events-none absolute inset-0 rounded-3xl border border-white/60 shadow-[0_0_30px_rgba(248,250,252,0.9)]" /> */}
+                {/* UPDATED: Inner glow effect (stronger shadow) */}
+                <div className="pointer-events-none absolute inset-0 rounded-3xl border border-white/60 shadow-[0_0_40px_rgba(248,250,252,0.6)]" />
 
                 <div className="relative text-base md:text-lg font-bold uppercase">
                   <span className={cardTextColor(discardTop)}>
@@ -1079,20 +1078,25 @@ export default function CloseMasterGame() {
                     key={c.id}
                     onClick={() => toggleSelect(c.id)}
                     disabled={!myTurn}
-                    // *******************************************************************
-                    // ******** MODIFIED: Applied neon-card-base styles ******************
-                    // *******************************************************************
                     className={[
-                      "neon-card-base w-16 md:w-20 h-24 md:h-28 rounded-3xl flex flex-col justify-between p-1.5 md:p-2 transition-transform",
+                      "relative w-16 md:w-20 h-24 md:h-28 rounded-3xl",
+                      // UPDATED: Thicker, brighter pink border (fuchsia)
+                      "bg-black/80 border-2 border-fuchsia-500/90", 
+                      // UPDATED: Stronger magenta shadow
+                      "shadow-[0_0_25px_rgba(236,72,153,0.8)]", 
+                      "flex flex-col justify-between p-1.5 md:p-2 transition-transform",
+                      "backdrop-blur-sm",
                       selected
-                        ? "selected-neon-card scale-125 animate-neon-rotate"
+                        // UPDATED: Use new border-glow animation and remove internal shadow (shadow-none)
+                        ? "scale-125 border-4 shadow-none animate-neon-border-glow" 
                         : myTurn
-                        ? "hover:scale-105 hover:border-cyan-300"
+                        // UPDATED: Stronger hover effect
+                        ? "hover:scale-105 hover:shadow-[0_0_35px_rgba(236,72,153,1)]" 
                         : "opacity-60 cursor-not-allowed",
                     ].join(" ")}
                   >
-                    {/* REMOVED: Inner white shadow div */}
-                    {/* <div className="pointer-events-none absolute inset-0 rounded-3xl border border-white/70 shadow-[0_0_26px_rgba(248,250,252,0.95)]" /> */}
+                    {/* UPDATED: Inner glow effect (stronger shadow) */}
+                    <div className="pointer-events-none absolute inset-0 rounded-3xl border border-white/70 shadow-[0_0_30px_rgba(248,250,252,0.8)]" />
 
                     <div className="relative text-sm md:text-base font-bold uppercase">
                       <span className={cardTextColor(c)}>{c.rank}</span>
@@ -1120,10 +1124,11 @@ export default function CloseMasterGame() {
             <button
               onClick={() => drawCard(false)}
               disabled={hasDrawn}
-              className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${
+              className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl transition-all ${
                 hasDrawn
                   ? "bg-gray-700/50 cursor-not-allowed opacity-50"
-                  : "bg-gradient-to-r from-purple-200 to-purple-700 hover:from-purple-700 hover:to-purple-800"
+                  // UPDATED: Intense Neon Blue style
+                  : "bg-black/70 border-2 border-sky-400 text-sky-200 shadow-[0_0_20px_rgba(56,189,248,0.8)] hover:shadow-[0_0_30px_rgba(56,189,248,1)] hover:scale-[1.03]" 
               }`}
             >
               DECK
@@ -1131,9 +1136,10 @@ export default function CloseMasterGame() {
             <button
               onClick={dropCards}
               disabled={!allowDrop}
-              className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${
+              className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl transition-all ${
                 allowDrop
-                  ? "bg-gradient-to-r from-green-200 to-green-700 hover:from-green-700 hover:to-green-800"
+                  // UPDATED: Intense Neon Green style
+                  ? "bg-black/70 border-2 border-emerald-400 text-emerald-200 shadow-[0_0_20px_rgba(52,211,167,0.8)] hover:shadow-[0_0_30px_rgba(52,211,167,1)] hover:scale-[1.03]"
                   : "bg-gray-700/50 cursor-not-allowed opacity-50"
               }`}
             >
@@ -1142,10 +1148,11 @@ export default function CloseMasterGame() {
             <button
               onClick={callClose}
               disabled={closeDisabled}
-              className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl ${
+              className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl transition-all ${
                 closeDisabled
                   ? "bg-gray-700/50 cursor-not-allowed opacity-50"
-                  : "bg-gradient-to-r from-red-200 to-red-700 hover:from-red-700 hover:to-red-800 hover:scale-105"
+                  // UPDATED: Intense Neon Red/Pink style
+                  : "bg-black/70 border-2 border-pink-500 text-pink-300 shadow-[0_0_20px_rgba(236,72,153,0.8)] hover:shadow-[0_0_30px_rgba(236,72,153,1)] hover:scale-[1.03]"
               }`}
             >
               CLOSE
@@ -1166,69 +1173,6 @@ export default function CloseMasterGame() {
       </div>
 
       <style jsx>{`
-        /* ******************************************************************* */
-        /* *************** NEW NEON CARD STYLES (Your Request) *************** */
-        /* ******************************************************************* */
-        :root {
-            --neon-blue: #00e5ff;    /* Cyan/Blue for Black Suits */
-            --neon-magenta: #ff00cc; /* Magenta for Card Border */
-            --neon-red: #ff3366;     /* Bright Red for Red Suits */
-            --neon-yellow: #ffe500;  /* Yellow for Joker */
-            --stroke-width: 1.5px;
-        }
-
-        /* Base Card Container Style (Frame and Transparency) */
-        .neon-card-base {
-            background-color: transparent !important; 
-            backdrop-filter: blur(4px); 
-            -webkit-backdrop-filter: blur(4px); 
-            
-            /* Neon Border Effect (Magenta) - Tighter glow */
-            border: 2px solid var(--neon-magenta) !important; 
-            box-shadow: 
-                0 0 5px var(--neon-magenta), 
-                0 0 10px var(--neon-magenta);
-        }
-        
-        /* Selected Card Hover Effect */
-        .selected-neon-card {
-            /* This overrides the base card border/shadow on selection */
-            border: 2px solid var(--neon-blue) !important;
-            box-shadow: 
-                0 0 8px var(--neon-blue),
-                0 0 20px var(--neon-blue) !important;
-        }
-
-        /* Crisp Outline Text Styles (replacing cardTextColor's default classes) */
-        
-        /* Blue Suits (Spade/Club) */
-        .text-blue-outline {
-            text-shadow: none !important; /* NO BRIGHTNESS/FUZZINESS */
-            color: transparent !important; 
-            -webkit-text-stroke: var(--stroke-width) var(--neon-blue) !important;
-            text-stroke: var(--stroke-width) var(--neon-blue) !important;
-        }
-
-        /* Red Suits (Heart/Diamond) */
-        .text-red-outline {
-            text-shadow: none !important;
-            color: transparent !important; 
-            -webkit-text-stroke: var(--stroke-width) var(--neon-red) !important;
-            text-stroke: var(--stroke-width) var(--neon-red) !important;
-        }
-
-        /* Joker */
-        .text-joker-outline {
-            text-shadow: none !important;
-            color: transparent !important; 
-            -webkit-text-stroke: var(--stroke-width) var(--neon-yellow) !important;
-            text-stroke: var(--stroke-width) var(--neon-yellow) !important;
-        }
-        
-        /* ******************************************************************* */
-        /* ************* END OF NEW NEON CARD STYLES ************************* */
-        /* ******************************************************************* */
-
         @keyframes firework-burst {
           0% {
             transform: scale(0);
@@ -1245,6 +1189,44 @@ export default function CloseMasterGame() {
         }
         .firework-burst {
           animation: firework-burst 1.2s ease-out infinite;
+        }
+
+        // NEW: Pulsing Neon Glow for Open Card
+        @keyframes neon-pulse {
+          0%, 100% {
+            box-shadow: 0 0 10px rgba(255, 0, 255, 0.4), 0 0 20px rgba(236,72,153,0.4); /* Pink */
+          }
+          50% {
+            box-shadow: 0 0 30px rgba(255, 0, 255, 1), 0 0 40px rgba(236,72,153,1); /* Strong Pink */
+          }
+        }
+        .animate-neon-pulse {
+            animation: neon-pulse 3s ease-in-out infinite;
+        }
+
+        // NEW: Tri-Color Border Glow for Selected Card
+        @keyframes neon-border-glow {
+          0% {
+            border-color: #ff00ff; /* Magenta */
+            box-shadow: 0 0 15px #ff00ff, 0 0 25px #ff00ff;
+            transform: scale(1.25);
+          }
+          33% {
+            border-color: #00ffff; /* Cyan */
+            box-shadow: 0 0 15px #00ffff, 0 0 25px #00ffff;
+          }
+          66% {
+            border-color: #00ff00; /* Green */
+            box-shadow: 0 0 15px #00ff00, 0 0 25px #00ff00;
+          }
+          100% {
+            border-color: #ff00ff; /* Magenta */
+            box-shadow: 0 0 15px #ff00ff, 0 0 25px #ff00ff;
+            transform: scale(1.25);
+          }
+        }
+        .animate-neon-border-glow {
+          animation: neon-border-glow 2.5s linear infinite;
         }
 
         @keyframes neon-rotate {
