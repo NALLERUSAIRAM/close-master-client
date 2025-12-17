@@ -22,6 +22,15 @@ const FACE_LIST = [
   "/gifs/5.png",
   "/gifs/6.png",
   "/gifs/7.png",
+  "/gifs/8.png",
+  "/gifs/9.png",
+];
+
+// 🎥 BACKGROUND VIDEO THEMES (GAME SCREEN THEMES)
+const BG_THEMES = [
+  { id: "t15", name: "Theme 15", file: "/gifs/15.mp4" },
+  { id: "t16", name: "Theme 16", file: "/gifs/16.mp4" },
+  { id: "t17", name: "Theme 17", file: "/gifs/17.mp4" },
 ];
 
 // UPDATED: Card text glow is now more intense and bright (drop-shadow:[0_0_12px...])
@@ -64,6 +73,9 @@ export default function CloseMasterGame() {
   const [loading, setLoading] = useState(false);
 
   const [selectedFace, setSelectedFace] = useState("");
+  // 🎨 Background Theme State
+  const [bgTheme, setBgTheme] = useState(BG_THEMES[0]);
+  const [showThemePicker, setShowThemePicker] = useState(false);
 
   const [turnTimeLeft, setTurnTimeLeft] = useState(20);
   const turnTimerRef = useRef(null);
@@ -489,19 +501,39 @@ export default function CloseMasterGame() {
     setScreen("lobby");
   };
 
-  const handleGifClick = (pid) => {
-    setShowGifPickerFor(pid);
-  };
+const handleGifClick = (pid) => {
+  setShowGifPickerFor(pid);
+};
 
-  const handleSelectGif = (gifId) => {
-    if (!socket || !roomId || !showGifPickerFor) return;
-    socket.emit("send_gif", {
-      roomId,
-      targetId: showGifPickerFor,
-      gifId,
-    });
-    setShowGifPickerFor(null);
-  };
+// 🎨 Auto cycle background theme (15 → 16 → 17 → 15)
+const cycleTheme = () => {
+  const currentIndex = BG_THEMES.findIndex(
+    (t) => t.id === bgTheme.id
+  );
+
+  const nextIndex =
+    currentIndex === -1 || currentIndex === BG_THEMES.length - 1
+      ? 0
+      : currentIndex + 1;
+
+  const nextTheme = BG_THEMES[nextIndex];
+  setBgTheme(nextTheme);
+  localStorage.setItem("cmp_bg_theme", nextTheme.id);
+};
+
+// 🎭 HANDLE GIF SELECTION (MISSING FUNCTION — VERY IMPORTANT)
+const handleSelectGif = (gifId) => {
+  if (!socket || !roomId || !showGifPickerFor) return;
+
+  socket.emit("send_gif", {
+    roomId,
+    targetId: showGifPickerFor,
+    gifId,
+  });
+
+  setShowGifPickerFor(null);
+};
+
 
   // RESULT OVERLAY – full list (no scroll)
   const ResultOverlay = () => {
@@ -867,7 +899,7 @@ export default function CloseMasterGame() {
     <div className="min-h-screen text-white relative overflow-hidden">
       <video
         className="fixed top-0 left-0 w-screen h-screen object-cover -z-10"
-        src="/gifs/15.mp4"
+        src={bgTheme.file}
         autoPlay
         muted
         loop
@@ -1168,6 +1200,16 @@ export default function CloseMasterGame() {
             </div>
           </div>
         )}
+
+{/* 🎨 CHANGE THEME BUTTON */}
+{started && (
+  <button
+    onClick={cycleTheme}
+    className="mb-2 px-4 py-2 bg-black/70 border-2 border-purple-400 text-purple-200 rounded-xl font-bold"
+  >
+    🎨 CHANGE THEME
+  </button>
+)}
 
         {/* ACTION BUTTONS */}
         {myTurn && started && (
