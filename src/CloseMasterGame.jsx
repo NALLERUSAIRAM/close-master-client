@@ -353,22 +353,26 @@ export default function CloseMasterGame() {
     game?.players,
   ]);
     // 🔔 VIBRATION ON MY TURN (1 SECOND)
-  useEffect(() => {
-    if (!game?.started) return;
+ useEffect(() => {
+  // Game start avvakapoina leda game data lekapoina return avvali
+  if (!game?.started) return;
 
-    const playersArr = game?.players || [];
-    const currentIndex = game?.currentIndex ?? 0;
-    const currentPlayer = playersArr[currentIndex];
+  const playersArr = game?.players || [];
+  const currentIndex = game?.currentIndex ?? 0;
+  const currentPlayer = playersArr[currentIndex];
+  // Meeru current player aa kaadha ani check chesthundhi
+  const isMyTurn = currentPlayer && currentPlayer.id === game?.youId;
 
-    const isMyTurn =
-      currentPlayer && currentPlayer.id === game?.youId;
-
-    if (isMyTurn) {
-      if ("vibrate" in navigator) {
-        navigator.vibrate(1000); // 1 second vibration
-      }
+  // Turn maarinappudu (turnId update ayinappudu) vibration trigger avthundi
+  if (isMyTurn && game?.turnId) {
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      // Pattern vibration: 300ms buzz, 100ms gap, 300ms buzz
+      // Idi APK lo mariyu Chrome lo strong ga thelusthundhi
+      navigator.vibrate([300, 100, 300]); 
+      console.log("Vibrating: My Turn!"); 
     }
-  }, [game?.turnId]);
+  }
+}, [game?.turnId, game?.currentIndex]); // Ee rendu variables trigger ki mukhyam
 
   const roomId = game?.roomId;
   const youId = game?.youId;
@@ -423,27 +427,34 @@ export default function CloseMasterGame() {
   };
 
   const joinRoom = () => {
-    if (!socket || !playerName.trim() || !joinCode.trim() || !selectedFace) {
-      alert("Name, Room ID and face select cheyali");
-      return;
-    }
-    setLoading(true);
-    socket.emit(
-      "join_room",
-      {
-        name: playerName.trim(),
-        roomId: joinCode.toUpperCase().trim(),
-        playerId,
-        face: selectedFace,
-      },
-      (res) => {
-        setLoading(false);
-        if (res?.error) {
-          alert(res.error);
-        }
+  if (!socket || !playerName.trim() || !joinCode.trim() || !selectedFace) {
+    alert("Name, Room ID and face select cheyali");
+    return;
+  }
+
+  // APK mariyu Browsers lo vibration permission unlock avvalante 
+  // User click chesinappude ee line trigger avvali.
+  if (typeof navigator !== "undefined" && navigator.vibrate) {
+    navigator.vibrate(50); // Small 50ms buzz to unlock hardware
+  }
+
+  setLoading(true);
+  socket.emit(
+    "join_room",
+    {
+      name: playerName.trim(),
+      roomId: joinCode.toUpperCase().trim(),
+      playerId,
+      face: selectedFace,
+    },
+    (res) => {
+      setLoading(false);
+      if (res?.error) {
+        alert(res.error);
       }
-    );
-  };
+    }
+  );
+};
 
   const startRound = () => {
     if (!socket || !roomId || !isHost || players.length < 2) {
