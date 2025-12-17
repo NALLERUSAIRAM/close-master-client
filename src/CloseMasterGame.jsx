@@ -934,49 +934,50 @@ const handleSelectGif = (gifId) => {
           </h1>
         </div>
 
-        {/* INFO BAR */}
-        {started && (
-          <div className="z-10 w-full max-w-4xl p-3 md:p-4 bg-black/70 rounded-2xl border border-gray-700">
-            <div className="flex flex-wrap justify-between items-center gap-2 text-sm md:text-base">
-              <div className="flex items-center gap-2">
+     {/* INFO BAR */}
 {started && (
-  <button
-    onClick={cycleTheme}
-    className="ml-3 px-2 py-1 text-xs md:text-sm bg-black/60 border border-purple-400 text-purple-200 rounded-lg font-bold"
-  >
-    🎨
-  </button>
-)}
+  <div className="z-10 w-full max-w-4xl p-3 md:p-4 bg-black/70 rounded-2xl border border-gray-700">
+    <div className="flex items-center justify-between gap-2 text-sm md:text-base">
 
-                {currentPlayer?.face && (
-                  <img
-                    src={currentPlayer.face}
-                    className="w-8 h-8 rounded-full"
-                    alt=""
-                  />
-                )}
-                <span>
-                  Turn:{" "}
-                  <span className="text-xl md:text-2xl font-bold text-yellow-400">
-                    {currentPlayer?.name}
-                  </span>
-                </span>
-               {myTurn && (
-  <span
-    className={`ml-2 px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-bold ${
-      hasDrawn
-        ? "bg-emerald-500/30 text-emerald-200"
-        : "bg-yellow-500/30 text-yellow-200"
-    }`}
-  >
-    {hasDrawn
-      ? "Drew"
-      : pendingDraw > 1
-      ? `Draw ${pendingDraw}`
-      : "Draw"}
-  </span>
-)}
+      {/* LEFT SIDE – TURN INFO */}
+      <div className="flex items-center gap-2">
+        {currentPlayer?.face && (
+          <img
+            src={currentPlayer.face}
+            className="w-8 h-8 rounded-full"
+            alt=""
+          />
+        )}
+        <span>
+          Turn:{" "}
+          <span className="text-xl md:text-2xl font-bold text-yellow-400">
+            {currentPlayer?.name}
+          </span>
+        </span>
+      </div>
 
+      {/* RIGHT SIDE – DRAW COUNT + THEME */}
+      <div className="flex items-center gap-2">
+
+        {/* DRAW COUNT */}
+        {pendingDraw > 0 && (
+          <span className="px-3 py-1 rounded-full text-xs md:text-sm font-bold
+            bg-yellow-500/30 text-yellow-200
+            border border-yellow-400
+            shadow-[0_0_10px_rgba(250,204,21,0.8)]">
+            Draw {pendingDraw}
+          </span>
+        )}
+
+        {/* CHANGE THEME */}
+        <button
+          onClick={cycleTheme}
+          className="px-2 py-1 text-xs md:text-sm
+            bg-black/60 border border-purple-400
+            text-purple-200 rounded-lg font-bold"
+        >
+          🎨
+        </button>
               </div> 
             </div>
           </div>
@@ -1100,10 +1101,12 @@ if (isYou && isTurn) {
 
   {/* RIGHT: TIMER */}
   <div className="w-6 h-6 flex items-center justify-center">
-  {isTurn && (
+  {isTurn ? (
     <div className="w-6 h-6 rounded-full border border-red-400 text-red-200 text-[10px] flex items-center justify-center font-bold shadow-[0_0_8px_rgba(248,113,113,1)]">
       {turnTimeLeft}
     </div>
+  ) : (
+    <div className="w-6 h-6" />
   )}
 </div>
 
@@ -1111,13 +1114,7 @@ if (isYou && isTurn) {
 <p className="mt-1 text-[10px] text-gray-300 text-center">
   {p.handSize} cards • {p.score} pts
 </p>
-{isTurn && pendingDraw > 0 && (
-  <p className="text-[10px] text-yellow-300 text-center font-bold mt-0.5">
-    Draw {pendingDraw}
-  </p>
-)}
-
-                  {/* ACTIVE GIF */}
+              {/* ACTIVE GIF */}
                   {activeGif && (
                     <div className="absolute -top-6 -right-3 w-9 h-9 md:w-10 md:h-10 rounded-full overflow-hidden border-2 border-white shadow-lg bg-black/70">
                       <img
