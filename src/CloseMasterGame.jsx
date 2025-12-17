@@ -646,8 +646,8 @@ const handleSelectGif = (gifId) => {
     const canJoin =
       !!playerName.trim() && !!joinCode.trim() && !!selectedFace && !loading;
 
-    return (
-      <div className="min-h-screen text-white relative overflow-hidden">
+   return (
+  <div className="fixed inset-0 w-full h-screen text-white overflow-hidden flex flex-col">
         <video
           className="fixed top-0 left-0 w-screen h-screen object-cover -z-10"
           src="/gifs/15.mp4"
@@ -979,59 +979,51 @@ const handleSelectGif = (gifId) => {
   </div> 
 )} {/* <-- Info Bar structure and Logic Close */}
 
-        {/* OPEN CARD (Discard Top) */}
+{/* OPEN CARD (Discard Top) - Mobile Optimized Size */}
         {started && (
-          <div className="z-10 text-center">
-            <h3 className="text-lg md:text-xl mb-3 md:mb-4 font-bold">
-              OPEN CARD
-            </h3>
+          <div className="z-10 text-center shrink-0 mb-1 mt-2">
+            <p className="text-[10px] mb-1 font-bold text-gray-400 uppercase tracking-tighter">Open Card</p>
             {discardTop ? (
               <button
                 onClick={() => drawCard(true)}
                 disabled={!myTurn || hasDrawn}
                 className={[
-                  "relative w-24 md:w-28 h-32 md:h-40 rounded-3xl border-2 border-fuchsia-500",
-                  "bg-black/80 shadow-[0_0_35px_rgba(236,72,153,0.9)] animate-neon-pulse",
-                  "flex flex-col justify-between p-2 md:p-3 transition-transform",
-                  myTurn && !hasDrawn
-                    ? "hover:scale-105 cursor-pointer"
-                    : "opacity-70 cursor-not-allowed",
+                  "relative w-16 h-24 rounded-xl border-2 border-fuchsia-500/60 bg-black/80 shadow-[0_0_15px_rgba(236,72,153,0.5)] flex flex-col justify-between p-1.5 transition-all",
+                  myTurn && !hasDrawn ? "animate-neon-pulse scale-105 cursor-pointer" : "opacity-60 cursor-not-allowed",
                 ].join(" ")}
               >
-                {/* Inner glow effect (stronger shadow) */}
-                <div className="pointer-events-none absolute inset-0 rounded-3xl border border-white/60 shadow-[0_0_40px_rgba(248,250,252,0.6)]" />
+                {/* Inner glow effect */}
+                <div className="pointer-events-none absolute inset-0 rounded-xl border border-white/20 shadow-[0_0_10px_rgba(248,250,252,0.3)]" />
 
-                <div className="relative text-base md:text-lg font-bold uppercase">
+                <div className="relative text-[10px] font-black leading-none uppercase">
                   <span className={cardTextColor(discardTop)}>
-                    {discardTop.rank}
+                    {discardTop.rank === "JOKER" ? "JKR" : discardTop.rank}
                   </span>
                 </div>
 
-                <div className="relative text-3xl md:text-4xl text-center">
+                <div className="relative text-xl text-center leading-none">
                   <span className={cardTextColor(discardTop)}>
-                    {discardTop.rank === "JOKER"
-                      ? discardTop.suit
-                      : discardTop.suit}
+                    {discardTop.suit}
                   </span>
                 </div>
 
-                <div className="relative text-base md:text-lg font-bold text-right uppercase">
+                <div className="relative text-[10px] font-black text-right leading-none uppercase">
                   <span className={cardTextColor(discardTop)}>
-                    {discardTop.rank}
+                    {discardTop.rank === "JOKER" ? "JKR" : discardTop.rank}
                   </span>
                 </div>
               </button>
             ) : (
-              <div className="w-24 md:w-28 h-32 md:h-40 bg-black/70 border border-white/20 rounded-3xl flex items-center justify-center text-gray-300 text-xs md:text-sm">
+              <div className="w-16 h-24 bg-black/50 border border-white/10 rounded-xl flex items-center justify-center text-gray-500 text-[10px]">
                 Empty
               </div>
             )}
           </div>
         )}
 
-        {/* PLAYERS LIST + GIF + TIMER */}
+        {/* PLAYERS LIST + GIF + TIMER - Updated to Mini Grid for Full Screen Fit */}
         {started && (
-          <div className="z-10 w-full max-w-5xl grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
+          <div className="z-10 w-full grid grid-cols-4 gap-1.5 px-2 shrink-0">
             {players.map((p) => {
               const isYou = p.id === youId;
               const isTurn = currentPlayer?.id === p.id;
