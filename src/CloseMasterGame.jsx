@@ -1275,7 +1275,7 @@ return (
         )}
       </div>
 
-      <style jsx>{`
+      <style>{`
         /* MODIFIED: Firework Burst Animation (now a quick explosion/pop) */
         @keyframes firework-burst {
           0% {
