@@ -24,6 +24,7 @@ const FACE_LIST = [
   "/gifs/7.png",
   "/gifs/8.png",
   "/gifs/9.png",
+  "/gifs/10.png",
 ];
 
 // 🎥 BACKGROUND VIDEO THEMES (GAME SCREEN THEMES)
@@ -1155,8 +1156,15 @@ const handleSelectGif = (gifId) => {
 
             <div className="flex gap-2 md:gap-3 flex-wrap justify-center p-3 md:p-4 bg-black/60 rounded-3xl border border-white/10">
               {me.hand.map((c) => {
-                const selected = selectedIds.includes(c.id);
+                 const selected = selectedIds.includes(c.id);
+
+              const isOpenRankMatch =
+                  myTurn &&
+                  discardTop &&
+                  String(c.rank).trim() === String(discardTop.rank).trim();
+
                 return (
+
                   <button
                     key={c.id}
                     onClick={() => toggleSelect(c.id)}
@@ -1164,23 +1172,24 @@ const handleSelectGif = (gifId) => {
                     className={[
                       "relative w-16 md:w-20 h-24 md:h-28 rounded-3xl",
                       // UPDATED: Thicker, brighter pink border (fuchsia)
-                      "bg-black/80 border-2 border-fuchsia-500/90", 
+                      "bg-black/80 border-2 border-white/20", 
                       // UPDATED: Stronger magenta shadow
                       "shadow-[0_0_25px_rgba(236,72,153,0.8)]", 
                       "flex flex-col justify-between p-1.5 md:p-2 transition-transform",
                       "backdrop-blur-sm",
                       selected
-                        // UPDATED: Re-implemented three-color border glow animation
-                        ? "scale-125 border-4 shadow-none animate-neon-border-glow" 
+                        ? "scale-115 border-4 shadow-none animate-neon-border-glow z-10"
+                        : isOpenRankMatch
+                        ? "scale-110 border-4 border-yellow-400 shadow-[0_0_35px_rgba(250,204,21,1)] animate-pulse"
                         : myTurn
-                        // UPDATED: Stronger hover effect
-                        ? "hover:scale-105 hover:shadow-[0_0_35px_rgba(236,72,153,1)]" 
+                        ? "hover:scale-105 hover:shadow-[0_0_35px_rgba(236,72,153,1)]"
                         : "opacity-60 cursor-not-allowed",
                     ].join(" ")}
                   >
                     {/* UPDATED: Inner glow effect (stronger shadow) */}
-                    <div className="pointer-events-none absolute inset-0 rounded-3xl border border-white/70 shadow-[0_0_30px_rgba(248,250,252,0.8)]" />
-
+                    {!isOpenRankMatch && !selected && (
+                        <div className="pointer-events-none absolute inset-0 rounded-3xl border border-white/40 shadow-[0_0_20px_rgba(248,250,252,0.5)]" />
+                    )}
                     <div className="relative text-sm md:text-base font-bold uppercase">
                       <span className={cardTextColor(c)}>{c.rank}</span>
                     </div>
