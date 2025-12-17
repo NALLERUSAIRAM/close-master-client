@@ -1,6 +1,8 @@
 // CLOSEMASTERGAME.NEON.jsx
 import React, { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
+import { Haptics, ImpactStyle } from "@capacitor/haptics";
+
 
 const SERVER_URL = "https://close-master-server-production.up.railway.app";
 const MAX_PLAYERS = 7;
@@ -350,6 +352,23 @@ export default function CloseMasterGame() {
   const pendingSkips = game?.pendingSkips || 0;
   const currentPlayer = players[currentIndex];
   const myTurn = started && currentPlayer?.id === youId;
+  // TURN CHANGE VIBRATION
+useEffect(() => {
+  if (!started) return;
+  if (!myTurn) return;
+
+  // Capacitor / mobile haptics
+  if (window.Capacitor && Haptics) {
+    Haptics.impact({ style: ImpactStyle.Heavy });
+    setTimeout(() => {
+      Haptics.impact({ style: ImpactStyle.Heavy });
+    }, 1000); // approx 1s feel
+  } else if (navigator.vibrate) {
+    // Web fallback
+    navigator.vibrate(1000);
+  }
+}, [myTurn, started]);
+
   const me = players.find((p) => p.id === youId);
   const hasDrawn = me?.hasDrawn || false;
 
