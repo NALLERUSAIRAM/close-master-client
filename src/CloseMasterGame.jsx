@@ -937,38 +937,45 @@ const handleSelectGif = (gifId) => {
         {/* INFO BAR */}
         {started && (
           <div className="z-10 w-full max-w-4xl p-3 md:p-4 bg-black/70 rounded-2xl border border-gray-700">
-            <div className="flex flex-wrap justify-between items-center gap-2 text-sm md:text-base">
-              <div className="flex items-center gap-2">
-                {currentPlayer?.face && (
-                  <img
-                    src={currentPlayer.face}
-                    className="w-8 h-8 rounded-full"
-                    alt=""
-                  />
-                )}
-                <span>
-                  Turn:{" "}
-                  <span className="text-xl md:text-2xl font-bold text-yellow-400">
-                    {currentPlayer?.name}
-                  </span>
-                </span>
-                {myTurn && (
-                  <span
-                    className={`ml-2 md:ml-4 px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-bold ${
-                      hasDrawn
-                        ? "bg-emerald-500/30 text-emerald-200"
-                        : "bg-yellow-500/30 text-yellow-200"
-                    }`}
-                  >
-                    {hasDrawn ? "Drew" : "Draw"}
-                  </span>
-                )}
-              </div> 
-            </div>
-          </div>
-        )}
+            <div className="flex items-center justify-between w-full">
+  {/* LEFT – TURN PLAYER */}
+  <div className="flex items-center gap-2">
+    {currentPlayer?.face && (
+      <img
+        src={currentPlayer.face}
+        className="w-8 h-8 rounded-full"
+        alt=""
+      />
+    )}
+    <span>
+      Turn:
+      <span className="ml-1 text-xl md:text-2xl font-bold text-yellow-400">
+        {currentPlayer?.name}
+      </span>
+    </span>
+  </div>
 
-        {/* OPEN CARD (Discard Top) */}
+  {/* CENTER – THEME BUTTON */}
+  <button
+    onClick={cycleTheme}
+    className="px-3 py-1 text-sm bg-black/60 border border-purple-400
+               text-purple-200 rounded-lg font-bold"
+  >
+    🎨
+  </button>
+
+  {/* RIGHT – DRAW / SKIP */}
+  <div className="flex gap-2 text-xs md:text-sm font-bold">
+    <span className="px-2 py-1 rounded-full bg-yellow-500/30 text-yellow-200 border border-yellow-400">
+      Draw : {pendingDraw || 0}
+    </span>
+    <span className="px-2 py-1 rounded-full bg-red-500/30 text-red-200 border border-red-400">
+      Skip : {pendingSkips || 0}
+    </span>
+  </div>
+</div>
+
+       {/* OPEN CARD (Discard Top) */}
         {started && (
           <div className="z-10 text-center">
             <h3 className="text-lg md:text-xl mb-3 md:mb-4 font-bold">
@@ -1030,18 +1037,18 @@ const handleSelectGif = (gifId) => {
 
               // Player Card Styling for Neon Glow and Turn Indicator
               const playerClasses = [
-                "relative p-1 md:p-1.5 rounded-xl border-2 shadow-lg transition-all duration-300",
+                "relative p-1 md:p-1.5 rounded-xl border-2 shadow-lg transition-all",
               ];
               
               if (isYou && isTurn) {
                playerClasses.push(
-  "border-fuchsia-400 bg-black/70 shadow-[0_0_18px_rgba(236,72,153,0.9)] scale-[0.6]"
+  "border-fuchsia-400 bg-black/70 shadow-[0_0_18px_rgba(236,72,153,0.9)]"
 );
 
               } else if (isYou) {
                 playerClasses.push("border-emerald-400 bg-black/70 shadow-[0_0_12px_rgba(52,211,167,0.7)]"); // Me (Subtle Green Glow)
               } else if (isTurn) {
-                playerClasses.push("border-yellow-400 bg-black/70 shadow-[0_0_18px_rgba(250,204,21,0.9)] animate-pulse-turn"); // Other's Turn (Strong Yellow Glow)
+                playerClasses.push("border-yellow-400 bg-black/70 shadow-[0_0_18px_rgba(250,204,21,0.9)]"); // Other's Turn (Strong Yellow Glow)
               } else {
                 playerClasses.push("border-gray-700 bg-black/60 hover:shadow-[0_0_5px_rgba(156,163,175,0.4)]"); // Normal
               }
@@ -1052,38 +1059,36 @@ const handleSelectGif = (gifId) => {
                   key={p.id}
                   className={playerClasses.join(" ")}
                 >
-                  {/* TOP BAR */}
-                  <div className="flex items-center justify-between mb-1 text-[10px] md:text-xs">
-                    <button
-                      type="button"
-                      onClick={() => handleGifClick(p.id)}
-                      className="text-[10px] md:text-xs px-2 py-1 rounded-full bg-black/40 border border-white/40 flex items-center gap-1 hover:bg-black/70"
-                    >
-                      <span>🎭</span>
-                    </button>
-                   {isTurn && (
-  <div className="flex gap-1 text-yellow-300 font-bold">
-    <span>D:{pendingDraw || 1}</span>
-    <span>S:{pendingSkips}</span>
-  </div>
-)}
-                    {isTimerCard && started && (
-                      <div className="flex items-center gap-1">
-                        <div
-                          // UPDATED: Timer styling for intense red neon look
-                          className={`w-7 h-7 md:w-8 md:h-8 rounded-full border-2 flex items-center justify-center text-[10px] md:text-xs font-black ${
-                            isTurn
-                              ? "border-red-400 text-red-200 shadow-[0_0_10px_rgba(248,113,113,1)] animate-ping-slow"
-                              : "border-gray-300 text-gray-200"
-                          }`}
-                        >
-                          {turnTimeLeft}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  
+                 {/* TOP BAR */}
+<div className="flex items-center justify-between px-1 mb-1">
 
-                  {/* ACTIVE GIF */}
+  {/* LEFT – GIF ICON */}
+  <button
+    type="button"
+    onClick={() => handleGifClick(p.id)}
+    className="text-xs px-1.5 py-0.5 rounded-full
+               bg-black/40 border border-white/40"
+  >
+    🎭
+  </button>
+
+  {/* CENTER – PLAYER NAME */}
+  <p className="flex-1 text-center font-bold text-sm truncate">
+    {p.name}
+  </p>
+
+  {/* RIGHT – TIMER */}
+  {isTurn && (
+    <div className="w-7 h-7 rounded-full border-2 flex items-center
+                    justify-center text-xs font-black
+                    border-red-400 text-red-200
+                    shadow-[0_0_8px_rgba(248,113,113,0.9)]">
+      {turnTimeLeft}
+    </div>
+  )}
+</div>
+                           {/* ACTIVE GIF */}
                   {activeGif && (
                     <div className="absolute -top-5 right-2 w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden border-2 border-white shadow-lg bg-black/70">
                       <img
@@ -1095,30 +1100,12 @@ const handleSelectGif = (gifId) => {
                   )}
 
                   {/* PLAYER INFO */}
-                  <div className="mt-1 flex flex-col items-center">
-                    <div className="flex items-center gap-2 mb-1">
-                      {p.face && (
-                        <img
-                          src={p.face}
-                          className="w-7 h-7 md:w-8 md:h-8 rounded-full"
-                          alt=""
-                        />
-                      )}
-                      <p className="font-bold text-center text-sm md:text-base truncate">
-                        {p.name}
-                      </p>
-                    </div>
-                    <p className="text-xs md:text-sm text-gray-300 text-center">
-                      {p.handSize} cards | {p.score} pts
-                    </p>
-                    {p.hasDrawn && (
-  <span className="absolute bottom-1 right-1 text-[10px] text-emerald-400 font-bold">
-    Drew
-  </span>
-)}
-
+                  <div className="flex flex-col items-center mt-1">
+  <p className="text-xs text-gray-300">
+    {p.handSize} cards • {p.score} pts
+  </p>
+</div>
                   </div>
-                </div>
               );
             })}
           </div>
@@ -1245,7 +1232,7 @@ const handleSelectGif = (gifId) => {
             <button
               onClick={() => drawCard(false)}
               disabled={hasDrawn}
-              className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl transition-all border-2 border-transparent ${
+              className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl border-2 border-transparent ${
                 hasDrawn
                   ? "bg-gray-700/50 cursor-not-allowed opacity-50"
                   : "bg-black/70 border-2 border-sky-400 text-sky-200 shadow-[0_0_20px_rgba(56,189,248,0.8)] hover:shadow-[0_0_30px_rgba(56,189,248,1)] hover:scale-[1.03]" 
