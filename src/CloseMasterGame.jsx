@@ -934,39 +934,55 @@ const handleSelectGif = (gifId) => {
           </h1>
         </div>
 
-        {/* INFO BAR */}
-        {started && (
-          <div className="z-10 w-full max-w-4xl p-3 md:p-4 bg-black/70 rounded-2xl border border-gray-700">
-            <div className="flex flex-wrap justify-between items-center gap-2 text-sm md:text-base">
-              <div className="flex items-center gap-2">
-                {currentPlayer?.face && (
-                  <img
-                    src={currentPlayer.face}
-                    className="w-8 h-8 rounded-full"
-                    alt=""
-                  />
-                )}
-                <span>
-                  Turn:{" "}
-                  <span className="text-xl md:text-2xl font-bold text-yellow-400">
-                    {currentPlayer?.name}
-                  </span>
-                </span>
-                {myTurn && (
-                  <span
-                    className={`ml-2 md:ml-4 px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-bold ${
-                      hasDrawn
-                        ? "bg-emerald-500/30 text-emerald-200"
-                        : "bg-yellow-500/30 text-yellow-200"
-                    }`}
-                  >
-                    {hasDrawn ? "Drew" : "Draw"}
-                  </span>
-                )}
-              </div> 
-            </div>
-          </div>
+       {/* INFO BAR */}
+{started && (
+  <div className="z-10 w-full max-w-4xl p-3 md:p-4 bg-black/70 rounded-2xl border border-gray-700 shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+    <div className="flex items-center justify-between w-full">
+      
+      {/* LEFT – TURN PLAYER */}
+      <div className="flex items-center gap-2 min-w-[100px]">
+        {currentPlayer?.face && (
+          <img
+            src={currentPlayer.face}
+            className="w-8 h-8 rounded-full border border-yellow-400"
+            alt=""
+          />
         )}
+        <div className="flex flex-col">
+          <span className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Turn</span>
+          <span className="text-sm md:text-lg font-black text-yellow-400 truncate max-w-[80px] md:max-w-none">
+            {currentPlayer?.name}
+          </span>
+        </div>
+      </div>
+
+      {/* MIDDLE – THEME BUTTON (Now inside the box) */}
+      <button
+        onClick={cycleTheme}
+        className="px-4 py-2 bg-gradient-to-b from-purple-600 to-purple-900 border border-purple-400 
+                   text-white rounded-xl font-bold text-sm md:text-base shadow-lg 
+                   hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+      >
+        🎨 <span className="hidden md:inline">THEME</span>
+      </button>
+
+      {/* RIGHT – DRAW / SKIP COUNTERS */}
+      <div className="flex items-center gap-2 md:gap-4 font-black text-xs md:text-sm min-w-[120px] justify-end">
+        <div className="flex flex-col items-end">
+          <div className="flex items-center gap-1 text-sky-400">
+            <span className="text-gray-400 font-normal">Draw :</span>
+            <span className="text-lg">{pendingDraw || 0}</span>
+          </div>
+          <div className="flex items-center gap-1 text-red-400">
+            <span className="text-gray-400 font-normal">Skip :</span>
+            <span className="text-lg">{pendingSkips || 0}</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+)}
 
         {/* OPEN CARD (Discard Top) */}
         {started && (
