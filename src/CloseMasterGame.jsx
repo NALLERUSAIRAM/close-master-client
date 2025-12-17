@@ -934,50 +934,35 @@ const handleSelectGif = (gifId) => {
           </h1>
         </div>
 
-     {/* INFO BAR */}
-{started && (
-  <div className="z-10 w-full max-w-4xl p-3 md:p-4 bg-black/70 rounded-2xl border border-gray-700">
-    <div className="flex items-center justify-between gap-2 text-sm md:text-base">
-
-      {/* LEFT SIDE – TURN INFO */}
-      <div className="flex items-center gap-2">
-        {currentPlayer?.face && (
-          <img
-            src={currentPlayer.face}
-            className="w-8 h-8 rounded-full"
-            alt=""
-          />
-        )}
-        <span>
-          Turn:{" "}
-          <span className="text-xl md:text-2xl font-bold text-yellow-400">
-            {currentPlayer?.name}
-          </span>
-        </span>
-      </div>
-
-      {/* RIGHT SIDE – DRAW COUNT + THEME */}
-      <div className="flex items-center gap-2">
-
-        {/* DRAW COUNT */}
-        {pendingDraw > 0 && (
-          <span className="px-3 py-1 rounded-full text-xs md:text-sm font-bold
-            bg-yellow-500/30 text-yellow-200
-            border border-yellow-400
-            shadow-[0_0_10px_rgba(250,204,21,0.8)]">
-            Draw {pendingDraw}
-          </span>
-        )}
-
-        {/* CHANGE THEME */}
-        <button
-          onClick={cycleTheme}
-          className="px-2 py-1 text-xs md:text-sm
-            bg-black/60 border border-purple-400
-            text-purple-200 rounded-lg font-bold"
-        >
-          🎨
-        </button>
+        {/* INFO BAR */}
+        {started && (
+          <div className="z-10 w-full max-w-4xl p-3 md:p-4 bg-black/70 rounded-2xl border border-gray-700">
+            <div className="flex flex-wrap justify-between items-center gap-2 text-sm md:text-base">
+              <div className="flex items-center gap-2">
+                {currentPlayer?.face && (
+                  <img
+                    src={currentPlayer.face}
+                    className="w-8 h-8 rounded-full"
+                    alt=""
+                  />
+                )}
+                <span>
+                  Turn:{" "}
+                  <span className="text-xl md:text-2xl font-bold text-yellow-400">
+                    {currentPlayer?.name}
+                  </span>
+                </span>
+                {myTurn && (
+                  <span
+                    className={`ml-2 md:ml-4 px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-bold ${
+                      hasDrawn
+                        ? "bg-emerald-500/30 text-emerald-200"
+                        : "bg-yellow-500/30 text-yellow-200"
+                    }`}
+                  >
+                    {hasDrawn ? "Drew" : "Draw"}
+                  </span>
+                )}
               </div> 
             </div>
           </div>
@@ -1043,80 +1028,64 @@ const handleSelectGif = (gifId) => {
               const activeGif = GIF_LIST.find((g) => g.id === activeGifId);
               const isTimerCard = isTurn; // timer only for current-turn player
 
-// ✅ PLAYER BOX CLASSES — FINAL & STABLE
-const playerClasses = [
-  "relative p-1 rounded-xl border-2 shadow-lg box-border",
-  "min-h-[64px] min-w-[160px]",
-  "overflow-visible",
-  "transform-none" // 🔒 IMPORTANT: prevents zoom / pulse resize
-];
+              // Player Card Styling for Neon Glow and Turn Indicator
+              const playerClasses = [
+                "relative p-1 md:p-1.5 rounded-xl border-2 shadow-lg transition-all duration-300",
+              ];
+              
+              if (isYou && isTurn) {
+               playerClasses.push(
+  "border-fuchsia-400 bg-black/70 shadow-[0_0_18px_rgba(236,72,153,0.9)] scale-[0.6]"
+);
 
-if (isYou && isTurn) {
-  playerClasses.push(
-    "border-fuchsia-400 bg-black/70 shadow-[0_0_18px_rgba(236,72,153,0.9)]"
-  );
-} else if (isYou) {
-  playerClasses.push(
-    "border-emerald-400 bg-black/70 shadow-[0_0_12px_rgba(52,211,167,0.7)]"
-  );
-} else if (isTurn) {
-  playerClasses.push(
-    "border-yellow-400 bg-black/70 shadow-[0_0_18px_rgba(250,204,21,0.9)]"
-  );
-} else {
-  playerClasses.push(
-    "border-gray-700 bg-black/60"
-  );
-}
+              } else if (isYou) {
+                playerClasses.push("border-emerald-400 bg-black/70 shadow-[0_0_12px_rgba(52,211,167,0.7)]"); // Me (Subtle Green Glow)
+              } else if (isTurn) {
+                playerClasses.push("border-yellow-400 bg-black/70 shadow-[0_0_18px_rgba(250,204,21,0.9)] animate-pulse-turn"); // Other's Turn (Strong Yellow Glow)
+              } else {
+                playerClasses.push("border-gray-700 bg-black/60 hover:shadow-[0_0_5px_rgba(156,163,175,0.4)]"); // Normal
+              }
+
 
               return (
                 <div
                   key={p.id}
                   className={playerClasses.join(" ")}
                 >
-                 {/* TOP BAR */}
-<div className="flex items-center gap-1">
-  {/* LEFT: GIF ICON */}
-  <button
-    type="button"
-    onClick={() => handleGifClick(p.id)}
-    className="text-[10px] px-1 py-0.5 rounded bg-black/40 border border-white/30"
-  >
-    🎭
-  </button>
-
-  {/* CENTER: AVATAR + NAME */}
-  <div className="flex items-center gap-1 min-w-0">
-    {p.face && (
-      <img
-        src={p.face}
-        className="w-6 h-6 rounded-full"
-        alt=""
-      />
-    )}
-    <p className="font-bold text-[11px] truncate max-w-[80px]">
-      {p.name}
-    </p>
+                  {/* TOP BAR */}
+                  <div className="flex items-center justify-between mb-1 text-[10px] md:text-xs">
+                    <button
+                      type="button"
+                      onClick={() => handleGifClick(p.id)}
+                      className="text-[10px] md:text-xs px-2 py-1 rounded-full bg-black/40 border border-white/40 flex items-center gap-1 hover:bg-black/70"
+                    >
+                      <span>🎭</span>
+                    </button>
+                   {isTurn && (
+  <div className="flex gap-1 text-yellow-300 font-bold">
+    <span>D:{pendingDraw || 1}</span>
+    <span>S:{pendingSkips}</span>
   </div>
+)}
+                    {isTimerCard && started && (
+                      <div className="flex items-center gap-1">
+                        <div
+                          // UPDATED: Timer styling for intense red neon look
+                          className={`w-7 h-7 md:w-8 md:h-8 rounded-full border-2 flex items-center justify-center text-[10px] md:text-xs font-black ${
+                            isTurn
+                              ? "border-red-400 text-red-200 shadow-[0_0_10px_rgba(248,113,113,1)] animate-ping-slow"
+                              : "border-gray-300 text-gray-200"
+                          }`}
+                        >
+                          {turnTimeLeft}
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
-  {/* RIGHT: TIMER */}
-  <div className="w-6 h-6 flex items-center justify-center">
-  {isTurn ? (
-    <div className="w-6 h-6 rounded-full border border-red-400 text-red-200 text-[10px] flex items-center justify-center font-bold shadow-[0_0_8px_rgba(248,113,113,1)]">
-      {turnTimeLeft}
-    </div>
-  ) : (
-    <div className="w-6 h-6" />
-  )}
-</div>
-
-{/* BOTTOM INFO */}
-<p className="mt-1 text-[10px] text-gray-300 text-center">
-  {p.handSize} cards • {p.score} pts
-</p>
-              {/* ACTIVE GIF */}
+                  {/* ACTIVE GIF */}
                   {activeGif && (
-                    <div className="absolute -top-6 -right-3 w-9 h-9 md:w-10 md:h-10 rounded-full overflow-hidden border-2 border-white shadow-lg bg-black/70">
+                    <div className="absolute -top-5 right-2 w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden border-2 border-white shadow-lg bg-black/70">
                       <img
                         src={activeGif.file}
                         alt={activeGif.name}
@@ -1124,6 +1093,31 @@ if (isYou && isTurn) {
                       />
                     </div>
                   )}
+
+                  {/* PLAYER INFO */}
+                  <div className="mt-1 flex flex-col items-center">
+                    <div className="flex items-center gap-2 mb-1">
+                      {p.face && (
+                        <img
+                          src={p.face}
+                          className="w-7 h-7 md:w-8 md:h-8 rounded-full"
+                          alt=""
+                        />
+                      )}
+                      <p className="font-bold text-center text-sm md:text-base truncate">
+                        {p.name}
+                      </p>
+                    </div>
+                    <p className="text-xs md:text-sm text-gray-300 text-center">
+                      {p.handSize} cards | {p.score} pts
+                    </p>
+                    {p.hasDrawn && (
+  <span className="absolute bottom-1 right-1 text-[10px] text-emerald-400 font-bold">
+    Drew
+  </span>
+)}
+
+                  </div>
                 </div>
               );
             })}
@@ -1234,10 +1228,20 @@ if (isYou && isTurn) {
           </div>
         )}
 
+{/* 🎨 CHANGE THEME BUTTON */}
+{started && (
+  <button
+    onClick={cycleTheme}
+    className="mb-2 px-4 py-2 bg-black/70 border-2 border-purple-400 text-purple-200 rounded-xl font-bold"
+  >
+    🎨 CHANGE THEME
+  </button>
+)}
+
         {/* ACTION BUTTONS */}
         {myTurn && started && (
           <div className="z-10 flex flex-wrap gap-2 md:gap-4 justify-center max-w-4xl p-4 md:p-6 bg-black/70 backdrop-blur-xl rounded-3xl border border-white/20">
-            {/* GAME - DRAW BUTTON (Intense Blue Neon Style) */}
+            {/* GAME - 🂠 BUTTON (Intense Blue Neon Style) */}
             <button
               onClick={() => drawCard(false)}
               disabled={hasDrawn}
@@ -1247,7 +1251,7 @@ if (isYou && isTurn) {
                   : "bg-black/70 border-2 border-sky-400 text-sky-200 shadow-[0_0_20px_rgba(56,189,248,0.8)] hover:shadow-[0_0_30px_rgba(56,189,248,1)] hover:scale-[1.03]" 
               }`}
             >
-  DRAW
+  🂠
 </button>
 
             {/* GAME - DROP BUTTON (Intense Green Neon Style) */}
@@ -1290,7 +1294,7 @@ if (isYou && isTurn) {
         )}
       </div>
 
-      <style>{`
+      <style jsx>{`
         /* MODIFIED: Firework Burst Animation (now a quick explosion/pop) */
         @keyframes firework-burst {
           0% {
@@ -1362,6 +1366,25 @@ if (isYou && isTurn) {
         }
         .animate-neon-border-glow {
           animation: neon-border-glow 2.5s linear infinite;
+        }
+        
+        /* Slow Ping for Timer */
+        @keyframes ping-slow {
+          0% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          75% {
+            transform: scale(1.15);
+            opacity: 0.6;
+          }
+          100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+        .animate-ping-slow {
+          animation: ping-slow 1.5s ease-in-out infinite;
         }
       `}</style>
     </div>
