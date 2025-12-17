@@ -1074,7 +1074,7 @@ if (isYou && isTurn) {
                   className={playerClasses.join(" ")}
                 >
                  {/* TOP BAR */}
-<div className="flex items-center justify-between gap-1">
+<div className="flex items-center gap-1">
   {/* LEFT: GIF ICON */}
   <button
     type="button"
@@ -1099,6 +1099,7 @@ if (isYou && isTurn) {
   </div>
 
   {/* RIGHT: TIMER */}
+  <div className="w-6 h-6 flex items-center justify-center">
   {isTurn && (
     <div className="w-6 h-6 rounded-full border border-red-400 text-red-200 text-[10px] flex items-center justify-center font-bold shadow-[0_0_8px_rgba(248,113,113,1)]">
       {turnTimeLeft}
@@ -1110,6 +1111,11 @@ if (isYou && isTurn) {
 <p className="mt-1 text-[10px] text-gray-300 text-center">
   {p.handSize} cards • {p.score} pts
 </p>
+{isTurn && pendingDraw > 0 && (
+  <p className="text-[10px] text-yellow-300 text-center font-bold mt-0.5">
+    Draw {pendingDraw}
+  </p>
+)}
 
                   {/* ACTIVE GIF */}
                   {activeGif && (
