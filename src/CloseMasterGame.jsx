@@ -1254,7 +1254,7 @@ const handleSelectGif = (gifId) => {
                   : "bg-black/70 border-2 border-sky-400 text-sky-200 shadow-[0_0_20px_rgba(56,189,248,0.8)] hover:shadow-[0_0_30px_rgba(56,189,248,1)] hover:scale-[1.03]" 
               }`}
             >
-  🂠
+  DRAW
 </button>
 
             {/* GAME - DROP BUTTON (Intense Green Neon Style) */}
