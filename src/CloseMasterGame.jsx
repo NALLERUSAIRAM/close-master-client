@@ -934,39 +934,50 @@ const handleSelectGif = (gifId) => {
           </h1>
         </div>
 
-        {/* INFO BAR */}
-        {started && (
-          <div className="z-10 w-full max-w-4xl p-3 md:p-4 bg-black/70 rounded-2xl border border-gray-700">
-            <div className="flex flex-wrap justify-between items-center gap-2 text-sm md:text-base">
-              <div className="flex items-center gap-2">
-                {currentPlayer?.face && (
-                  <img
-                    src={currentPlayer.face}
-                    className="w-8 h-8 rounded-full"
-                    alt=""
-                  />
-                )}
-                <span>
-                  Turn:{" "}
-                  <span className="text-xl md:text-2xl font-bold text-yellow-400">
-                    {currentPlayer?.name}
-                  </span>
-                </span>
-                {myTurn && (
-                  <span
-                    className={`ml-2 md:ml-4 px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-bold ${
-                      hasDrawn
-                        ? "bg-emerald-500/30 text-emerald-200"
-                        : "bg-yellow-500/30 text-yellow-200"
-                    }`}
-                  >
-                    {hasDrawn ? "Drew" : "Draw"}
-                  </span>
-                )}
-              </div> 
-            </div>
-          </div>
-        )}
+   {/* INFO BAR - REPLACE THIS SECTION */}
+{started && (
+  <div className="z-10 w-full max-w-4xl p-2 md:p-3 bg-black/70 rounded-2xl border border-gray-700 flex justify-between items-center">
+    
+    {/* Content Wrapper */}
+    <div className="flex items-center gap-2 text-sm md:text-base">
+      {currentPlayer?.face && (
+        <img
+          src={currentPlayer.face}
+          className="w-8 h-8 rounded-full border border-yellow-400/30"
+          alt=""
+        />
+      )}
+      <div className="flex flex-col md:flex-row md:items-center md:gap-2">
+        <span className="text-[10px] md:text-xs text-gray-400 font-bold uppercase">Turn:</span>
+        <span className="text-base md:text-xl font-black text-yellow-400 leading-tight">
+          {currentPlayer?.name}
+        </span>
+      </div>
+
+      {myTurn && (
+        <span
+          className={`ml-1 md:ml-3 px-2 py-0.5 rounded-full text-[10px] md:text-xs font-bold ${
+            hasDrawn
+              ? "bg-emerald-500/30 text-emerald-200"
+              : "bg-yellow-500/30 text-yellow-200"
+          }`}
+        >
+          {hasDrawn ? "Drew" : "Draw"}
+        </span>
+      )}
+    </div> {/* <-- Div 1 Close */}
+
+    {/* THEME BUTTON - Ippudu idi right side ki vachindi */}
+    <button
+      onClick={cycleTheme}
+      className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/10 border border-purple-400/60 rounded-xl text-[10px] md:text-xs font-black text-purple-200 active:scale-95 transition-transform"
+    >
+      <span>🎨</span>
+      <span className="hidden sm:inline">THEME</span>
+    </button>
+
+  </div> 
+)} {/* <-- Info Bar structure and Logic Close */}
 
         {/* OPEN CARD (Discard Top) */}
         {started && (
@@ -1231,15 +1242,6 @@ const handleSelectGif = (gifId) => {
           </div>
         )}
 
-{/* 🎨 CHANGE THEME BUTTON */}
-{started && (
-  <button
-    onClick={cycleTheme}
-    className="mb-2 px-4 py-2 bg-black/70 border-2 border-purple-400 text-purple-200 rounded-xl font-bold"
-  >
-    🎨 CHANGE THEME
-  </button>
-)}
 
         {/* ACTION BUTTONS */}
         {myTurn && started && (
