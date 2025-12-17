@@ -1045,8 +1045,8 @@ const handleSelectGif = (gifId) => {
 // ✅ PLAYER BOX CLASSES — FINAL & STABLE
 const playerClasses = [
   "relative p-1 rounded-xl border-2 shadow-lg box-border",
-  "min-h-[82px] min-w-[160px]",
-  "overflow-hidden",
+  "min-h-[64px] min-w-[160px]",
+  "overflow-visible",
   "transform-none" // 🔒 IMPORTANT: prevents zoom / pulse resize
 ];
 
