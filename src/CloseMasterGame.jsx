@@ -1029,32 +1029,26 @@ const handleSelectGif = (gifId) => {
               const isTimerCard = isTurn; // timer only for current-turn player
 
               // Player Card Styling for Neon Glow and Turn Indicator
-              const playerClasses = [
-                "relative p-1 md:p-1.5 rounded-xl border-2 shadow-lg transition-all duration-300",
-              ];
-              
-    if (isYou && isTurn) {
-  // scale-[0.6] badhulu scale-105 leda scale-110 vaadithe highlight avthundi
-  playerClasses.push(
-    "border-fuchsia-400 bg-black/80 shadow-[0_0_25px_rgba(236,72,153,1)] scale-105 z-20"
-  );
-} else if (isYou) {
-  playerClasses.push("border-emerald-400 bg-black/70 shadow-[0_0_12px_rgba(52,211,167,0.7)]");
-} else if (isTurn) {
-  // Vere player turn unnapudu kuda scale highlight cheyandi
-  playerClasses.push("border-yellow-400 bg-black/70 shadow-[0_0_18px_rgba(250,204,21,0.9)] animate-pulse-turn scale-105 z-20");
-} else {
-  playerClasses.push("border-gray-700 bg-black/60");
-}
+              // STYLING LOGIC START
+  const playerClasses = [
+    "relative p-1 md:p-1.5 rounded-xl border-2 shadow-lg transition-all duration-300",
+  ];
 
-              } else if (isYou) {
-                playerClasses.push("border-emerald-400 bg-black/70 shadow-[0_0_12px_rgba(52,211,167,0.7)]"); // Me (Subtle Green Glow)
-              } else if (isTurn) {
-                playerClasses.push("border-yellow-400 bg-black/70 shadow-[0_0_18px_rgba(250,204,21,0.9)] animate-pulse-turn"); // Other's Turn (Strong Yellow Glow)
-              } else {
-                playerClasses.push("border-gray-700 bg-black/60 hover:shadow-[0_0_5px_rgba(156,163,175,0.4)]"); // Normal
-              }
-
+  if (isTurn) {
+    // Current player turn unnapudu box size scale-105 (koncham peddhaga) avthundi
+    // Pinkish/Yellow glow tho highlight chesthunnam
+    playerClasses.push(
+      isYou 
+        ? "border-fuchsia-400 bg-black/80 shadow-[0_0_20px_rgba(236,72,153,1)] scale-105 z-20"
+        : "border-yellow-400 bg-black/80 shadow-[0_0_20px_rgba(250,204,21,1)] animate-pulse-turn scale-105 z-20"
+    );
+  } else if (isYou) {
+    // Mi box turn lenappudu normal emerald (green) border tho untundi
+    playerClasses.push("border-emerald-400 bg-black/70 shadow-[0_0_12px_rgba(52,211,167,0.7)]");
+  } else {
+    // Vere players turn lenappudu simple gray border
+    playerClasses.push("border-gray-700 bg-black/60");
+  }
 
               return (
                 <div
