@@ -501,7 +501,16 @@ export default function CloseMasterGame() {
     setShowResultOverlay(false);
     setScreen("lobby");
   };
+const handleKickPlayer = (playerIdToKick) => {
+  if (!socket || !roomId || !isHost) return;
 
+  if (!window.confirm("Ee player ni remove cheyala?")) return;
+
+  socket.emit("kick_player", {
+    roomId,
+    targetId: playerIdToKick,
+  });
+};
 const handleGifClick = (pid) => {
   setShowGifPickerFor(pid);
 };
@@ -826,12 +835,21 @@ const handleSelectGif = (gifId) => {
             {players.map((p) => (
               <div
                 key={p.id}
-                className={`p-2 md:p-3 rounded-2xl border-2 shadow-lg ${
+                className={`relative p-2 md:p-3 rounded-2xl border-2 shadow-lg ${
                   p.id === youId
                     ? "border-emerald-400 bg-black/70"
                     : "border-gray-700 bg-black/60"
                 }`}
               >
+               {/* HOST REMOVE BUTTON */}
+               {isHost && p.id !== youId && (
+               <button
+               onClick={() => handleKickPlayer(p.id)}
+               className="absolute top-1 right-1 px-2 py-1 text-xs bg-red-600 text-white rounded-full hover:bg-red-700"
+               >
+              ❌
+               </button>
+             )}
                 <div className="flex items-center justify-center gap-2 mb-1">
                   {p.face && (
                     <img
@@ -945,11 +963,7 @@ const handleSelectGif = (gifId) => {
                     {hasDrawn ? "Drew" : "Draw"}
                   </span>
                 )}
-              </div>
-              <div className="text-sm md:text-base">
-                Draw: <span className="font-bold">{pendingDraw || 1}</span> |
-                Skip: <span className="font-bold">{pendingSkips}</span>
-              </div>
+              </div> 
             </div>
           </div>
         )}
@@ -1016,11 +1030,14 @@ const handleSelectGif = (gifId) => {
 
               // Player Card Styling for Neon Glow and Turn Indicator
               const playerClasses = [
-                "relative p-2 md:p-3 rounded-2xl border-2 shadow-lg transition-all duration-300",
+                "relative p-1 md:p-1.5 rounded-xl border-2 shadow-lg transition-all duration-300",
               ];
               
               if (isYou && isTurn) {
-                playerClasses.push("border-fuchsia-400 bg-black/70 shadow-[0_0_18px_rgba(236,72,153,0.9)] animate-pulse-turn"); // Me + My Turn (Strong Pink Glow)
+               playerClasses.push(
+  "border-fuchsia-400 bg-black/70 shadow-[0_0_18px_rgba(236,72,153,0.9)] scale-[0.6]"
+);
+
               } else if (isYou) {
                 playerClasses.push("border-emerald-400 bg-black/70 shadow-[0_0_12px_rgba(52,211,167,0.7)]"); // Me (Subtle Green Glow)
               } else if (isTurn) {
@@ -1036,16 +1053,20 @@ const handleSelectGif = (gifId) => {
                   className={playerClasses.join(" ")}
                 >
                   {/* TOP BAR */}
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center justify-between mb-1 text-[10px] md:text-xs">
                     <button
                       type="button"
                       onClick={() => handleGifClick(p.id)}
                       className="text-[10px] md:text-xs px-2 py-1 rounded-full bg-black/40 border border-white/40 flex items-center gap-1 hover:bg-black/70"
                     >
-                      <span>GIF</span>
                       <span>🎭</span>
                     </button>
-
+                   {isTurn && (
+  <div className="flex gap-1 text-yellow-300 font-bold">
+    <span>D:{pendingDraw || 1}</span>
+    <span>S:{pendingSkips}</span>
+  </div>
+)}
                     {isTimerCard && started && (
                       <div className="flex items-center gap-1">
                         <div
@@ -1091,10 +1112,11 @@ const handleSelectGif = (gifId) => {
                       {p.handSize} cards | {p.score} pts
                     </p>
                     {p.hasDrawn && (
-                      <p className="text-xs text-emerald-400 text-center">
-                        Drew
-                      </p>
-                    )}
+  <span className="absolute bottom-1 right-1 text-[10px] text-emerald-400 font-bold">
+    Drew
+  </span>
+)}
+
                   </div>
                 </div>
               );
@@ -1149,11 +1171,7 @@ const handleSelectGif = (gifId) => {
 
         {/* YOUR HAND */}
         {me && started && (
-          <div className="z-10 w-full max-w-5xl">
-            <h3 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-emerald-300 text-center">
-              Your Hand ({me.hand.length})
-            </h3>
-
+          <div className="z-10 w-full max-w-5xl">            
             <div className="flex gap-2 md:gap-3 flex-wrap justify-center p-3 md:p-4 bg-black/60 rounded-3xl border border-white/10">
               {me.hand.map((c) => {
                  const selected = selectedIds.includes(c.id);
@@ -1170,7 +1188,7 @@ const handleSelectGif = (gifId) => {
                     onClick={() => toggleSelect(c.id)}
                     disabled={!myTurn}
                     className={[
-                      "relative w-16 md:w-20 h-24 md:h-28 rounded-3xl",
+                      "relative w-14 md:w-18 h-20 md:h-24 rounded-2xl",
                       // UPDATED: Thicker, brighter pink border (fuchsia)
                       "bg-black/80 border-2 border-white/20", 
                       // UPDATED: Stronger magenta shadow
@@ -1223,7 +1241,7 @@ const handleSelectGif = (gifId) => {
         {/* ACTION BUTTONS */}
         {myTurn && started && (
           <div className="z-10 flex flex-wrap gap-2 md:gap-4 justify-center max-w-4xl p-4 md:p-6 bg-black/70 backdrop-blur-xl rounded-3xl border border-white/20">
-            {/* GAME - DECK BUTTON (Intense Blue Neon Style) */}
+            {/* GAME - 🂠 BUTTON (Intense Blue Neon Style) */}
             <button
               onClick={() => drawCard(false)}
               disabled={hasDrawn}
@@ -1233,8 +1251,9 @@ const handleSelectGif = (gifId) => {
                   : "bg-black/70 border-2 border-sky-400 text-sky-200 shadow-[0_0_20px_rgba(56,189,248,0.8)] hover:shadow-[0_0_30px_rgba(56,189,248,1)] hover:scale-[1.03]" 
               }`}
             >
-              DECK
-            </button>
+  🂠
+</button>
+
             {/* GAME - DROP BUTTON (Intense Green Neon Style) */}
             <button
               onClick={dropCards}
