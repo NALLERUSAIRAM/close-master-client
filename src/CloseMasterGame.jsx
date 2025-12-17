@@ -352,23 +352,27 @@ export default function CloseMasterGame() {
   const pendingSkips = game?.pendingSkips || 0;
   const currentPlayer = players[currentIndex];
   const myTurn = started && currentPlayer?.id === youId;
-  // TURN CHANGE VIBRATION
+// TURN CHANGE VIBRATION
 useEffect(() => {
   if (!started) return;
   if (!myTurn) return;
 
-  // Capacitor / mobile haptics
-  if (window.Capacitor && Haptics) {
+  // SSR / build-time guard
+  if (typeof window === "undefined") return;
+
+  const hasCapacitor = !!window.Capacitor;
+  const canVibrate =
+    typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
+
+  if (hasCapacitor && Haptics) {
     Haptics.impact({ style: ImpactStyle.Heavy });
     setTimeout(() => {
       Haptics.impact({ style: ImpactStyle.Heavy });
-    }, 1000); // approx 1s feel
-  } else if (navigator.vibrate) {
-    // Web fallback
+    }, 1000);
+  } else if (canVibrate) {
     navigator.vibrate(1000);
   }
 }, [myTurn, started]);
-
   const me = players.find((p) => p.id === youId);
   const hasDrawn = me?.hasDrawn || false;
 
