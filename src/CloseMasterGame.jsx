@@ -1028,24 +1028,31 @@ const handleSelectGif = (gifId) => {
               const activeGif = GIF_LIST.find((g) => g.id === activeGifId);
               const isTimerCard = isTurn; // timer only for current-turn player
 
-              // Player Card Styling for Neon Glow and Turn Indicator
-              const playerClasses = [
-                "relative p-1 md:p-1.5 rounded-xl border-2 shadow-lg transition-all duration-300",
-              ];
-              
-              if (isYou && isTurn) {
-               playerClasses.push(
-  "border-fuchsia-400 bg-black/70 shadow-[0_0_18px_rgba(236,72,153,0.9)] scale-[0.6]"
-);
+// ✅ PLAYER BOX CLASSES — FINAL & STABLE
+const playerClasses = [
+  "relative p-1 rounded-xl border-2 shadow-lg box-border",
+  "min-h-[82px] min-w-[160px]",
+  "overflow-hidden",
+  "transform-none" // 🔒 IMPORTANT: prevents zoom / pulse resize
+];
 
-              } else if (isYou) {
-                playerClasses.push("border-emerald-400 bg-black/70 shadow-[0_0_12px_rgba(52,211,167,0.7)]"); // Me (Subtle Green Glow)
-              } else if (isTurn) {
-                playerClasses.push("border-yellow-400 bg-black/70 shadow-[0_0_18px_rgba(250,204,21,0.9)] animate-pulse-turn"); // Other's Turn (Strong Yellow Glow)
-              } else {
-                playerClasses.push("border-gray-700 bg-black/60 hover:shadow-[0_0_5px_rgba(156,163,175,0.4)]"); // Normal
-              }
-
+if (isYou && isTurn) {
+  playerClasses.push(
+    "border-fuchsia-400 bg-black/70 shadow-[0_0_18px_rgba(236,72,153,0.9)]"
+  );
+} else if (isYou) {
+  playerClasses.push(
+    "border-emerald-400 bg-black/70 shadow-[0_0_12px_rgba(52,211,167,0.7)]"
+  );
+} else if (isTurn) {
+  playerClasses.push(
+    "border-yellow-400 bg-black/70 shadow-[0_0_18px_rgba(250,204,21,0.9)]"
+  );
+} else {
+  playerClasses.push(
+    "border-gray-700 bg-black/60"
+  );
+}
 
               return (
                 <div
@@ -1061,21 +1068,15 @@ const handleSelectGif = (gifId) => {
                     >
                       <span>🎭</span>
                     </button>
-                   {isTurn && (
-  <div className="flex gap-1 text-yellow-300 font-bold">
-    <span>D:{pendingDraw || 1}</span>
-    <span>S:{pendingSkips}</span>
-  </div>
-)}
                     {isTimerCard && started && (
                       <div className="flex items-center gap-1">
                         <div
                           // UPDATED: Timer styling for intense red neon look
-                          className={`w-7 h-7 md:w-8 md:h-8 rounded-full border-2 flex items-center justify-center text-[10px] md:text-xs font-black ${
-                            isTurn
-                              ? "border-red-400 text-red-200 shadow-[0_0_10px_rgba(248,113,113,1)] animate-ping-slow"
-                              : "border-gray-300 text-gray-200"
-                          }`}
+                         className={`w-7 h-7 md:w-8 md:h-8 rounded-full border-2 flex items-center justify-center text-[10px] md:text-xs font-black ${
+  isTurn
+    ? "border-red-400 text-red-200 shadow-[0_0_10px_rgba(248,113,113,1)]"
+    : "border-gray-300 text-gray-200"
+}`}
                         >
                           {turnTimeLeft}
                         </div>
@@ -1085,7 +1086,7 @@ const handleSelectGif = (gifId) => {
 
                   {/* ACTIVE GIF */}
                   {activeGif && (
-                    <div className="absolute -top-5 right-2 w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden border-2 border-white shadow-lg bg-black/70">
+                    <div className="absolute -top-6 -right-3 w-9 h-9 md:w-10 md:h-10 rounded-full overflow-hidden border-2 border-white shadow-lg bg-black/70">
                       <img
                         src={activeGif.file}
                         alt={activeGif.name}
@@ -1111,12 +1112,11 @@ const handleSelectGif = (gifId) => {
                     <p className="text-xs md:text-sm text-gray-300 text-center">
                       {p.handSize} cards | {p.score} pts
                     </p>
-                    {p.hasDrawn && (
-  <span className="absolute bottom-1 right-1 text-[10px] text-emerald-400 font-bold">
+{p.hasDrawn && (
+  <span className="absolute -bottom-3 right-1 text-[10px] text-emerald-400 font-bold pointer-events-none">
     Drew
   </span>
 )}
-
                   </div>
                 </div>
               );
@@ -1241,7 +1241,7 @@ const handleSelectGif = (gifId) => {
         {/* ACTION BUTTONS */}
         {myTurn && started && (
           <div className="z-10 flex flex-wrap gap-2 md:gap-4 justify-center max-w-4xl p-4 md:p-6 bg-black/70 backdrop-blur-xl rounded-3xl border border-white/20">
-            {/* GAME - 🂠 BUTTON (Intense Blue Neon Style) */}
+            {/* GAME - DRAW BUTTON (Intense Blue Neon Style) */}
             <button
               onClick={() => drawCard(false)}
               disabled={hasDrawn}
@@ -1366,25 +1366,6 @@ const handleSelectGif = (gifId) => {
         }
         .animate-neon-border-glow {
           animation: neon-border-glow 2.5s linear infinite;
-        }
-        
-        /* Slow Ping for Timer */
-        @keyframes ping-slow {
-          0% {
-            transform: scale(1);
-            opacity: 1;
-          }
-          75% {
-            transform: scale(1.15);
-            opacity: 0.6;
-          }
-          100% {
-            transform: scale(1);
-            opacity: 1;
-          }
-        }
-        .animate-ping-slow {
-          animation: ping-slow 1.5s ease-in-out infinite;
         }
       `}</style>
     </div>
