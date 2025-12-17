@@ -1033,10 +1033,19 @@ const handleSelectGif = (gifId) => {
                 "relative p-1 md:p-1.5 rounded-xl border-2 shadow-lg transition-all duration-300",
               ];
               
-              if (isYou && isTurn) {
-               playerClasses.push(
-  "border-fuchsia-400 bg-black/70 shadow-[0_0_18px_rgba(236,72,153,0.9)] scale-[0.6]"
-);
+    if (isYou && isTurn) {
+  // scale-[0.6] badhulu scale-105 leda scale-110 vaadithe highlight avthundi
+  playerClasses.push(
+    "border-fuchsia-400 bg-black/80 shadow-[0_0_25px_rgba(236,72,153,1)] scale-105 z-20"
+  );
+} else if (isYou) {
+  playerClasses.push("border-emerald-400 bg-black/70 shadow-[0_0_12px_rgba(52,211,167,0.7)]");
+} else if (isTurn) {
+  // Vere player turn unnapudu kuda scale highlight cheyandi
+  playerClasses.push("border-yellow-400 bg-black/70 shadow-[0_0_18px_rgba(250,204,21,0.9)] animate-pulse-turn scale-105 z-20");
+} else {
+  playerClasses.push("border-gray-700 bg-black/60");
+}
 
               } else if (isYou) {
                 playerClasses.push("border-emerald-400 bg-black/70 shadow-[0_0_12px_rgba(52,211,167,0.7)]"); // Me (Subtle Green Glow)
