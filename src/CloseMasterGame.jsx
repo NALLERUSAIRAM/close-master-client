@@ -1271,19 +1271,20 @@ const handleSelectGif = (gifId) => {
   DRAW
 </button>
 
-            {/* GAME - DROP BUTTON (Intense Green Neon Style) */}
+           {/* DROP Button */}
             <button
               onClick={dropCards}
-              disabled={!allowDrop}
+              disabled={selectedIds.length === 0}
               className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl transition-all border-2 border-transparent ${
-                allowDrop
-                  ? "bg-black/70 border-2 border-emerald-400 text-emerald-200 shadow-[0_0_20px_rgba(52,211,167,0.8)] hover:shadow-[0_0_30px_rgba(52,211,167,1)] hover:scale-[1.03]"
-                  : "bg-gray-700/50 cursor-not-allowed opacity-50"
+                selectedIds.length === 0
+                  ? "bg-gray-700/50 cursor-not-allowed opacity-50 text-gray-400"
+                  : "bg-black/70 border-2 border-emerald-500 text-emerald-300 shadow-[0_0_20px_rgba(16,185,129,0.8)] hover:shadow-[0_0_30px_rgba(16,185,129,1)] hover:scale-[1.03]"
               }`}
             >
               DROP ({selectedIds.length})
             </button>
-            {/* GAME - CLOSE BUTTON (Intense Pink Neon Style) */}
+
+            {/* CLOSE BUTTON */}
             <button
               onClick={callClose}
               disabled={closeDisabled}
@@ -1296,7 +1297,8 @@ const handleSelectGif = (gifId) => {
               CLOSE
             </button>
           </div>
-        )}
+        )} 
+        {/* పైన ఉన్న }) ఈ సెక్షన్ ని క్లోజ్ చేస్తుంది. దీని తర్వాతే స్టైల్స్ ఉండాలి */}
 
       <style jsx>{`
         /* MODIFIED: Firework Burst Animation (now a quick explosion/pop) */
