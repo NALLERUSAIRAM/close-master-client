@@ -1255,30 +1255,30 @@ const handleSelectGif = (gifId) => {
         )}
 
 
-        {/* ACTION BUTTONS */}
+        {/* ACTION BUTTONS - Structure Fixed */}
         {myTurn && started && (
           <div className="z-10 flex flex-wrap gap-2 md:gap-4 justify-center max-w-4xl p-4 md:p-6 bg-black/70 backdrop-blur-xl rounded-3xl border border-white/20">
-            {/* GAME - 🂠 BUTTON (Intense Blue Neon Style) */}
+            {/* DRAW BUTTON */}
             <button
               onClick={() => drawCard(false)}
               disabled={hasDrawn}
               className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl transition-all border-2 border-transparent ${
                 hasDrawn
                   ? "bg-gray-700/50 cursor-not-allowed opacity-50"
-                  : "bg-black/70 border-2 border-sky-400 text-sky-200 shadow-[0_0_20px_rgba(56,189,248,0.8)] hover:shadow-[0_0_30px_rgba(56,189,248,1)] hover:scale-[1.03]" 
+                  : "bg-black/70 border-2 border-sky-400 text-sky-200 shadow-[0_0_20px_rgba(56,189,248,0.8)] hover:shadow-[0_0_30px_rgba(56,189,248,1)] hover:scale-[1.03]"
               }`}
             >
-  DRAW
-</button>
+              DRAW
+            </button>
 
-           {/* DROP Button */}
+            {/* DROP BUTTON */}
             <button
               onClick={dropCards}
               disabled={selectedIds.length === 0}
               className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl transition-all border-2 border-transparent ${
                 selectedIds.length === 0
                   ? "bg-gray-700/50 cursor-not-allowed opacity-50 text-gray-400"
-                  : "bg-black/70 border-2 border-emerald-500 text-emerald-300 shadow-[0_0_20px_rgba(16,185,129,0.8)] hover:shadow-[0_0_30px_rgba(16,185,129,1)] hover:scale-[1.03]"
+                  : "bg-black/70 border-2 border-emerald-500 text-emerald-300 shadow-[0_0_20_rgba(16,185,129,0.8)] hover:shadow-[0_0_30px_rgba(16,185,129,1)] hover:scale-[1.03]"
               }`}
             >
               DROP ({selectedIds.length})
@@ -1297,102 +1297,51 @@ const handleSelectGif = (gifId) => {
               CLOSE
             </button>
           </div>
-        )} 
-        {/* పైన ఉన్న }) ఈ సెక్షన్ ని క్లోజ్ చేస్తుంది. దీని తర్వాతే స్టైల్స్ ఉండాలి */}
+        )}
 
-      <style jsx>{`
-        /* MODIFIED: Firework Burst Animation (now a quick explosion/pop) */
-        @keyframes firework-burst {
-          0% {
-            transform: scale(0);
-            opacity: 1;
+        <style jsx>{`
+          /* Fireworks Burst Animation (Explosion Effect) */
+          @keyframes firework-burst {
+            0% { transform: scale(0); opacity: 1; }
+            15% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1.8); opacity: 0; }
           }
-          15% {
-            transform: scale(1.2); /* Quick expansion for the burst */
-            opacity: 1;
+          .firework-burst {
+            animation: firework-burst 0.7s ease-out infinite;
           }
-          100% {
-            transform: scale(1.8); /* Fades out while scaling slightly larger */
-            opacity: 0;
-          }
-        }
-        .firework-burst {
-          animation: firework-burst 0.7s ease-out infinite; /* Faster animation for a 'pop' effect */
-        }
 
-        /* Re-added: Pulsing Neon Glow for Open Card (Standby) */
-        @keyframes neon-pulse {
-            0%, 100% {
-                box-shadow: 0 0 10px rgba(255, 0, 255, 0.4), 0 0 20px rgba(236,72,153,0.4); /* Pink */
-            }
-            50% {
-                box-shadow: 0 0 30px rgba(255, 0, 255, 1), 0 0 40px rgba(236,72,153,1); /* Strong Pink */
-            }
-        }
-        .animate-neon-pulse {
-            animation: neon-pulse 3s ease-in-out infinite;
-        }
+          /* Pulsing Neon Glow for Open Card */
+          @keyframes neon-pulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(255, 0, 255, 0.4), 0 0 20px rgba(236,72,153,0.4); }
+            50% { box-shadow: 0 0 30px rgba(255, 0, 255, 1), 0 0 40px rgba(236,72,153,1); }
+          }
+          .animate-neon-pulse { animation: neon-pulse 3s ease-in-out infinite; }
 
-        /* NEW: Player Card Turn Pulse Animation (for Turn Indicator) */
-        @keyframes pulse-turn {
-            0%, 100% {
-                box-shadow: 0 0 5px currentColor;
-                border-color: currentColor;
-            }
-            50% {
-                box-shadow: 0 0 20px currentColor;
-                border-color: currentColor;
-            }
-        }
-        .animate-pulse-turn {
-            animation: pulse-turn 1.5s infinite alternate;
-        }
+          /* Player Turn Pulse */
+          @keyframes pulse-turn {
+            0%, 100% { box-shadow: 0 0 5px currentColor; border-color: currentColor; }
+            50% { box-shadow: 0 0 20px currentColor; border-color: currentColor; }
+          }
+          .animate-pulse-turn { animation: pulse-turn 1.5s infinite alternate; }
 
+          /* Hand Card Glow */
+          @keyframes neon-border-glow {
+            0% { border-color: #ff00ff; box-shadow: 0 0 15px #ff00ff; transform: scale(1.25); }
+            33% { border-color: #00ffff; box-shadow: 0 0 15px #00ffff; }
+            66% { border-color: #00ff00; box-shadow: 0 0 15px #00ff00; }
+            100% { border-color: #ff00ff; box-shadow: 0 0 15px #ff00ff; transform: scale(1.25); }
+          }
+          .animate-neon-border-glow { animation: neon-border-glow 2.5s linear infinite; }
 
-        /* Hand Card Glow */
-        @keyframes neon-border-glow {
-          0% {
-            border-color: #ff00ff; /* Magenta */
-            box-shadow: 0 0 15px #ff00ff, 0 0 25px #ff00ff;
-            transform: scale(1.25);
+          /* Timer Ping */
+          @keyframes ping-slow {
+            0% { transform: scale(1); opacity: 1; }
+            75% { transform: scale(1.15); opacity: 0.6; }
+            100% { transform: scale(1); opacity: 1; }
           }
-          33% {
-            border-color: #00ffff; /* Cyan */
-            box-shadow: 0 0 15px #00ffff, 0 0 25px #00ffff;
-          }
-          66% {
-            border-color: #00ff00; /* Green */
-            box-shadow: 0 0 15px #00ff00, 0 0 25px #00ff00;
-          }
-          100% {
-            border-color: #ff00ff; /* Magenta */
-            box-shadow: 0 0 15px #ff00ff, 0 0 25px #ff00ff;
-            transform: scale(1.25);
-          }
-        }
-        .animate-neon-border-glow {
-          animation: neon-border-glow 2.5s linear infinite;
-        }
-        
-        /* Slow Ping for Timer */
-        @keyframes ping-slow {
-          0% {
-            transform: scale(1);
-            opacity: 1;
-          }
-          75% {
-            transform: scale(1.15);
-            opacity: 0.6;
-          }
-          100% {
-            transform: scale(1);
-            opacity: 1;
-          }
-        }
-        .animate-ping-slow {
-          animation: ping-slow 1.5s ease-in-out infinite;
-        }
-      `}</style>
+          .animate-ping-slow { animation: ping-slow 1.5s ease-in-out infinite; }
+        `}</style>
+      </div>
     </div>
   );
 }
