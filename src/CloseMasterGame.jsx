@@ -1298,19 +1298,6 @@ const handleSelectGif = (gifId) => {
           </div>
         )}
 
-        {started && (
-          <div className="z-10 mt-4">
-            {/* UPDATED: GAME - EXIT GAME BUTTON (Dark Neon) */}
-            <button
-              onClick={exitGame}
-              className="px-6 py-3 bg-black/70 border-2 border-gray-600 hover:border-gray-400 rounded-2xl font-bold text-lg text-gray-300 shadow-xl transition-all hover:scale-[1.01]"
-            >
-              EXIT GAME
-            </button>
-          </div>
-        )}
-      </div>
-
       <style jsx>{`
         /* MODIFIED: Firework Burst Animation (now a quick explosion/pop) */
         @keyframes firework-burst {
