@@ -1032,9 +1032,9 @@ const handleSelectGif = (gifId) => {
           </div>
         )}
 
-        {/* PLAYERS LIST + GIF + TIMER - Updated to Mini Grid for Full Screen Fit */}
+{/* PLAYERS LIST + GIF + TIMER - Updated to Spacious 2-Column Grid */}
         {started && (
-          <div className="z-10 w-full grid grid-cols-4 gap-1.5 px-2 shrink-0">
+          <div className="z-10 w-full grid grid-cols-2 gap-3 px-3 shrink-0">
             {players.map((p) => {
               const isYou = p.id === youId;
               const isTurn = currentPlayer?.id === p.id;
@@ -1042,67 +1042,61 @@ const handleSelectGif = (gifId) => {
               const activeGif = GIF_LIST.find((g) => g.id === activeGifId);
               const isTimerCard = isTurn; // timer only for current-turn player
 
-              // Player Card Styling for Neon Glow and Turn Indicator
-              // STYLING LOGIC START
-  const playerClasses = [
-    "relative p-1 md:p-1.5 rounded-xl border-2 shadow-lg transition-all duration-300",
-  ];
+              // Player Card Styling - Lobby style spacious boxes
+              const playerClasses = [
+                "relative p-2.5 rounded-2xl border-2 shadow-xl transition-all duration-300 min-h-[80px] flex flex-col justify-center",
+              ];
 
-  if (isTurn) {
-    // Current player turn unnapudu box size scale-105 (koncham peddhaga) avthundi
-    // Pinkish/Yellow glow tho highlight chesthunnam
-    playerClasses.push(
-      isYou 
-        ? "border-fuchsia-400 bg-black/80 shadow-[0_0_20px_rgba(236,72,153,1)] scale-105 z-20"
-        : "border-yellow-400 bg-black/80 shadow-[0_0_20px_rgba(250,204,21,1)] animate-pulse-turn scale-105 z-20"
-    );
-  } else if (isYou) {
-    // Mi box turn lenappudu normal emerald (green) border tho untundi
-    playerClasses.push("border-emerald-400 bg-black/70 shadow-[0_0_12px_rgba(52,211,167,0.7)]");
-  } else {
-    // Vere players turn lenappudu simple gray border
-    playerClasses.push("border-gray-700 bg-black/60");
-  }
+              if (isTurn) {
+                // Current player turn unnapudu box scale-105 avthundi
+                playerClasses.push(
+                  isYou 
+                    ? "border-fuchsia-400 bg-black/80 shadow-[0_0_20px_rgba(236,72,153,1)] scale-105 z-20" 
+                    : "border-yellow-400 bg-black/80 shadow-[0_0_20px_rgba(250,204,21,1)] animate-pulse-turn scale-105 z-20"
+                );
+              } else if (isYou) {
+                // Your box when not your turn
+                playerClasses.push("border-emerald-400 bg-black/70 shadow-[0_0_12px_rgba(52,211,167,0.7)]");
+              } else {
+                // Other players normal state
+                playerClasses.push("border-gray-700 bg-black/60");
+              }
 
               return (
-                <div
-                  key={p.id}
-                  className={playerClasses.join(" ")}
-                >
+                <div key={p.id} className={playerClasses.join(" ")}>
                   {/* TOP BAR */}
-                  <div className="flex items-center justify-between mb-1 text-[10px] md:text-xs">
+                  <div className="absolute top-1.5 left-2 right-2 flex items-center justify-between">
                     <button
                       type="button"
                       onClick={() => handleGifClick(p.id)}
-                      className="text-[10px] md:text-xs px-2 py-1 rounded-full bg-black/40 border border-white/40 flex items-center gap-1 hover:bg-black/70"
+                      className="text-[10px] px-2 py-0.5 rounded-full bg-black/40 border border-white/40 flex items-center gap-1 hover:bg-black/70"
                     >
                       <span>🎭</span>
                     </button>
-                   {isTurn && (
-  <div className="flex gap-1 text-yellow-300 font-bold">
-    <span>D:{pendingDraw || 1}</span>
-    <span>S:{pendingSkips}</span>
-  </div>
-)}
+
+                    {isTurn && (
+                      <div className="flex gap-1.5 text-[10px] text-yellow-300 font-bold bg-black/40 px-1 rounded">
+                        <span>D:{pendingDraw || 1}</span>
+                        <span>S:{pendingSkips}</span>
+                      </div>
+                    )}
+
                     {isTimerCard && started && (
-                      <div className="flex items-center gap-1">
-                        <div
-                          // UPDATED: Timer styling for intense red neon look
-                          className={`w-7 h-7 md:w-8 md:h-8 rounded-full border-2 flex items-center justify-center text-[10px] md:text-xs font-black ${
-                            isTurn
-                              ? "border-red-400 text-red-200 shadow-[0_0_10px_rgba(248,113,113,1)] animate-ping-slow"
-                              : "border-gray-300 text-gray-200"
-                          }`}
-                        >
-                          {turnTimeLeft}
-                        </div>
+                      <div
+                        className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-[10px] font-black ${
+                          isTurn
+                            ? "border-red-400 text-red-200 shadow-[0_0_10px_rgba(248,113,113,1)] animate-ping-slow"
+                            : "border-gray-300 text-gray-200"
+                        }`}
+                      >
+                        {turnTimeLeft}
                       </div>
                     )}
                   </div>
 
-                  {/* ACTIVE GIF */}
+                  {/* ACTIVE GIF OVERLAY */}
                   {activeGif && (
-                    <div className="absolute -top-5 right-2 w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden border-2 border-white shadow-lg bg-black/70">
+                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-11 h-11 rounded-full overflow-hidden border-2 border-white shadow-lg bg-black/70 z-30">
                       <img
                         src={activeGif.file}
                         alt={activeGif.name}
@@ -1112,28 +1106,31 @@ const handleSelectGif = (gifId) => {
                   )}
 
                   {/* PLAYER INFO */}
-                  <div className="mt-1 flex flex-col items-center">
+                  <div className="mt-4 flex flex-col items-center">
                     <div className="flex items-center gap-2 mb-1">
                       {p.face && (
                         <img
                           src={p.face}
-                          className="w-7 h-7 md:w-8 md:h-8 rounded-full"
+                          className="w-7 h-7 rounded-full border border-white/20"
                           alt=""
                         />
                       )}
-                      <p className="font-bold text-center text-sm md:text-base truncate">
+                      <p className="font-bold text-center text-sm truncate max-w-[85px] text-white">
                         {p.name}
                       </p>
                     </div>
-                    <p className="text-xs md:text-sm text-gray-300 text-center">
-                      {p.handSize} cards | {p.score} pts
-                    </p>
-                    {p.hasDrawn && (
-  <span className="absolute bottom-1 right-1 text-[10px] text-emerald-400 font-bold">
-    Drew
-  </span>
-)}
+                    
+                    <div className="flex items-center gap-2 text-[10px] font-medium">
+                       <span className="text-gray-300">{p.handSize} Cards</span>
+                       <span className="text-gray-500">|</span>
+                       <span className="text-amber-400">{p.score} Pts</span>
+                    </div>
 
+                    {p.hasDrawn && (
+                      <span className="mt-1 text-[9px] text-emerald-400 font-bold bg-emerald-900/30 px-1.5 rounded-full border border-emerald-500/20">
+                        Drew
+                      </span>
+                    )}
                   </div>
                 </div>
               );
