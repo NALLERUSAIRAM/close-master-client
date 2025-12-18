@@ -945,64 +945,64 @@ const handleSelectGif = (gifId) => {
           </h1>
         </div>
 
-{/* INFO BAR - Updated with EXIT Button & Spacious Layout */}
-{started && (
-  <div className="z-10 w-full max-w-4xl p-2 md:p-3 bg-black/70 rounded-2xl border border-gray-700 flex justify-between items-center shadow-xl">
-    
-    {/* Player Turn Info */}
-    <div className="flex items-center gap-2 text-sm md:text-base">
-      {currentPlayer?.face && (
-        <img
-          src={currentPlayer.face}
-          className="w-8 h-8 rounded-full border border-yellow-400/30"
-          alt=""
-        />
-      )}
-      <div className="flex flex-col md:flex-row md:items-center md:gap-2">
-        <span className="text-[10px] md:text-xs text-gray-400 font-bold uppercase">Turn:</span>
-        <span className="text-base md:text-xl font-black text-yellow-400 leading-tight">
-          {currentPlayer?.name}
-        </span>
-      </div>
+{/* INFO BAR - Crash Proof Version */}
+        {started && (
+          <div className="z-10 w-full max-w-4xl p-2 md:p-3 bg-black/70 rounded-2xl border border-gray-700 flex justify-between items-center shadow-xl">
+            
+            {/* Player Turn Info */}
+            <div className="flex items-center gap-2 text-sm md:text-base">
+              {currentPlayer?.face && (
+                <img
+                  src={currentPlayer.face}
+                  className="w-8 h-8 rounded-full border border-yellow-400/30"
+                  alt=""
+                />
+              )}
+              <div className="flex flex-col md:flex-row md:items-center md:gap-2">
+                <span className="text-[10px] md:text-xs text-gray-400 font-bold uppercase">Turn:</span>
+                <span className="text-base md:text-xl font-black text-yellow-400 leading-tight">
+                  {currentPlayer?.name || "Player"}
+                </span>
+              </div>
 
-      {myTurn && (
-        <span
-          className={`ml-1 md:ml-3 px-2 py-0.5 rounded-full text-[10px] md:text-xs font-bold ${
-            hasDrawn
-              ? "bg-emerald-500/30 text-emerald-200"
-              : "bg-yellow-500/30 text-yellow-200"
-          }`}
-        >
-          {hasDrawn ? "Drew" : "Your Turn"}
-        </span>
-      )}
-    </div>
+              {/* isMyTurn and hasDrawn check chesi display chesthunnam */}
+              {game?.youId === currentPlayer?.id && (
+                <span
+                  className={`ml-1 md:ml-3 px-2 py-0.5 rounded-full text-[10px] md:text-xs font-bold ${
+                    game?.hasDrawn
+                      ? "bg-emerald-500/30 text-emerald-200"
+                      : "bg-yellow-500/30 text-yellow-200"
+                  }`}
+                >
+                  {game?.hasDrawn ? "Drew" : "Your Turn"}
+                </span>
+              )}
+            </div>
 
-    {/* Buttons Group: Theme & Exit */}
-    <div className="flex items-center gap-2">
-      {/* THEME BUTTON */}
-      <button
-        onClick={cycleTheme}
-        className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/10 border border-purple-400/60 rounded-xl text-[10px] md:text-xs font-black text-purple-200 active:scale-95 transition-transform"
-      >
-        <span>🎨</span>
-        <span className="hidden sm:inline uppercase">Theme</span>
-      </button>
+            {/* Buttons Group: Theme & Exit */}
+            <div className="flex items-center gap-2">
+              {/* THEME BUTTON - cycleTheme lekapothe toggleTheme check chesthadhi */}
+              <button
+                onClick={() => (typeof cycleTheme === 'function' ? cycleTheme() : toggleTheme && toggleTheme())}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/10 border border-purple-400/60 rounded-xl text-[10px] md:text-xs font-black text-purple-200 active:scale-95 transition-transform"
+              >
+                <span>🎨</span>
+                <span className="hidden sm:inline uppercase">Theme</span>
+              </button>
 
-      {/* EXIT BUTTON - Newly Added */}
-      <button
-        onClick={leaveRoom}
-        className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600/20 border border-red-500/60 rounded-xl text-[10px] md:text-xs font-black text-red-200 active:scale-95 transition-transform shadow-[0_0_10px_rgba(239,68,68,0.2)]"
-      >
-        <span>🚪</span>
-        <span className="uppercase text-[10px]">Exit</span>
-      </button>
-    </div>
+              {/* EXIT BUTTON - leaveRoom lekapothe page reload chesthadhi (Safe exit) */}
+              <button
+                onClick={() => (typeof leaveRoom === 'function' ? leaveRoom() : window.location.reload())}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600/20 border border-red-500/60 rounded-xl text-[10px] md:text-xs font-black text-red-200 active:scale-95 transition-transform"
+              >
+                <span>🚪</span>
+                <span className="uppercase text-[10px]">Exit</span>
+              </button>
+            </div>
+          </div> 
+        )}
 
-  </div> 
-)} 
-
-{/* OPEN CARD (Discard Top) - Mobile Optimized Size */}
+        {/* OPEN CARD (Discard Top) - Mobile Optimized Size */}
         {started && (
           <div className="z-10 text-center shrink-0 mb-1 mt-2">
             <p className="text-[10px] mb-1 font-bold text-gray-400 uppercase tracking-tighter">Open Card</p>
