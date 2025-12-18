@@ -945,11 +945,11 @@ const handleSelectGif = (gifId) => {
           </h1>
         </div>
 
-   {/* INFO BAR - REPLACE THIS SECTION */}
+{/* INFO BAR - Updated with EXIT Button & Spacious Layout */}
 {started && (
-  <div className="z-10 w-full max-w-4xl p-2 md:p-3 bg-black/70 rounded-2xl border border-gray-700 flex justify-between items-center">
+  <div className="z-10 w-full max-w-4xl p-2 md:p-3 bg-black/70 rounded-2xl border border-gray-700 flex justify-between items-center shadow-xl">
     
-    {/* Content Wrapper */}
+    {/* Player Turn Info */}
     <div className="flex items-center gap-2 text-sm md:text-base">
       {currentPlayer?.face && (
         <img
@@ -973,22 +973,34 @@ const handleSelectGif = (gifId) => {
               : "bg-yellow-500/30 text-yellow-200"
           }`}
         >
-          {hasDrawn ? "Drew" : "Draw"}
+          {hasDrawn ? "Drew" : "Your Turn"}
         </span>
       )}
-    </div> {/* <-- Div 1 Close */}
+    </div>
 
-    {/* THEME BUTTON - Ippudu idi right side ki vachindi */}
-    <button
-      onClick={cycleTheme}
-      className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/10 border border-purple-400/60 rounded-xl text-[10px] md:text-xs font-black text-purple-200 active:scale-95 transition-transform"
-    >
-      <span>🎨</span>
-      <span className="hidden sm:inline">THEME</span>
-    </button>
+    {/* Buttons Group: Theme & Exit */}
+    <div className="flex items-center gap-2">
+      {/* THEME BUTTON */}
+      <button
+        onClick={cycleTheme}
+        className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/10 border border-purple-400/60 rounded-xl text-[10px] md:text-xs font-black text-purple-200 active:scale-95 transition-transform"
+      >
+        <span>🎨</span>
+        <span className="hidden sm:inline uppercase">Theme</span>
+      </button>
+
+      {/* EXIT BUTTON - Newly Added */}
+      <button
+        onClick={leaveRoom}
+        className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600/20 border border-red-500/60 rounded-xl text-[10px] md:text-xs font-black text-red-200 active:scale-95 transition-transform shadow-[0_0_10px_rgba(239,68,68,0.2)]"
+      >
+        <span>🚪</span>
+        <span className="uppercase text-[10px]">Exit</span>
+      </button>
+    </div>
 
   </div> 
-)} {/* <-- Info Bar structure and Logic Close */}
+)} 
 
 {/* OPEN CARD (Discard Top) - Mobile Optimized Size */}
         {started && (
