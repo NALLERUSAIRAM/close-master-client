@@ -2,14 +2,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 
-const SERVER_URL = "https://site--close-master-server--t29zpf96vfvq.code.run";
-
-export const socket = io(SERVER_URL, {
-  transports: ["websocket"],   // 🔥 MUST
-  path: "/socket.io",          // 🔥 SAFE
-  reconnection: true,
-  reconnectionAttempts: 5,
-});
+const SERVER_URL = "https://site--close-master-server--t29zpf96vfqv.code.run";
 const MAX_PLAYERS = 7;
 
 // 🔥 GIF LIST – only 4 GIFs (for reactions)
