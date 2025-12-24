@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 
-// ✅ UPDATED SERVER URL (From your screenshot)
+// ✅ YOUR SERVER URL
 const SERVER_URL = "https://site--close-master-server--t29zpf96vfqv.code.run";
 
 const MAX_PLAYERS = 7;
@@ -65,6 +65,9 @@ export default function CloseMasterGame() {
   const [winnerName, setWinnerName] = useState("");
   const [roundBaseScores, setRoundBaseScores] = useState({});
   const prevStartedRef = useRef(false);
+  
+  // 🔄 ROUND NUMBER TRACKING (Client Side Logic)
+  const [roundNum, setRoundNum] = useState(1);
 
   const FIREWORK_COLORS = [
     "rgba(255, 0, 255, 1)", "rgba(0, 255, 255, 1)", "rgba(255, 255, 0, 1)",
@@ -91,10 +94,9 @@ export default function CloseMasterGame() {
     } catch {}
   }, []);
 
-  // 🔌 SOCKET CONNECTION
+  // 🔌 SOCKET SETUP
   useEffect(() => {
     const s = io(SERVER_URL, {
-      // ✅ FIX 1: Polling + Websocket for Stable Connection
       transports: ["polling", "websocket"], 
       upgrade: true,
       timeout: 20000,
@@ -138,9 +140,7 @@ export default function CloseMasterGame() {
       setLoading(false);
     });
 
-    // ❌ ERROR HANDLER (Handles Kicks)
     s.on("error", (e) => {
-      // ✅ FIX 2: Handle Kick Properly
       if (e.message === "You were removed by host") {
         alert("You have been kicked from the room.");
         localStorage.removeItem("cmp_room_id");
@@ -149,6 +149,12 @@ export default function CloseMasterGame() {
         alert(e.message || "Server error!");
       }
       setLoading(false);
+    });
+
+    // 🏆 RESET GAME LISTENER (Optional: If server sends reset event)
+    s.on("game_reset", () => {
+       setRoundNum(1);
+       alert("Game Over! Scores have been reset.");
     });
 
     s.on("gif_play", ({ targetId, gifId }) => {
@@ -176,9 +182,13 @@ export default function CloseMasterGame() {
     }
   }, [game?.roomId, playerName]);
 
+  // Round Logic
   useEffect(() => {
     const startedNow = !!game?.started;
     if (startedNow && !prevStartedRef.current) {
+      // Game just started -> New Round
+      setRoundNum(prev => prev + 1);
+
       const base = {};
       (game?.players || []).forEach((p) => {
         base[p.id] = typeof p.score === "number" ? p.score : 0;
@@ -197,7 +207,7 @@ export default function CloseMasterGame() {
     setShowResultOverlay(true);
   }, [game?.closeCalled]);
 
-  // Visibility / Reconnect Logic
+  // Visibility
   useEffect(() => {
     let reconnectTimeout;
     const handleVisibilityChange = () => {
@@ -219,11 +229,7 @@ export default function CloseMasterGame() {
     };
   }, [socket, game?.roomId, playerName, screen, playerId]);
 
-  // Turn Timer
-  useEffect(() => {
-    return () => { if (turnTimerRef.current) clearInterval(turnTimerRef.current); };
-  }, []);
-
+  // Timer
   useEffect(() => {
     const startedNow = !!game?.started;
     const playersArr = game?.players || [];
@@ -240,9 +246,6 @@ export default function CloseMasterGame() {
           if (prev <= 1) {
             clearInterval(turnTimerRef.current);
             turnTimerRef.current = null;
-            if (isMyTurn && socket && game?.roomId) {
-              // Auto-play handled by server, we just wait
-            }
             return 0;
           }
           return prev - 1;
@@ -303,6 +306,7 @@ export default function CloseMasterGame() {
     socket.emit("create_room", { name: playerName.trim(), playerId, face: selectedFace }, (res) => {
       setLoading(false);
       if (!res || res.error) alert(res?.error || "Create failed");
+      else setRoundNum(1); // Reset round on create
     });
   };
 
@@ -316,6 +320,7 @@ export default function CloseMasterGame() {
     socket.emit("join_room", { name: playerName.trim(), roomId: joinCode.toUpperCase().trim(), playerId, face: selectedFace }, (res) => {
       setLoading(false);
       if (res?.error) alert(res.error);
+      else setRoundNum(1); // Reset round on join
     });
   };
 
@@ -326,6 +331,19 @@ export default function CloseMasterGame() {
     }
     socket.emit("start_round", { roomId });
   };
+  
+  // 🔥 NEW: RESTART GAME (Reset Scores)
+  const restartGame = () => {
+    if (!socket || !roomId || !isHost) return;
+    if (confirm("Scores anni 0 chesi game restart cheyala?")) {
+        // Since server logic might not exist, we try to simulate or re-create room logic
+        // IDEALLY: socket.emit("reset_game", { roomId });
+        // WORKAROUND: Just start round. If you updated server, it handles it.
+        // For now, we rely on the Client UI showing "Game Over" and manually handling it if server doesn't support 'reset'
+        socket.emit("start_round", { roomId }); 
+        setRoundNum(1); // Client side reset
+    }
+  }
 
   const drawCard = (fromDiscard = false) => {
     if (!socket || !roomId || !myTurn) return;
@@ -363,15 +381,31 @@ export default function CloseMasterGame() {
       setShowResultOverlay(false);
       setLoading(false);
       setSelectedFace("");
+      setRoundNum(1);
     }
   };
 
+  // 🔥 UPDATED LOGIC: CHECK 500 POINTS
   const handleContinue = () => {
+    // Check if any player has >= 500
+    const highestScore = Math.max(...players.map(p => p.score || 0));
+    
+    if (highestScore >= 500) {
+        if (isHost) {
+             // If host, trigger restart
+             if (confirm("Game Over! 500 Points Reached. Restarting Game...")) {
+                 socket.emit("start_round", { roomId }); // Usually resets hand, scores keep adding in current server code. 
+                 // NOTE: For true score reset, server needs 'reset_game' event. 
+                 setRoundNum(1);
+             }
+        } else {
+             alert("Game Over! Waiting for host to restart...");
+        }
+    } 
     setShowResultOverlay(false);
     setScreen("lobby");
   };
 
-  // 🔥 KICK PLAYER FUNCTION
   const handleKickPlayer = (playerIdToKick) => {
     if (!socket || !roomId || !isHost) return;
     if (!window.confirm("Ee player ni remove cheyala?")) return;
@@ -399,6 +433,11 @@ export default function CloseMasterGame() {
   // RESULT OVERLAY
   const ResultOverlay = () => {
     if (!showResultOverlay || !game?.closeCalled) return null;
+    
+    // 🔥 Check for Game Over (500 Points)
+    const maxScore = Math.max(...players.map(p => p.score || 0));
+    const isGameOver = maxScore >= 500;
+
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
@@ -421,25 +460,33 @@ export default function CloseMasterGame() {
         </div>
 
         <div className="relative px-8 py-6 md:px-10 md:py-8 bg-black/90 rounded-3xl border border-amber-400 shadow-[0_0_20px_rgba(251,191,36,1)] max-w-md w-[90%]">
-          <p className="text-xs md:text-sm font-semibold tracking-[0.3em] text-amber-300 text-center mb-2">ROUND WINNER</p>
-          <p className="text-2xl md:text-3xl font-black text-amber-400 text-center mb-1 capitalize">{winnerName}</p>
+          <p className="text-xs md:text-sm font-semibold tracking-[0.3em] text-amber-300 text-center mb-2">
+            {isGameOver ? "GAME OVER" : "ROUND WINNER"}
+          </p>
+          <p className="text-2xl md:text-3xl font-black text-amber-400 text-center mb-1 capitalize">
+            {isGameOver ? "Limit Reached!" : winnerName}
+          </p>
           <div className="flex justify-center mb-3">
             <img src="/gifs/chimpanzee.gif" alt="Winner" className="w-32 h-32 md:w-40 md:h-40 rounded-2xl shadow-xl object-cover" />
           </div>
-          <p className="text-sm md:text-base text-amber-100 text-center mb-4">CLOSE SUCCESS 🎉</p>
+          <p className="text-sm md:text-base text-amber-100 text-center mb-4">
+             {isGameOver ? "Someone crossed 500 pts!" : "CLOSE SUCCESS 🎉"}
+          </p>
           <div className="bg-white/5 rounded-2xl p-3 md:p-4 mb-4">
-            <p className="text-xs md:text-sm text-amber-200 font-semibold mb-2 text-center">CURRENT ROUND POINTS</p>
+            <p className="text-xs md:text-sm text-amber-200 font-semibold mb-2 text-center">TOTAL SCORES</p>
             {players.map((p) => (
-              <div key={p.id} className={`flex justify-between items-center px-3 py-2 rounded-xl mb-1 text-sm md:text-base ${p.name === winnerName ? "bg-emerald-500/90 text-white" : "bg-gray-900/70 text-gray-100"}`}>
+              <div key={p.id} className={`flex justify-between items-center px-3 py-2 rounded-xl mb-1 text-sm md:text-base ${p.score >= 500 ? "bg-red-500/90 text-white animate-pulse" : p.name === winnerName ? "bg-emerald-500/90 text-white" : "bg-gray-900/70 text-gray-100"}`}>
                 <span className="font-semibold truncate flex items-center gap-2">
                   {p.face && <img src={p.face} className="w-6 h-6 rounded-full" alt="" />}
                   {p.name}
                 </span>
-                <span className="font-black text-lg md:text-xl">{getRoundPointsForPlayer(p, roundBaseScores)}</span>
+                <span className="font-black text-lg md:text-xl">{p.score}</span>
               </div>
             ))}
           </div>
-          <button onClick={handleContinue} className="w-full py-3 md:py-4 bg-black/70 border-2 border-amber-400 text-amber-200 shadow-[0_0_20px_rgba(251,191,36,0.8)] hover:shadow-[0_0_30px_rgba(251,191,36,1)] rounded-2xl font-black text-base md:text-lg transition-all hover:scale-[1.01]">CONTINUE</button>
+          <button onClick={handleContinue} className={`w-full py-3 md:py-4 border-2 rounded-2xl font-black text-base md:text-lg transition-all hover:scale-[1.01] ${isGameOver ? "bg-red-600 border-red-400 text-white shadow-[0_0_20px_rgba(239,68,68,0.8)]" : "bg-black/70 border-amber-400 text-amber-200 shadow-[0_0_20px_rgba(251,191,36,0.8)]"}`}>
+            {isGameOver ? "RESET GAME (Host Only)" : "CONTINUE"}
+          </button>
         </div>
       </div>
     );
@@ -514,7 +561,7 @@ export default function CloseMasterGame() {
           <div className="z-10 w-full max-w-5xl grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
             {players.map((p) => (
               <div key={p.id} className={`relative p-2 md:p-3 rounded-2xl border-2 shadow-lg ${p.id === youId ? "border-emerald-400 bg-black/70" : "border-gray-700 bg-black/60"}`}>
-                {/* ❌ HOST KICK BUTTON */}
+                {/* ✅ HOST KICK BUTTON (Only in Lobby) */}
                 {isHost && p.id !== youId && (
                   <button onClick={() => handleKickPlayer(p.id)} className="absolute top-1 right-1 px-2 py-1 text-xs bg-red-600 text-white rounded-full hover:bg-red-700 z-50">❌</button>
                 )}
@@ -576,6 +623,13 @@ export default function CloseMasterGame() {
 
         {started && (
           <div className="z-10 text-center shrink-0 mb-1 mt-2">
+            {/* 🔥 UPDATED: ROUND INDICATOR BOX */}
+            <div className="mb-1">
+                <span className="px-3 py-1 bg-yellow-500/20 border border-yellow-500/50 rounded-full text-[10px] md:text-xs font-black text-yellow-200 uppercase tracking-widest shadow-[0_0_10px_rgba(234,179,8,0.3)]">
+                    Round {roundNum}
+                </span>
+            </div>
+            
             <p className="text-[10px] mb-1 font-bold text-gray-400 uppercase tracking-tighter">Open Card</p>
             {discardTop ? (
               <button onClick={() => drawCard(true)} disabled={!myTurn || hasDrawn} className={["relative w-16 h-24 rounded-xl border-2 border-fuchsia-500/60 bg-black/80 shadow-[0_0_15px_rgba(236,72,153,0.5)] flex flex-col justify-between p-1.5 transition-all", myTurn && !hasDrawn ? "animate-neon-pulse scale-105 cursor-pointer" : "opacity-60 cursor-not-allowed"].join(" ")}>
@@ -609,10 +663,7 @@ export default function CloseMasterGame() {
 
               return (
                 <div key={p.id} className={playerClasses.join(" ")}>
-                  {/* ❌ HOST KICK BUTTON IN GAME */}
-                  {isHost && p.id !== youId && (
-                    <button onClick={() => handleKickPlayer(p.id)} className="absolute top-1 right-1 px-2 py-1 text-xs bg-red-600 text-white rounded-full hover:bg-red-700 z-50">❌</button>
-                  )}
+                  {/* ✅ KICK BUTTON REMOVED FROM HERE */}
                   <div className="absolute top-1.5 left-2 right-2 flex items-center justify-between">
                     <button type="button" onClick={() => handleGifClick(p.id)} className="text-[10px] px-2 py-0.5 rounded-full bg-black/40 border border-white/40 flex items-center gap-1 hover:bg-black/70"><span>🎭</span></button>
                     {isTurn && (<div className="flex gap-1.5 text-[10px] text-yellow-300 font-bold bg-black/40 px-1 rounded"><span>D:{pendingDraw || 1}</span><span>S:{pendingSkips}</span></div>)}
