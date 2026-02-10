@@ -11,9 +11,9 @@ const BG_THEMES = [
 
 function getCardColor(card) {
   if (!card) return "text-white";
-  if (card.rank === "JOKER") return "text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]";
+  if (card.rank === "JOKER") return "text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,1)]";
   const isRed = card.suit === "♥" || card.suit === "♦";
-  return isRed ? "text-pink-500 drop-shadow-[0_0_8px_rgba(236,72,153,0.8)]" : "text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]";
+  return isRed ? "text-pink-500 drop-shadow-[0_0_10px_rgba(236,72,153,1)]" : "text-cyan-400 drop-shadow-[0_0_10px_rgba(34,211,238,1)]";
 }
 
 export default function CloseMasterGame() {
@@ -55,7 +55,7 @@ export default function CloseMasterGame() {
     });
     setSocket(s);
     return () => s.disconnect();
-  }, []);
+  }, [playerId]);
 
   useEffect(() => {
     if (game?.started) {
@@ -63,23 +63,8 @@ export default function CloseMasterGame() {
       if (turnTimerRef.current) clearInterval(turnTimerRef.current);
       turnTimerRef.current = setInterval(() => setTurnTimeLeft(p => p <= 1 ? 0 : p - 1), 1000);
     }
+    return () => clearInterval(turnTimerRef.current);
   }, [game?.started, game?.currentIndex, game?.turnId]);
-
-  const createRoom = () => {
-    if (!playerName.trim()) return alert("Name enter chey!");
-    socket.emit("create_room", { name: playerName, playerId }, (res) => {
-      if (res.error) alert(res.error);
-      else localStorage.setItem("cmp_room_id", res.roomId);
-    });
-  };
-
-  const joinRoom = () => {
-    if (!playerName.trim() || !joinCode.trim()) return alert("Details enter chey!");
-    socket.emit("join_room", { name: playerName, roomId: joinCode.toUpperCase(), playerId }, (res) => {
-      if (res.error) alert(res.error);
-      else localStorage.setItem("cmp_room_id", res.roomId);
-    });
-  };
 
   const handleContinue = () => {
     if (game?.isGameOver && isHost) {
@@ -94,14 +79,14 @@ export default function CloseMasterGame() {
 
   if (screen === "welcome") {
     return (
-      <div className="fixed inset-0 flex items-center justify-center text-white font-sans">
-        <video className="fixed inset-0 w-full h-full object-cover -z-10 opacity-40" src="/gifs/15.mp4" autoPlay muted loop />
-        <div className="bg-black/80 p-8 rounded-3xl w-full max-w-sm border border-white/20">
-          <h1 className="text-3xl font-black text-center mb-6 text-emerald-400">CLOSE MASTER</h1>
-          <input className="w-full p-4 bg-gray-900 rounded-xl mb-4 border border-gray-700" placeholder="Name" value={playerName} onChange={e => setPlayerName(e.target.value)} />
-          <input className="w-full p-4 bg-gray-900 rounded-xl mb-6 border border-gray-700 uppercase" placeholder="Room ID" value={joinCode} onChange={e => setJoinCode(e.target.value)} />
-          <button onClick={createRoom} className="w-full py-4 bg-emerald-600 rounded-xl font-bold mb-3">CREATE</button>
-          <button onClick={joinRoom} className="w-full py-4 bg-sky-600 rounded-xl font-bold">JOIN</button>
+      <div className="fixed inset-0 flex items-center justify-center text-white select-none">
+        <video className="fixed inset-0 w-full h-full object-cover -z-10 opacity-50" src="/gifs/15.mp4" autoPlay muted loop playsInline />
+        <div className="bg-black/90 p-8 rounded-[40px] w-full max-w-sm border border-white/20 shadow-2xl">
+          <h1 className="text-4xl font-black text-center mb-8 text-emerald-400">CLOSE MASTER</h1>
+          <input className="w-full p-5 bg-gray-900 rounded-2xl mb-4 border-2 border-gray-700 text-xl font-bold select-text" placeholder="Name" value={playerName} onChange={e => setPlayerName(e.target.value)} />
+          <input className="w-full p-5 bg-gray-900 rounded-2xl mb-6 border-2 border-gray-700 uppercase text-3xl font-black tracking-widest text-center select-text" placeholder="ROOM ID" value={joinCode} onChange={e => setJoinCode(e.target.value)} />
+          <button onClick={() => { if(playerName.trim()) socket.emit("create_room", { name: playerName, playerId }, (res) => { localStorage.setItem("cmp_room_id", res.roomId); }); }} className="w-full py-5 bg-emerald-600 rounded-2xl font-black text-2xl mb-4 shadow-lg active:scale-95 transition-transform">CREATE</button>
+          <button onClick={() => { if(playerName.trim() && joinCode.trim()) socket.emit("join_room", { name: playerName, roomId: joinCode.toUpperCase(), playerId }, (res) => { if(res.error) alert(res.error); else localStorage.setItem("cmp_room_id", res.roomId); }); }} className="w-full py-5 bg-sky-600 rounded-2xl font-black text-2xl shadow-lg active:scale-95 transition-transform">JOIN</button>
         </div>
       </div>
     );
@@ -111,81 +96,74 @@ export default function CloseMasterGame() {
   const myTurn = game?.started && game?.turnId === game.youId;
 
   return (
-    <div className="min-h-screen text-white relative flex flex-col items-center p-4 overflow-hidden">
-      <video className="fixed inset-0 w-full h-full object-cover -z-10" src={bgTheme.file} autoPlay muted loop />
+    <div className="min-h-screen text-white relative flex flex-col items-center p-4 overflow-hidden select-none touch-none">
+      <video className="fixed inset-0 w-full h-full object-cover -z-10" src={bgTheme.file} autoPlay muted loop playsInline />
       
-      {/* Result Overlay */}
-      {showResultOverlay && (
-        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-6">
-          <div className="bg-gray-900 border-2 border-amber-500 p-6 rounded-3xl w-full max-w-sm text-center">
-            <h2 className="text-amber-500 font-bold mb-2">ROUND RESULTS</h2>
-            <h1 className="text-2xl font-black mb-4">{winnerName} Won!</h1>
-            <div className="space-y-2 mb-6">
-              {game.players.map(p => (
-                <div key={p.id} className="flex justify-between bg-white/5 p-2 rounded-lg">
-                  <span className={p.score >= 500 ? "text-red-500 font-bold" : ""}>{p.name}</span>
-                  <span className="font-bold">+{p.lastRoundPoints} ({p.score})</span>
-                </div>
-              ))}
-            </div>
-            <button onClick={handleContinue} className="w-full py-3 bg-amber-600 rounded-xl font-bold">
-              {game?.isGameOver ? "RESET GAME" : "CONTINUE"}
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Selection Block Styles */}
+      <style dangerouslySetInnerHTML={{__html: `
+        * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+        input { -webkit-user-select: text; user-select: text; }
+      `}} />
 
       {/* Game Header */}
-      <div className="w-full max-w-md flex justify-between bg-black/60 p-3 rounded-2xl mb-4 border border-white/10">
-        <div>
-          <p className="text-[10px] text-gray-400 uppercase">Room: {game?.roomId}</p>
-          <p className="font-black text-emerald-400">Round {game?.roundNumber}</p>
+      <div className="w-full max-w-2xl flex justify-between items-center bg-black/70 p-5 rounded-[30px] border-2 border-white/10 mb-6 backdrop-blur-md">
+        <div className="flex flex-col">
+          <p className="text-sm text-gray-400 font-black tracking-widest leading-none">ROOM: <span className="text-white text-2xl ml-1">{game?.roomId}</span></p>
+          <p className="text-4xl font-black text-emerald-400 mt-2 leading-none">Round {game?.roundNumber}</p>
         </div>
-        <button onClick={() => setBgTheme(BG_THEMES[(BG_THEMES.findIndex(t => t.id === bgTheme.id) + 1) % BG_THEMES.length])} className="px-3 bg-white/10 rounded-lg text-xs">🎨 Theme</button>
+        <button onClick={() => setBgTheme(BG_THEMES[(BG_THEMES.findIndex(t => t.id === bgTheme.id) + 1) % BG_THEMES.length])} className="p-5 bg-white/10 rounded-2xl border border-white/20 active:scale-90 transition-transform text-2xl">🎨</button>
       </div>
 
-      {/* Players */}
-      <div className="grid grid-cols-2 gap-2 w-full max-w-md mb-6">
+      {/* Players Grid */}
+      <div className="grid grid-cols-2 gap-4 w-full max-w-2xl mb-auto">
         {game?.players.map(p => (
-          <div key={p.id} className={`p-2 rounded-xl border-2 ${game.turnId === p.id ? 'border-yellow-400 bg-yellow-400/10' : 'border-white/5 bg-black/40'}`}>
-            <p className="text-sm font-bold truncate">{p.name}</p>
-            <p className="text-[10px] text-gray-400">{p.handSize} Cards | {p.score} Pts</p>
-            {game.turnId === p.id && <p className="text-[10px] text-yellow-400 font-black">TURN: {turnTimeLeft}s</p>}
+          <div key={p.id} className={`p-5 rounded-[30px] border-4 transition-all ${game.turnId === p.id ? 'border-yellow-400 bg-yellow-400/20 shadow-[0_0_20px_rgba(250,204,21,0.4)] scale-105' : 'border-white/5 bg-black/50'}`}>
+            <p className="text-2xl font-black truncate text-white uppercase tracking-tighter leading-tight">{p.name}</p>
+            <div className="flex justify-between items-end mt-1">
+              <p className="text-xs font-bold text-gray-400 uppercase">{p.handSize} Cards</p>
+              <p className="text-2xl font-black text-amber-400">{p.score} <span className="text-[10px] text-gray-500">PTS</span></p>
+            </div>
+            {game.turnId === p.id && (
+              <div className="mt-3 h-2 bg-gray-800 rounded-full overflow-hidden">
+                <div className="h-full bg-yellow-400 transition-all duration-1000" style={{ width: `${(turnTimeLeft/20)*100}%` }}></div>
+              </div>
+            )}
           </div>
         ))}
       </div>
 
-      {/* Discard Pile (Open Card) */}
+      {/* Center Discard Pile */}
       {game?.started && (
-        <div className="flex flex-col items-center mb-8">
-          <p className="text-[10px] text-gray-400 mb-2 uppercase tracking-widest">Discard</p>
-          <div onClick={() => drawCard(true)} className={`w-20 h-28 rounded-2xl border-2 bg-black/80 flex items-center justify-center transition-all ${myTurn && !me?.hasDrawn ? 'border-yellow-400 scale-110 shadow-[0_0_20px_rgba(250,204,21,0.5)]' : 'border-white/20'}`}>
-            <span className={`text-5xl font-black ${getCardColor(game.discardTop)}`}>{game.discardTop?.rank === "JOKER" ? "JKR" : game.discardTop?.rank}</span>
+        <div className="flex flex-col items-center my-10">
+          <p className="text-xs font-black text-gray-500 mb-4 uppercase tracking-[0.6em]">Discard</p>
+          <div onClick={() => { if(myTurn && !me?.hasDrawn) socket.emit("action_draw", { roomId: game.roomId, fromDiscard: true }); }} 
+            className={`w-32 h-44 md:w-40 md:h-56 rounded-[45px] border-[6px] bg-black/90 flex items-center justify-center transition-all cursor-pointer ${myTurn && !me?.hasDrawn ? 'border-yellow-400 scale-110 shadow-[0_0_50px_rgba(250,204,21,0.7)]' : 'border-white/10'}`}>
+            <span className={`text-8xl md:text-9xl font-black ${getCardColor(game.discardTop)}`}>{game.discardTop?.rank === "JOKER" ? "JKR" : game.discardTop?.rank}</span>
           </div>
         </div>
       )}
 
       {/* Hand & Actions */}
-      <div className="mt-auto w-full max-w-md">
-        <div className="flex flex-wrap justify-center gap-2 mb-6">
+      <div className="w-full max-w-2xl mt-auto pb-6">
+        <div className="flex flex-wrap justify-center gap-3 mb-10 px-2">
           {me?.hand.map(c => (
             <div key={c.id} onClick={() => setSelectedIds(prev => prev.includes(c.id) ? prev.filter(x => x !== c.id) : [...prev, c.id])}
-              className={`w-16 h-24 rounded-2xl border-2 bg-black/90 flex items-center justify-center transition-all ${selectedIds.includes(c.id) ? 'border-pink-500 -translate-y-4 shadow-lg scale-110' : 'border-white/20'}`}>
-              <span className={`text-4xl font-black ${getCardColor(c)}`}>{c.rank === "JOKER" ? "JKR" : c.rank}</span>
+              className={`w-20 h-32 md:w-28 md:h-40 rounded-[30px] border-4 bg-black/95 flex items-center justify-center transition-all cursor-pointer ${selectedIds.includes(c.id) ? 'border-pink-500 -translate-y-10 scale-115 shadow-[0_0_40px_rgba(236,72,153,0.6)] z-20' : 'border-white/10 hover:border-white/30'}`}>
+              <span className={`text-6xl md:text-7xl font-black ${getCardColor(c)}`}>{c.rank === "JOKER" ? "JKR" : c.rank}</span>
             </div>
           ))}
         </div>
         
         {myTurn && (
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            <button onClick={() => socket.emit("action_draw", { roomId: game.roomId, fromDiscard: false })} disabled={me?.hasDrawn} className="py-4 bg-sky-600 rounded-xl font-black disabled:opacity-50">DRAW</button>
-            <button onClick={() => socket.emit("action_drop", { roomId: game.roomId, selectedIds })} disabled={selectedIds.length === 0} className="py-4 bg-emerald-600 rounded-xl font-black disabled:opacity-50">DROP</button>
-            <button onClick={() => { if (window.confirm("CLOSE?")) socket.emit("action_close", { roomId: game.roomId }); }} className="py-4 bg-pink-600 rounded-xl font-black">CLOSE</button>
+          <div className="grid grid-cols-3 gap-4">
+            <button onClick={() => socket.emit("action_draw", { roomId: game.roomId, fromDiscard: false })} disabled={me?.hasDrawn} className="py-6 bg-sky-600 rounded-[30px] font-black text-2xl shadow-xl active:scale-90 disabled:opacity-20 uppercase">Draw</button>
+            <button onClick={() => socket.emit("action_drop", { roomId: game.roomId, selectedIds })} disabled={selectedIds.length === 0} className="py-6 bg-emerald-600 rounded-[30px] font-black text-2xl shadow-xl active:scale-90 disabled:opacity-20 uppercase">Drop</button>
+            <button onClick={() => { if (window.confirm("CLOSE?")) socket.emit("action_close", { roomId: game.roomId }); }} className="py-6 bg-pink-600 rounded-[30px] font-black text-2xl shadow-xl active:scale-90 uppercase">Close</button>
           </div>
         )}
         
         {screen === "lobby" && isHost && (
-          <button onClick={() => socket.emit("start_round", { roomId: game.roomId })} className="w-full py-5 bg-emerald-600 rounded-2xl font-black text-xl mb-4">START GAME</button>
+          <button onClick={() => socket.emit("start_round", { roomId: game.roomId })} className="w-full py-8 bg-emerald-600 rounded-[40px] font-black text-4xl shadow-2xl active:scale-95 transition-all uppercase tracking-tighter">Start Game</button>
         )}
       </div>
     </div>
