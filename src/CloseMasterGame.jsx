@@ -1,25 +1,19 @@
 import React, { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 
-// ✅ YOUR SERVER URL
 const SERVER_URL = "https://site--close-master-server--t29zpf96vfqv.code.run";
 
-const MAX_PLAYERS = 7;
-
-// 🎥 BACKGROUND THEMES
 const BG_THEMES = [
   { id: "t15", name: "Theme 15", file: "/gifs/15.mp4" },
   { id: "t16", name: "Theme 16", file: "/gifs/16.mp4" },
   { id: "t17", name: "Theme 17", file: "/gifs/17.mp4" },
 ];
 
-function cardTextColor(card) {
+function getCardColor(card) {
   if (!card) return "text-white";
-  if (card.rank === "JOKER")
-    return "text-yellow-100 drop-shadow-[0_0_12px_rgba(255,255,0,1)] font-extrabold";
-  if (card.suit === "♥" || card.suit === "♦")
-    return "text-pink-300 drop-shadow-[0_0_12px_rgba(255,0,255,1)] font-bold";
-  return "text-cyan-300 drop-shadow-[0_0_12px_rgba(0,255,255,1)] font-bold";
+  if (card.rank === "JOKER") return "text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]";
+  const isRed = card.suit === "♥" || card.suit === "♦";
+  return isRed ? "text-pink-500 drop-shadow-[0_0_8px_rgba(236,72,153,0.8)]" : "text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]";
 }
 
 export default function CloseMasterGame() {
@@ -30,280 +24,170 @@ export default function CloseMasterGame() {
   const [game, setGame] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [isHost, setIsHost] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [bgTheme, setBgTheme] = useState(BG_THEMES[0]);
   const [turnTimeLeft, setTurnTimeLeft] = useState(20);
   const turnTimerRef = useRef(null);
   const [showResultOverlay, setShowResultOverlay] = useState(false);
   const [winnerName, setWinnerName] = useState("");
-  const [roundBaseScores, setRoundBaseScores] = useState({});
-  const prevStartedRef = useRef(false);
-  
-  // 🔄 ROUND NUMBER TRACKING
-  const [roundNum, setRoundNum] = useState(0);
 
   const [playerId] = useState(() => {
     if (typeof window === "undefined") return "";
-    try {
-      let id = localStorage.getItem("cmp_player_id");
-      if (!id) {
-        id = window.crypto?.randomUUID ? window.crypto.randomUUID() : Math.random().toString(36).slice(2);
-        localStorage.setItem("cmp_player_id", id);
-      }
-      return id;
-    } catch { return ""; }
+    let id = localStorage.getItem("cmp_player_id") || Math.random().toString(36).slice(2);
+    localStorage.setItem("cmp_player_id", id);
+    return id;
   });
 
   useEffect(() => {
-    try {
-      const storedName = localStorage.getItem("cmp_player_name");
-      if (storedName) setPlayerName(storedName);
-    } catch {}
-  }, []);
-
-  // 🔌 SOCKET SETUP
-  useEffect(() => {
-    const s = io(SERVER_URL, {
-      transports: ["polling", "websocket"], 
-      upgrade: true,
-      reconnection: true,
-    });
-
+    const s = io(SERVER_URL, { transports: ["polling", "websocket"] });
     s.on("connect", () => {
-      let roomIdToUse = game?.roomId || localStorage.getItem("cmp_room_id");
-      let nameToUse = playerName || localStorage.getItem("cmp_player_name");
-      if (roomIdToUse && nameToUse) {
-        s.emit("rejoin_room", { roomId: roomIdToUse, name: nameToUse, playerId });
-      }
+      const rid = localStorage.getItem("cmp_room_id");
+      const name = localStorage.getItem("cmp_player_name");
+      if (rid && name) s.emit("rejoin_room", { roomId: rid, name, playerId });
     });
-
-    s.on("rejoin_success", (state) => {
-      setGame(state);
-      setScreen(state.started ? "game" : "lobby");
-    });
-
     s.on("game_state", (state) => {
       setGame(state);
       setIsHost(state.hostId === state.youId);
-      setSelectedIds([]);
       setScreen(state.started ? "game" : "lobby");
-      setLoading(false);
-
-      // Handle Round Number Logic (Increment only when game actually starts)
-      if (state.started && !prevStartedRef.current) {
-        setRoundNum(prev => prev + 1);
-        
-        // Capture scores at round start to calculate round-only points later
-        const base = {};
-        (state.players || []).forEach((p) => {
-          base[p.id] = typeof p.score === "number" ? p.score : 0;
-        });
-        setRoundBaseScores(base);
-      }
-      prevStartedRef.current = state.started;
     });
-
-    s.on("error", (e) => {
-      alert(e.message || "Server error!");
-      setLoading(false);
+    s.on("close_result", (data) => {
+      setWinnerName(data.winner);
+      setShowResultOverlay(true);
     });
-
     setSocket(s);
     return () => s.disconnect();
   }, []);
 
   useEffect(() => {
-    if (game?.roomId && playerName) {
-      localStorage.setItem("cmp_room_id", game.roomId);
-      localStorage.setItem("cmp_player_name", playerName);
-    }
-  }, [game?.roomId, playerName]);
-
-  // Result logic
-  useEffect(() => {
-    if (game?.closeCalled) {
-      const playersArr = game.players || [];
-      const closer = playersArr[game.currentIndex] || playersArr[0];
-      setWinnerName(closer?.name || "Winner");
-      setShowResultOverlay(true);
-    }
-  }, [game?.closeCalled]);
-
-  // Timer logic
-  useEffect(() => {
     if (game?.started) {
       setTurnTimeLeft(20);
       if (turnTimerRef.current) clearInterval(turnTimerRef.current);
-      turnTimerRef.current = setInterval(() => {
-        setTurnTimeLeft((prev) => (prev <= 1 ? 0 : prev - 1));
-      }, 1000);
+      turnTimerRef.current = setInterval(() => setTurnTimeLeft(p => p <= 1 ? 0 : p - 1), 1000);
     }
-    return () => { if (turnTimerRef.current) clearInterval(turnTimerRef.current); };
   }, [game?.started, game?.currentIndex, game?.turnId]);
 
-  const me = game?.players.find((p) => p.id === game?.youId);
-  const myTurn = game?.started && game?.players[game?.currentIndex]?.id === game?.youId;
-
-  // ACTIONS
   const createRoom = () => {
-    if (!playerName.trim()) return alert("Name enter cheyali");
-    setLoading(true);
-    socket.emit("create_room", { name: playerName.trim(), playerId }, (res) => {
-      setLoading(false);
-      if (res?.error) alert(res.error); else setRoundNum(0);
+    if (!playerName.trim()) return alert("Name enter chey!");
+    socket.emit("create_room", { name: playerName, playerId }, (res) => {
+      if (res.error) alert(res.error);
+      else localStorage.setItem("cmp_room_id", res.roomId);
     });
   };
 
   const joinRoom = () => {
-    if (!playerName.trim() || !joinCode.trim()) return alert("Name mariyu Room ID kavali");
-    setLoading(true);
-    socket.emit("join_room", { name: playerName.trim(), roomId: joinCode.toUpperCase().trim(), playerId }, (res) => {
-      setLoading(false);
-      if (res?.error) alert(res.error); else setRoundNum(0);
+    if (!playerName.trim() || !joinCode.trim()) return alert("Details enter chey!");
+    socket.emit("join_room", { name: playerName, roomId: joinCode.toUpperCase(), playerId }, (res) => {
+      if (res.error) alert(res.error);
+      else localStorage.setItem("cmp_room_id", res.roomId);
     });
   };
 
-  const startRound = () => socket.emit("start_round", { roomId: game.roomId });
-  const drawCard = (fromDiscard = false) => socket.emit("action_draw", { roomId: game.roomId, fromDiscard });
-  const dropCards = () => socket.emit("action_drop", { roomId: game.roomId, selectedIds });
-  const callClose = () => {
-    if (window.confirm("CLOSE cheyala?")) socket.emit("action_close", { roomId: game.roomId });
+  const handleContinue = () => {
+    if (game?.isGameOver && isHost) {
+      if (window.confirm("Game Over! 500 points reach ayyaru. Scores reset cheyala?")) {
+        socket.emit("reset_game", { roomId: game.roomId, playerId });
+      }
+    } else if (isHost) {
+      socket.emit("start_round", { roomId: game.roomId });
+    }
+    setShowResultOverlay(false);
   };
 
-  const cycleTheme = () => {
-    const currentIndex = BG_THEMES.findIndex((t) => t.id === bgTheme.id);
-    setBgTheme(BG_THEMES[(currentIndex + 1) % BG_THEMES.length]);
-  };
-
-  // Result Overlay (Round Points Only)
-  const ResultOverlay = () => {
-    if (!showResultOverlay) return null;
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
-        <div className="bg-gray-900 border border-amber-400 p-6 rounded-3xl max-w-sm w-full shadow-[0_0_20px_rgba(251,191,36,0.5)]">
-          <h2 className="text-amber-400 text-center font-black text-2xl mb-4">ROUND OVER</h2>
-          <p className="text-white text-center text-lg mb-4 font-bold">{winnerName} Won the Round! 🎉</p>
-          
-          <div className="space-y-2 mb-6">
-            <p className="text-xs text-gray-400 uppercase font-bold text-center">Points added this round</p>
-            {game?.players.map((p) => {
-              const roundPoints = (p.score || 0) - (roundBaseScores[p.id] || 0);
-              return (
-                <div key={p.id} className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/10">
-                  <span className="font-bold">{p.name}</span>
-                  <span className="font-black text-red-400">+{roundPoints < 0 ? 0 : roundPoints}</span>
-                </div>
-              );
-            })}
-          </div>
-
-          <button onClick={() => { setShowResultOverlay(false); setScreen("lobby"); }} className="w-full py-4 bg-amber-500 text-black font-black rounded-2xl hover:bg-amber-400 transition-all">CONTINUE</button>
-        </div>
-      </div>
-    );
-  };
-
-  // WELCOME SCREEN
   if (screen === "welcome") {
     return (
-      <div className="fixed inset-0 w-full h-screen text-white overflow-hidden flex flex-col items-center justify-center px-4">
-        <video className="fixed inset-0 w-full h-full object-cover -z-10 opacity-60" src="/gifs/15.mp4" autoPlay muted loop playsInline />
-        <div className="bg-black/80 backdrop-blur-xl p-8 rounded-3xl w-full max-w-md border border-white/20 shadow-2xl">
-          <h1 className="text-4xl font-black text-center mb-8 bg-gradient-to-r from-emerald-400 to-sky-400 bg-clip-text text-transparent">CLOSE MASTER</h1>
-          <div className="space-y-5">
-            <input type="text" className="w-full p-4 bg-gray-900/80 border border-gray-700 rounded-2xl text-white font-bold" placeholder="Enter Name" value={playerName} onChange={(e) => setPlayerName(e.target.value)} maxLength={15} />
-            <input type="text" className="w-full p-4 bg-gray-900/80 border border-gray-700 rounded-2xl text-white font-bold uppercase" placeholder="Room ID (for joining)" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} maxLength={4} />
-            <button onClick={createRoom} disabled={loading} className="w-full py-4 bg-emerald-600 rounded-2xl font-black text-xl hover:bg-emerald-500 shadow-lg shadow-emerald-900/20">{loading ? "Loading..." : "CREATE ROOM"}</button>
-            <button onClick={joinRoom} disabled={loading} className="w-full py-4 bg-sky-600 rounded-2xl font-black text-xl hover:bg-sky-500 shadow-lg shadow-sky-900/20">{loading ? "Loading..." : "JOIN ROOM"}</button>
-          </div>
+      <div className="fixed inset-0 flex items-center justify-center text-white font-sans">
+        <video className="fixed inset-0 w-full h-full object-cover -z-10 opacity-40" src="/gifs/15.mp4" autoPlay muted loop />
+        <div className="bg-black/80 p-8 rounded-3xl w-full max-w-sm border border-white/20">
+          <h1 className="text-3xl font-black text-center mb-6 text-emerald-400">CLOSE MASTER</h1>
+          <input className="w-full p-4 bg-gray-900 rounded-xl mb-4 border border-gray-700" placeholder="Name" value={playerName} onChange={e => setPlayerName(e.target.value)} />
+          <input className="w-full p-4 bg-gray-900 rounded-xl mb-6 border border-gray-700 uppercase" placeholder="Room ID" value={joinCode} onChange={e => setJoinCode(e.target.value)} />
+          <button onClick={createRoom} className="w-full py-4 bg-emerald-600 rounded-xl font-bold mb-3">CREATE</button>
+          <button onClick={joinRoom} className="w-full py-4 bg-sky-600 rounded-xl font-bold">JOIN</button>
         </div>
       </div>
     );
   }
 
-  // LOBBY & GAME RENDER
-  return (
-    <div className="min-h-screen text-white relative flex flex-col items-center p-4">
-      <video className="fixed inset-0 w-full h-full object-cover -z-10" src={bgTheme.file} autoPlay muted loop playsInline />
-      <ResultOverlay />
+  const me = game?.players.find(p => p.id === game.youId);
+  const myTurn = game?.started && game?.turnId === game.youId;
 
-      {/* Header Info */}
-      <div className="w-full max-w-4xl flex justify-between items-center bg-black/60 backdrop-blur-md p-3 rounded-2xl border border-white/10 mb-4 z-10">
+  return (
+    <div className="min-h-screen text-white relative flex flex-col items-center p-4 overflow-hidden">
+      <video className="fixed inset-0 w-full h-full object-cover -z-10" src={bgTheme.file} autoPlay muted loop />
+      
+      {/* Result Overlay */}
+      {showResultOverlay && (
+        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-6">
+          <div className="bg-gray-900 border-2 border-amber-500 p-6 rounded-3xl w-full max-w-sm text-center">
+            <h2 className="text-amber-500 font-bold mb-2">ROUND RESULTS</h2>
+            <h1 className="text-2xl font-black mb-4">{winnerName} Won!</h1>
+            <div className="space-y-2 mb-6">
+              {game.players.map(p => (
+                <div key={p.id} className="flex justify-between bg-white/5 p-2 rounded-lg">
+                  <span className={p.score >= 500 ? "text-red-500 font-bold" : ""}>{p.name}</span>
+                  <span className="font-bold">+{p.lastRoundPoints} ({p.score})</span>
+                </div>
+              ))}
+            </div>
+            <button onClick={handleContinue} className="w-full py-3 bg-amber-600 rounded-xl font-bold">
+              {game?.isGameOver ? "RESET GAME" : "CONTINUE"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Game Header */}
+      <div className="w-full max-w-md flex justify-between bg-black/60 p-3 rounded-2xl mb-4 border border-white/10">
         <div>
-          <p className="text-[10px] text-gray-400 font-bold">ROOM: {game?.roomId}</p>
-          <p className="text-emerald-400 font-black">Round {roundNum}</p>
+          <p className="text-[10px] text-gray-400 uppercase">Room: {game?.roomId}</p>
+          <p className="font-black text-emerald-400">Round {game?.roundNumber}</p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={cycleTheme} className="px-3 py-1 bg-white/10 border border-white/20 rounded-lg text-xs font-bold uppercase">🎨 Theme</button>
-          <button onClick={() => window.location.reload()} className="px-3 py-1 bg-red-600/20 border border-red-500/50 rounded-lg text-xs font-bold uppercase text-red-200">Exit</button>
-        </div>
+        <button onClick={() => setBgTheme(BG_THEMES[(BG_THEMES.findIndex(t => t.id === bgTheme.id) + 1) % BG_THEMES.length])} className="px-3 bg-white/10 rounded-lg text-xs">🎨 Theme</button>
       </div>
 
-      {/* Players List */}
-      <div className="w-full max-w-4xl grid grid-cols-2 md:grid-cols-4 gap-2 mb-4 z-10">
-        {game?.players.map((p) => (
-          <div key={p.id} className={`p-2 rounded-xl border-2 flex flex-col items-center justify-center transition-all ${game?.players[game.currentIndex]?.id === p.id ? 'border-yellow-400 bg-yellow-400/10 shadow-[0_0_10px_rgba(250,204,21,0.5)] scale-105' : 'border-white/10 bg-black/40'}`}>
-            <p className="font-bold text-sm truncate max-w-full">{p.name} {p.id === game?.youId && "(You)"}</p>
-            <div className="flex gap-2 text-[10px] mt-1">
-              <span className="text-gray-400">{p.handSize} Cards</span>
-              <span className="text-amber-400 font-bold">{p.score} Pts</span>
-            </div>
-            {game?.players[game.currentIndex]?.id === p.id && <div className="text-[10px] font-black text-yellow-400 mt-1 animate-pulse">TURN ({turnTimeLeft}s)</div>}
+      {/* Players */}
+      <div className="grid grid-cols-2 gap-2 w-full max-w-md mb-6">
+        {game?.players.map(p => (
+          <div key={p.id} className={`p-2 rounded-xl border-2 ${game.turnId === p.id ? 'border-yellow-400 bg-yellow-400/10' : 'border-white/5 bg-black/40'}`}>
+            <p className="text-sm font-bold truncate">{p.name}</p>
+            <p className="text-[10px] text-gray-400">{p.handSize} Cards | {p.score} Pts</p>
+            {game.turnId === p.id && <p className="text-[10px] text-yellow-400 font-black">TURN: {turnTimeLeft}s</p>}
           </div>
         ))}
       </div>
 
-      {screen === "lobby" ? (
-        <div className="flex flex-col items-center justify-center flex-1 z-10">
-          <div className="bg-black/60 p-10 rounded-3xl border border-white/10 text-center backdrop-blur-md">
-            <h2 className="text-2xl font-black mb-6">Lobby</h2>
-            {isHost ? (
-              <button onClick={startRound} className="px-10 py-4 bg-emerald-600 text-white font-black text-xl rounded-2xl animate-bounce">START GAME</button>
-            ) : (
-              <p className="text-gray-300 animate-pulse">Waiting for host to start...</p>
-            )}
-            <p className="mt-4 text-xs text-gray-400">{game?.players.length} Players joined</p>
-          </div>
-        </div>
-      ) : (
-        <div className="w-full max-w-4xl flex flex-col items-center flex-1 z-10">
-          {/* Open Card */}
-          <div className="mb-6 text-center">
-             <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Discard Pile</p>
-             <div onClick={() => drawCard(true)} className={`w-20 h-28 rounded-xl border-2 flex flex-col justify-between p-2 bg-black/80 transition-all ${myTurn && !me?.hasDrawn ? 'border-yellow-400 scale-110 cursor-pointer shadow-[0_0_20px_rgba(250,204,21,0.8)]' : 'border-white/20'}`}>
-                <span className={`text-xs font-bold ${cardTextColor(game?.discardTop)}`}>{game?.discardTop?.rank}</span>
-                <span className={`text-3xl text-center ${cardTextColor(game?.discardTop)}`}>{game?.discardTop?.suit}</span>
-                <span className={`text-xs font-bold text-right ${cardTextColor(game?.discardTop)}`}>{game?.discardTop?.rank}</span>
-             </div>
-          </div>
-
-          {/* Your Hand */}
-          <div className="mt-auto w-full">
-            <div className="flex flex-wrap justify-center gap-2 p-4 bg-black/40 rounded-3xl border border-white/10 mb-6">
-              {me?.hand.map((c) => (
-                <div 
-                  key={c.id} 
-                  onClick={() => setSelectedIds(prev => prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id])}
-                  className={`relative w-14 h-20 md:w-16 md:h-24 rounded-xl border-2 flex flex-col justify-between p-2 bg-black transition-all cursor-pointer ${selectedIds.includes(c.id) ? 'border-pink-500 -translate-y-4 shadow-[0_0_15px_rgba(236,72,153,0.8)]' : 'border-white/20'}`}
-                >
-                  <span className={`text-xs font-bold ${cardTextColor(c)}`}>{c.rank}</span>
-                  <span className={`text-2xl text-center ${cardTextColor(c)}`}>{c.suit}</span>
-                  <span className={`text-xs font-bold text-right ${cardTextColor(c)}`}>{c.rank}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Game Buttons */}
-            {myTurn && (
-              <div className="grid grid-cols-3 gap-3 w-full mb-4">
-                <button onClick={() => drawCard(false)} disabled={me?.hasDrawn} className={`py-4 rounded-2xl font-black text-lg border-2 ${me?.hasDrawn ? 'bg-gray-800 border-gray-700 opacity-50' : 'bg-sky-600 border-sky-400 shadow-[0_0_15px_rgba(2,132,199,0.5)]'}`}>DRAW</button>
-                <button onClick={dropCards} disabled={selectedIds.length === 0} className={`py-4 rounded-2xl font-black text-lg border-2 ${selectedIds.length === 0 ? 'bg-gray-800 border-gray-700 opacity-50' : 'bg-emerald-600 border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.5)]'}`}>DROP ({selectedIds.length})</button>
-                <button onClick={callClose} disabled={me?.hasDrawn || game?.discardTop?.rank === "7"} className={`py-4 rounded-2xl font-black text-lg border-2 ${me?.hasDrawn || game?.discardTop?.rank === "7" ? 'bg-gray-800 border-gray-700 opacity-50' : 'bg-pink-600 border-pink-400 shadow-[0_0_15px_rgba(219,39,119,0.5)]'}`}>CLOSE</button>
-              </div>
-            )}
+      {/* Discard Pile (Open Card) */}
+      {game?.started && (
+        <div className="flex flex-col items-center mb-8">
+          <p className="text-[10px] text-gray-400 mb-2 uppercase tracking-widest">Discard</p>
+          <div onClick={() => drawCard(true)} className={`w-20 h-28 rounded-2xl border-2 bg-black/80 flex items-center justify-center transition-all ${myTurn && !me?.hasDrawn ? 'border-yellow-400 scale-110 shadow-[0_0_20px_rgba(250,204,21,0.5)]' : 'border-white/20'}`}>
+            <span className={`text-5xl font-black ${getCardColor(game.discardTop)}`}>{game.discardTop?.rank === "JOKER" ? "JKR" : game.discardTop?.rank}</span>
           </div>
         </div>
       )}
+
+      {/* Hand & Actions */}
+      <div className="mt-auto w-full max-w-md">
+        <div className="flex flex-wrap justify-center gap-2 mb-6">
+          {me?.hand.map(c => (
+            <div key={c.id} onClick={() => setSelectedIds(prev => prev.includes(c.id) ? prev.filter(x => x !== c.id) : [...prev, c.id])}
+              className={`w-16 h-24 rounded-2xl border-2 bg-black/90 flex items-center justify-center transition-all ${selectedIds.includes(c.id) ? 'border-pink-500 -translate-y-4 shadow-lg scale-110' : 'border-white/20'}`}>
+              <span className={`text-4xl font-black ${getCardColor(c)}`}>{c.rank === "JOKER" ? "JKR" : c.rank}</span>
+            </div>
+          ))}
+        </div>
+        
+        {myTurn && (
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            <button onClick={() => socket.emit("action_draw", { roomId: game.roomId, fromDiscard: false })} disabled={me?.hasDrawn} className="py-4 bg-sky-600 rounded-xl font-black disabled:opacity-50">DRAW</button>
+            <button onClick={() => socket.emit("action_drop", { roomId: game.roomId, selectedIds })} disabled={selectedIds.length === 0} className="py-4 bg-emerald-600 rounded-xl font-black disabled:opacity-50">DROP</button>
+            <button onClick={() => { if (window.confirm("CLOSE?")) socket.emit("action_close", { roomId: game.roomId }); }} className="py-4 bg-pink-600 rounded-xl font-black">CLOSE</button>
+          </div>
+        )}
+        
+        {screen === "lobby" && isHost && (
+          <button onClick={() => socket.emit("start_round", { roomId: game.roomId })} className="w-full py-5 bg-emerald-600 rounded-2xl font-black text-xl mb-4">START GAME</button>
+        )}
+      </div>
     </div>
   );
 }
