@@ -6,21 +6,6 @@ const SERVER_URL = "https://site--close-master-server--t29zpf96vfqv.code.run";
 
 const MAX_PLAYERS = 7;
 
-// 🔥 GIF LIST
-const GIF_LIST = [
-  { id: "laugh", name: "Laugh", file: "/gifs/Laugh.gif" },
-  { id: "husky", name: "Husky", file: "/gifs/Husky.gif" },
-  { id: "monkey", name: "Monkey", file: "/gifs/monkey_clap.gif" },
-  { id: "horse", name: "Horse", file: "/gifs/Horse_run.gif" },
-];
-
-// 🧑 FACE LIST
-const FACE_LIST = [
-  "/gifs/1.png", "/gifs/2.png", "/gifs/3.png", "/gifs/4.png",
-  "/gifs/5.png", "/gifs/6.png", "/gifs/7.png", "/gifs/8.png",
-  "/gifs/9.png", "/gifs/10.png",
-];
-
 // 🎥 BACKGROUND THEMES
 const BG_THEMES = [
   { id: "t15", name: "Theme 15", file: "/gifs/15.mp4" },
@@ -37,14 +22,6 @@ function cardTextColor(card) {
   return "text-cyan-300 drop-shadow-[0_0_12px_rgba(0,255,255,1)] font-bold";
 }
 
-function getRoundPointsForPlayer(p, baseScores) {
-  if (!p) return 0;
-  const total = typeof p.score === "number" ? p.score : 0;
-  const base = typeof baseScores[p.id] === "number" ? baseScores[p.id] : total;
-  const diff = total - base;
-  return diff < 0 ? 0 : diff;
-}
-
 export default function CloseMasterGame() {
   const [socket, setSocket] = useState(null);
   const [screen, setScreen] = useState("welcome");
@@ -53,27 +30,17 @@ export default function CloseMasterGame() {
   const [game, setGame] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [isHost, setIsHost] = useState(false);
-  const [showPoints, setShowPoints] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [selectedFace, setSelectedFace] = useState("");
   const [bgTheme, setBgTheme] = useState(BG_THEMES[0]);
   const [turnTimeLeft, setTurnTimeLeft] = useState(20);
   const turnTimerRef = useRef(null);
-  const [showGifPickerFor, setShowGifPickerFor] = useState(null);
-  const [activeReactions, setActiveReactions] = useState({});
   const [showResultOverlay, setShowResultOverlay] = useState(false);
   const [winnerName, setWinnerName] = useState("");
   const [roundBaseScores, setRoundBaseScores] = useState({});
   const prevStartedRef = useRef(false);
   
-  // 🔄 ROUND NUMBER TRACKING (Client Side Logic)
-  const [roundNum, setRoundNum] = useState(1);
-
-  const FIREWORK_COLORS = [
-    "rgba(255, 0, 255, 1)", "rgba(0, 255, 255, 1)", "rgba(255, 255, 0, 1)",
-    "rgba(255, 105, 180, 1)", "rgba(0, 255, 127, 1)", "rgba(255, 165, 0, 1)",
-  ];
-  const randomColor = () => FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)];
+  // 🔄 ROUND NUMBER TRACKING
+  const [roundNum, setRoundNum] = useState(0);
 
   const [playerId] = useState(() => {
     if (typeof window === "undefined") return "";
@@ -99,37 +66,20 @@ export default function CloseMasterGame() {
     const s = io(SERVER_URL, {
       transports: ["polling", "websocket"], 
       upgrade: true,
-      timeout: 20000,
       reconnection: true,
-      reconnectionAttempts: Infinity,
     });
 
     s.on("connect", () => {
-      let roomIdToUse = game?.roomId;
-      let nameToUse = playerName;
-      try {
-        if (!roomIdToUse) roomIdToUse = localStorage.getItem("cmp_room_id");
-        if (!nameToUse) nameToUse = localStorage.getItem("cmp_player_name");
-      } catch {}
-
+      let roomIdToUse = game?.roomId || localStorage.getItem("cmp_room_id");
+      let nameToUse = playerName || localStorage.getItem("cmp_player_name");
       if (roomIdToUse && nameToUse) {
-        setTimeout(() => {
-          s.emit("rejoin_room", { roomId: roomIdToUse, name: nameToUse, playerId });
-        }, 500);
+        s.emit("rejoin_room", { roomId: roomIdToUse, name: nameToUse, playerId });
       }
-    });
-
-    s.on("disconnect", (reason) => {
-      if (reason === "io server disconnect") s.disconnect();
     });
 
     s.on("rejoin_success", (state) => {
       setGame(state);
       setScreen(state.started ? "game" : "lobby");
-    });
-
-    s.on("rejoin_error", () => {
-      setScreen("welcome");
     });
 
     s.on("game_state", (state) => {
@@ -138,35 +88,24 @@ export default function CloseMasterGame() {
       setSelectedIds([]);
       setScreen(state.started ? "game" : "lobby");
       setLoading(false);
+
+      // Handle Round Number Logic (Increment only when game actually starts)
+      if (state.started && !prevStartedRef.current) {
+        setRoundNum(prev => prev + 1);
+        
+        // Capture scores at round start to calculate round-only points later
+        const base = {};
+        (state.players || []).forEach((p) => {
+          base[p.id] = typeof p.score === "number" ? p.score : 0;
+        });
+        setRoundBaseScores(base);
+      }
+      prevStartedRef.current = state.started;
     });
 
     s.on("error", (e) => {
-      if (e.message === "You were removed by host") {
-        alert("You have been kicked from the room.");
-        localStorage.removeItem("cmp_room_id");
-        window.location.reload(); 
-      } else {
-        alert(e.message || "Server error!");
-      }
+      alert(e.message || "Server error!");
       setLoading(false);
-    });
-
-    // 🏆 RESET GAME LISTENER (Optional: If server sends reset event)
-    s.on("game_reset", () => {
-       setRoundNum(1);
-       alert("Game Over! Scores have been reset.");
-    });
-
-    s.on("gif_play", ({ targetId, gifId }) => {
-      if (!targetId || !gifId) return;
-      setActiveReactions((prev) => ({ ...prev, [targetId]: gifId }));
-      setTimeout(() => {
-        setActiveReactions((prev) => {
-          const copy = { ...prev };
-          delete copy[targetId];
-          return copy;
-        });
-      }, 4000);
     });
 
     setSocket(s);
@@ -175,318 +114,90 @@ export default function CloseMasterGame() {
 
   useEffect(() => {
     if (game?.roomId && playerName) {
-      try {
-        localStorage.setItem("cmp_room_id", game.roomId);
-        localStorage.setItem("cmp_player_name", playerName);
-      } catch {}
+      localStorage.setItem("cmp_room_id", game.roomId);
+      localStorage.setItem("cmp_player_name", playerName);
     }
   }, [game?.roomId, playerName]);
 
-  // Round Logic
+  // Result logic
   useEffect(() => {
-    const startedNow = !!game?.started;
-    if (startedNow && !prevStartedRef.current) {
-      // Game just started -> New Round
-      setRoundNum(prev => prev + 1);
-
-      const base = {};
-      (game?.players || []).forEach((p) => {
-        base[p.id] = typeof p.score === "number" ? p.score : 0;
-      });
-      setRoundBaseScores(base);
+    if (game?.closeCalled) {
+      const playersArr = game.players || [];
+      const closer = playersArr[game.currentIndex] || playersArr[0];
+      setWinnerName(closer?.name || "Winner");
+      setShowResultOverlay(true);
     }
-    prevStartedRef.current = startedNow;
-  }, [game?.started, game?.players]);
-
-  useEffect(() => {
-    if (!game?.closeCalled) return;
-    const playersArr = game.players || [];
-    const currentIndex = game.currentIndex ?? 0;
-    const closer = playersArr[currentIndex] || playersArr[0];
-    setWinnerName(closer?.name || "Winner");
-    setShowResultOverlay(true);
   }, [game?.closeCalled]);
 
-  // Visibility
+  // Timer logic
   useEffect(() => {
-    let reconnectTimeout;
-    const handleVisibilityChange = () => {
-      if (!document.hidden && socket && screen !== "welcome") {
-        let roomIdToUse = game?.roomId || localStorage.getItem("cmp_room_id");
-        let nameToUse = playerName || localStorage.getItem("cmp_player_name");
-        
-        if (roomIdToUse && nameToUse) {
-          reconnectTimeout = setTimeout(() => {
-            socket.emit("rejoin_room", { roomId: roomIdToUse, name: nameToUse, playerId });
-          }, 1000);
-        }
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      if (reconnectTimeout) clearTimeout(reconnectTimeout);
-    };
-  }, [socket, game?.roomId, playerName, screen, playerId]);
-
-  // Timer
-  useEffect(() => {
-    const startedNow = !!game?.started;
-    const playersArr = game?.players || [];
-    const currentIndex = game?.currentIndex ?? 0;
-    const currentPlayer = playersArr[currentIndex];
-    const isMyTurn = startedNow && currentPlayer && currentPlayer.id === game?.youId;
-
-    setTurnTimeLeft(20);
-    if (turnTimerRef.current) clearInterval(turnTimerRef.current);
-
-    if (startedNow && currentPlayer) {
+    if (game?.started) {
+      setTurnTimeLeft(20);
+      if (turnTimerRef.current) clearInterval(turnTimerRef.current);
       turnTimerRef.current = setInterval(() => {
-        setTurnTimeLeft((prev) => {
-          if (prev <= 1) {
-            clearInterval(turnTimerRef.current);
-            turnTimerRef.current = null;
-            return 0;
-          }
-          return prev - 1;
-        });
+        setTurnTimeLeft((prev) => (prev <= 1 ? 0 : prev - 1));
       }, 1000);
     }
     return () => { if (turnTimerRef.current) clearInterval(turnTimerRef.current); };
   }, [game?.started, game?.currentIndex, game?.turnId]);
 
-  // Vibration
-  useEffect(() => {
-    if (!game?.started) return;
-    const playersArr = game?.players || [];
-    const currentIndex = game?.currentIndex ?? 0;
-    const currentPlayer = playersArr[currentIndex];
-    const isMyTurn = currentPlayer && currentPlayer.id === game?.youId;
-
-    if (isMyTurn && game?.turnId && typeof navigator !== "undefined" && navigator.vibrate) {
-      navigator.vibrate([300, 100, 300]);
-    }
-  }, [game?.turnId, game?.currentIndex]);
-
-  const roomId = game?.roomId;
-  const youId = game?.youId;
-  const players = game?.players || [];
-  const discardTop = game?.discardTop;
-  const currentIndex = game?.currentIndex ?? 0;
-  const started = game?.started;
-  const pendingDraw = game?.pendingDraw || 0;
-  const pendingSkips = game?.pendingSkips || 0;
-  const currentPlayer = players[currentIndex];
-  const myTurn = started && currentPlayer?.id === youId;
-  const me = players.find((p) => p.id === youId);
-  const hasDrawn = me?.hasDrawn || false;
-
-  const selectedCards = me ? me.hand.filter((c) => selectedIds.includes(c.id)) : [];
-  const selectedRanks = [...new Set(selectedCards.map((c) => c.rank))];
-  const selectedSingleRank = selectedRanks.length === 1 ? selectedRanks[0] : null;
-  const openCardRank = discardTop?.rank;
-
-  let canDropWithoutDraw = false;
-  if (!hasDrawn && selectedCards.length > 0 && selectedSingleRank) {
-    const sameAsOpen = openCardRank && selectedSingleRank === openCardRank;
-    if (sameAsOpen || selectedCards.length >= 3) {
-      canDropWithoutDraw = true;
-    }
-  }
-  const allowDrop = selectedCards.length > 0 && (hasDrawn || canDropWithoutDraw);
-  const closeDisabled = !myTurn || hasDrawn || discardTop?.rank === "7";
+  const me = game?.players.find((p) => p.id === game?.youId);
+  const myTurn = game?.started && game?.players[game?.currentIndex]?.id === game?.youId;
 
   // ACTIONS
   const createRoom = () => {
-    if (!socket || !playerName.trim() || !selectedFace) {
-      alert("Name and face select cheyali");
-      return;
-    }
+    if (!playerName.trim()) return alert("Name enter cheyali");
     setLoading(true);
-    socket.emit("create_room", { name: playerName.trim(), playerId, face: selectedFace }, (res) => {
+    socket.emit("create_room", { name: playerName.trim(), playerId }, (res) => {
       setLoading(false);
-      if (!res || res.error) alert(res?.error || "Create failed");
-      else setRoundNum(1); // Reset round on create
+      if (res?.error) alert(res.error); else setRoundNum(0);
     });
   };
 
   const joinRoom = () => {
-    if (!socket || !playerName.trim() || !joinCode.trim() || !selectedFace) {
-      alert("Name, Room ID and face select cheyali");
-      return;
-    }
-    if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(50);
+    if (!playerName.trim() || !joinCode.trim()) return alert("Name mariyu Room ID kavali");
     setLoading(true);
-    socket.emit("join_room", { name: playerName.trim(), roomId: joinCode.toUpperCase().trim(), playerId, face: selectedFace }, (res) => {
+    socket.emit("join_room", { name: playerName.trim(), roomId: joinCode.toUpperCase().trim(), playerId }, (res) => {
       setLoading(false);
-      if (res?.error) alert(res.error);
-      else setRoundNum(1); // Reset round on join
+      if (res?.error) alert(res.error); else setRoundNum(0);
     });
   };
 
-  const startRound = () => {
-    if (!socket || !roomId || !isHost || players.length < 2) {
-      alert("Minimum 2 players (host only)");
-      return;
-    }
-    socket.emit("start_round", { roomId });
-  };
-  
-  // 🔥 NEW: RESTART GAME (Reset Scores)
-  const restartGame = () => {
-    if (!socket || !roomId || !isHost) return;
-    if (confirm("Scores anni 0 chesi game restart cheyala?")) {
-        // Since server logic might not exist, we try to simulate or re-create room logic
-        // IDEALLY: socket.emit("reset_game", { roomId });
-        // WORKAROUND: Just start round. If you updated server, it handles it.
-        // For now, we rely on the Client UI showing "Game Over" and manually handling it if server doesn't support 'reset'
-        socket.emit("start_round", { roomId }); 
-        setRoundNum(1); // Client side reset
-    }
-  }
-
-  const drawCard = (fromDiscard = false) => {
-    if (!socket || !roomId || !myTurn) return;
-    socket.emit("action_draw", { roomId, fromDiscard });
-  };
-
-  const dropCards = () => {
-    if (!socket || !roomId || !myTurn || !allowDrop) {
-      alert("Valid cards select cheyali");
-      return;
-    }
-    socket.emit("action_drop", { roomId, selectedIds });
-  };
-
+  const startRound = () => socket.emit("start_round", { roomId: game.roomId });
+  const drawCard = (fromDiscard = false) => socket.emit("action_draw", { roomId: game.roomId, fromDiscard });
+  const dropCards = () => socket.emit("action_drop", { roomId: game.roomId, selectedIds });
   const callClose = () => {
-    if (!socket || !roomId || !myTurn) return;
-    if (!window.confirm("CLOSE cheyala?")) return;
-    socket.emit("action_close", { roomId });
-  };
-
-  const toggleSelect = (id) => {
-    setSelectedIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
-  };
-
-  const exitGame = () => {
-    if (window.confirm("Game exit cheyala?")) {
-      try { localStorage.removeItem("cmp_room_id"); } catch {}
-      socket?.disconnect();
-      setScreen("welcome");
-      setJoinCode("");
-      setGame(null);
-      setSelectedIds([]);
-      setIsHost(false);
-      setShowPoints(false);
-      setShowResultOverlay(false);
-      setLoading(false);
-      setSelectedFace("");
-      setRoundNum(1);
-    }
-  };
-
-  // 🔥 UPDATED LOGIC: CHECK 500 POINTS
-  const handleContinue = () => {
-    // Check if any player has >= 500
-    const highestScore = Math.max(...players.map(p => p.score || 0));
-    
-    if (highestScore >= 500) {
-        if (isHost) {
-             // If host, trigger restart
-             if (confirm("Game Over! 500 Points Reached. Restarting Game...")) {
-                 socket.emit("start_round", { roomId }); // Usually resets hand, scores keep adding in current server code. 
-                 // NOTE: For true score reset, server needs 'reset_game' event. 
-                 setRoundNum(1);
-             }
-        } else {
-             alert("Game Over! Waiting for host to restart...");
-        }
-    } 
-    setShowResultOverlay(false);
-    setScreen("lobby");
-  };
-
-  const handleKickPlayer = (playerIdToKick) => {
-    if (!socket || !roomId || !isHost) return;
-    if (!window.confirm("Ee player ni remove cheyala?")) return;
-    socket.emit("kick_player", { roomId, targetId: playerIdToKick });
-  };
-
-  const handleGifClick = (pid) => {
-    setShowGifPickerFor(pid);
+    if (window.confirm("CLOSE cheyala?")) socket.emit("action_close", { roomId: game.roomId });
   };
 
   const cycleTheme = () => {
     const currentIndex = BG_THEMES.findIndex((t) => t.id === bgTheme.id);
-    const nextIndex = currentIndex === -1 || currentIndex === BG_THEMES.length - 1 ? 0 : currentIndex + 1;
-    const nextTheme = BG_THEMES[nextIndex];
-    setBgTheme(nextTheme);
-    localStorage.setItem("cmp_bg_theme", nextTheme.id);
+    setBgTheme(BG_THEMES[(currentIndex + 1) % BG_THEMES.length]);
   };
 
-  const handleSelectGif = (gifId) => {
-    if (!socket || !roomId || !showGifPickerFor) return;
-    socket.emit("send_gif", { roomId, targetId: showGifPickerFor, gifId });
-    setShowGifPickerFor(null);
-  };
-
-  // RESULT OVERLAY
+  // Result Overlay (Round Points Only)
   const ResultOverlay = () => {
-    if (!showResultOverlay || !game?.closeCalled) return null;
-    
-    // 🔥 Check for Game Over (500 Points)
-    const maxScore = Math.max(...players.map(p => p.score || 0));
-    const isGameOver = maxScore >= 500;
-
+    if (!showResultOverlay) return null;
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
-        <div className="absolute inset-0 pointer-events-none">
-          {Array.from({ length: 20 }).map((_, i) => {
-            const color = randomColor();
-            const size = 4 + Math.random() * 4;
-            return (
-              <div key={i} className="absolute rounded-full firework-burst"
-                style={{
-                  width: `${size}rem`, height: `${size}rem`,
-                  left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%`,
-                  boxShadow: `0 0 ${size * 5}px 10px ${color.replace('1)', '0.99)')}`,
-                  background: `radial-gradient(circle, ${color} 0%, rgba(0,0,0,0) 70%)`,
-                  animationDelay: `${Math.random() * 0.9}s`,
-                }}
-              />
-            );
-          })}
-        </div>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
+        <div className="bg-gray-900 border border-amber-400 p-6 rounded-3xl max-w-sm w-full shadow-[0_0_20px_rgba(251,191,36,0.5)]">
+          <h2 className="text-amber-400 text-center font-black text-2xl mb-4">ROUND OVER</h2>
+          <p className="text-white text-center text-lg mb-4 font-bold">{winnerName} Won the Round! 🎉</p>
+          
+          <div className="space-y-2 mb-6">
+            <p className="text-xs text-gray-400 uppercase font-bold text-center">Points added this round</p>
+            {game?.players.map((p) => {
+              const roundPoints = (p.score || 0) - (roundBaseScores[p.id] || 0);
+              return (
+                <div key={p.id} className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/10">
+                  <span className="font-bold">{p.name}</span>
+                  <span className="font-black text-red-400">+{roundPoints < 0 ? 0 : roundPoints}</span>
+                </div>
+              );
+            })}
+          </div>
 
-        <div className="relative px-8 py-6 md:px-10 md:py-8 bg-black/90 rounded-3xl border border-amber-400 shadow-[0_0_20px_rgba(251,191,36,1)] max-w-md w-[90%]">
-          <p className="text-xs md:text-sm font-semibold tracking-[0.3em] text-amber-300 text-center mb-2">
-            {isGameOver ? "GAME OVER" : "ROUND WINNER"}
-          </p>
-          <p className="text-2xl md:text-3xl font-black text-amber-400 text-center mb-1 capitalize">
-            {isGameOver ? "Limit Reached!" : winnerName}
-          </p>
-          <div className="flex justify-center mb-3">
-            <img src="/gifs/chimpanzee.gif" alt="Winner" className="w-32 h-32 md:w-40 md:h-40 rounded-2xl shadow-xl object-cover" />
-          </div>
-          <p className="text-sm md:text-base text-amber-100 text-center mb-4">
-             {isGameOver ? "Someone crossed 500 pts!" : "CLOSE SUCCESS 🎉"}
-          </p>
-          <div className="bg-white/5 rounded-2xl p-3 md:p-4 mb-4">
-            <p className="text-xs md:text-sm text-amber-200 font-semibold mb-2 text-center">TOTAL SCORES</p>
-            {players.map((p) => (
-              <div key={p.id} className={`flex justify-between items-center px-3 py-2 rounded-xl mb-1 text-sm md:text-base ${p.score >= 500 ? "bg-red-500/90 text-white animate-pulse" : p.name === winnerName ? "bg-emerald-500/90 text-white" : "bg-gray-900/70 text-gray-100"}`}>
-                <span className="font-semibold truncate flex items-center gap-2">
-                  {p.face && <img src={p.face} className="w-6 h-6 rounded-full" alt="" />}
-                  {p.name}
-                </span>
-                <span className="font-black text-lg md:text-xl">{p.score}</span>
-              </div>
-            ))}
-          </div>
-          <button onClick={handleContinue} className={`w-full py-3 md:py-4 border-2 rounded-2xl font-black text-base md:text-lg transition-all hover:scale-[1.01] ${isGameOver ? "bg-red-600 border-red-400 text-white shadow-[0_0_20px_rgba(239,68,68,0.8)]" : "bg-black/70 border-amber-400 text-amber-200 shadow-[0_0_20px_rgba(251,191,36,0.8)]"}`}>
-            {isGameOver ? "RESET GAME (Host Only)" : "CONTINUE"}
-          </button>
+          <button onClick={() => { setShowResultOverlay(false); setScreen("lobby"); }} className="w-full py-4 bg-amber-500 text-black font-black rounded-2xl hover:bg-amber-400 transition-all">CONTINUE</button>
         </div>
       </div>
     );
@@ -494,255 +205,105 @@ export default function CloseMasterGame() {
 
   // WELCOME SCREEN
   if (screen === "welcome") {
-    const canCreate = !!playerName.trim() && !!selectedFace && !loading;
-    const canJoin = !!playerName.trim() && !!joinCode.trim() && !!selectedFace && !loading;
     return (
-      <div className="fixed inset-0 w-full h-screen text-white overflow-hidden flex flex-col">
-        <video className="fixed top-0 left-0 w-screen h-screen object-cover -z-10" src="/gifs/15.mp4" autoPlay muted loop playsInline />
-        <div className="relative flex items-center justify-center px-4 pt-10">
-          <div className="bg-black/80 backdrop-blur-2xl p-8 rounded-3xl w-full max-w-md border border-white/20 shadow-2xl">
-            <div className="text-center mb-8">
-              <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-emerald-400 via-blue-400 to-purple-500 bg-clip-text text-transparent drop-shadow-2xl">CLOSE MASTER</h1>
-            </div>
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-200 mb-3">Name</label>
-                <input type="text" className="w-full p-4 bg-gray-900/80 border-2 border-gray-200 rounded-2xl text-lg font-semibold text-white placeholder-gray-500 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/30 transition-all" value={playerName} onChange={(e) => setPlayerName(e.target.value)} maxLength={15} />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-200 mb-3">Choose Avatar</label>
-                <div className="grid grid-cols-4 gap-3 mb-1">
-                  {FACE_LIST.map((f) => (
-                    <img key={f} src={f} onClick={() => setSelectedFace(f)} className={`w-14 h-14 rounded-full cursor-pointer border-2 transition-transform ${selectedFace === f ? "border-emerald-400 scale-110" : "border-transparent opacity-70 hover:opacity-100"}`} alt="" />
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-200 mb-3">Room ID</label>
-                <input type="text" className="w-full p-4 bg-gray-900/80 border-2 border-gray-200 rounded-2xl text-lg font-semibold text-white placeholder-gray-500 uppercase focus:border-sky-400 focus:ring-4 focus:ring-sky-500/30 transition-all" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} maxLength={4} />
-              </div>
-              <button onClick={createRoom} disabled={!canCreate} className={`w-full py-4 rounded-2xl text-xl font-black shadow-2xl transition-all border-2 border-transparent ${canCreate ? "bg-black/70 border-2 border-emerald-400 text-emerald-200 shadow-[0_0_20px_rgba(52,211,167,0.8)]" : "bg-gray-800/50 border-2 border-gray-200 cursor-not-allowed opacity-50"}`}>{loading ? "Creating..." : "CREATE ROOM"}</button>
-              <button onClick={joinRoom} disabled={!canJoin} className={`w-full py-4 rounded-2xl text-xl font-black shadow-2xl transition-all border-2 border-transparent ${canJoin ? "bg-black/70 border-2 border-sky-400 text-sky-200 shadow-[0_0_20px_rgba(56,189,248,0.8)]" : "bg-gray-800/50 border-2 border-gray-200 cursor-not-allowed opacity-50"}`}>{loading ? "Joining..." : "JOIN ROOM"}</button>
-            </div>
+      <div className="fixed inset-0 w-full h-screen text-white overflow-hidden flex flex-col items-center justify-center px-4">
+        <video className="fixed inset-0 w-full h-full object-cover -z-10 opacity-60" src="/gifs/15.mp4" autoPlay muted loop playsInline />
+        <div className="bg-black/80 backdrop-blur-xl p-8 rounded-3xl w-full max-w-md border border-white/20 shadow-2xl">
+          <h1 className="text-4xl font-black text-center mb-8 bg-gradient-to-r from-emerald-400 to-sky-400 bg-clip-text text-transparent">CLOSE MASTER</h1>
+          <div className="space-y-5">
+            <input type="text" className="w-full p-4 bg-gray-900/80 border border-gray-700 rounded-2xl text-white font-bold" placeholder="Enter Name" value={playerName} onChange={(e) => setPlayerName(e.target.value)} maxLength={15} />
+            <input type="text" className="w-full p-4 bg-gray-900/80 border border-gray-700 rounded-2xl text-white font-bold uppercase" placeholder="Room ID (for joining)" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} maxLength={4} />
+            <button onClick={createRoom} disabled={loading} className="w-full py-4 bg-emerald-600 rounded-2xl font-black text-xl hover:bg-emerald-500 shadow-lg shadow-emerald-900/20">{loading ? "Loading..." : "CREATE ROOM"}</button>
+            <button onClick={joinRoom} disabled={loading} className="w-full py-4 bg-sky-600 rounded-2xl font-black text-xl hover:bg-sky-500 shadow-lg shadow-sky-900/20">{loading ? "Loading..." : "JOIN ROOM"}</button>
           </div>
         </div>
       </div>
     );
   }
 
-  // LOBBY SCREEN
-  if (screen === "lobby") {
-    const meLobby = players.find((p) => p.id === youId);
-    return (
-      <div className="min-h-screen text-white relative overflow-hidden">
-        <video className="fixed top-0 left-0 w-screen h-screen object-cover -z-10" src="/gifs/15.mp4" autoPlay muted loop playsInline />
-        <ResultOverlay />
-        <div className="relative p-4 md:p-6 flex flex-col items-center gap-4 md:gap-6">
-          <div className="z-10 w-full max-w-5xl text-center p-4 md:p-6 bg-black/60 backdrop-blur-xl rounded-3xl border border-emerald-500/50 shadow-2xl">
-            <h1 className="mb-3 md:mb-4 text-2xl md:text-4xl font-black bg-gradient-to-r from-emerald-400 to-emerald-200 bg-clip-text text-transparent">Room: {roomId?.toUpperCase()}</h1>
-            <div className="flex flex-col items-center mb-4 md:mb-6">
-              <div className="flex items-center gap-3 mb-2">
-                {meLobby?.face && <img src={meLobby.face} className="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-emerald-400" alt="" />}
-                <p className="text-lg md:text-xl">You: <span className="font-bold text-white px-3 py-1 bg-emerald-500/30 rounded-full">{meLobby?.name}</span></p>
-              </div>
-              {isHost && <span className="px-3 md:px-4 py-1 md:py-2 bg-yellow-500/90 text-black font-bold rounded-full text-sm md:text-lg animate-pulse">HOST</span>}
-            </div>
-            <div className="flex flex-wrap gap-2 md:gap-4 justify-center">
-              {isHost && (
-                <button onClick={startRound} disabled={players.length < 2} className={`px-4 md:px-8 py-3 md:py-4 rounded-3xl text-base md:text-xl font-black shadow-2xl transition-all border-2 border-transparent ${players.length < 2 ? "bg-gray-700/50 border-2 border-gray-200 cursor-not-allowed opacity-20" : "bg-black/70 border-2 border-emerald-400 text-emerald-200 shadow-[0_0_20px_rgba(52,211,167,0.8)] hover:shadow-[0_0_30px_rgba(52,211,167,1)]"}`}>
-                  {players.length < 2 ? `WAIT (${players.length}/2)` : "START GAME"}
-                </button>
-              )}
-              <button onClick={() => setShowPoints(true)} className="px-4 md:px-8 py-3 md:py-4 bg-black/70 border-2 border-amber-400 text-amber-200 shadow-[0_0_20px_rgba(251,191,36,0.8)] rounded-3xl font-black text-base md:text-xl">SCORES ({players.length})</button>
-              <button onClick={exitGame} className="px-4 md:px-8 py-3 md:py-4 bg-black/70 border-2 border-gray-600 hover:border-gray-400 rounded-3xl font-bold text-base md:text-xl text-gray-300 shadow-lg">EXIT</button>
-            </div>
-            <div className="mt-3 md:mt-4 text-sm md:text-lg">Players: <span className="text-emerald-400 font-bold">{players.length}/{MAX_PLAYERS}</span></div>
-          </div>
-          <div className="z-10 w-full max-w-5xl grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
-            {players.map((p) => (
-              <div key={p.id} className={`relative p-2 md:p-3 rounded-2xl border-2 shadow-lg ${p.id === youId ? "border-emerald-400 bg-black/70" : "border-gray-700 bg-black/60"}`}>
-                {/* ✅ HOST KICK BUTTON (Only in Lobby) */}
-                {isHost && p.id !== youId && (
-                  <button onClick={() => handleKickPlayer(p.id)} className="absolute top-1 right-1 px-2 py-1 text-xs bg-red-600 text-white rounded-full hover:bg-red-700 z-50">❌</button>
-                )}
-                <div className="flex items-center justify-center gap-2 mb-1">
-                  {p.face && <img src={p.face} className="w-7 h-7 md:w-8 md:h-8 rounded-full" alt="" />}
-                  <p className="font-bold text-center text-sm md:text-base truncate">{p.name}</p>
-                </div>
-                <p className="text-xs md:text-sm text-gray-300 text-center">{p.score} pts</p>
-              </div>
-            ))}
-          </div>
-          {showPoints && (
-            <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
-              <div className="bg-white/95 text-black rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl">
-                <h3 className="text-2xl md:text-3xl font-black text-center mb-4 md:mb-6 text-gray-900">SCORES</h3>
-                {players.map((p, i) => (
-                  <div key={p.id} className={`flex justify-between p-3 md:p-4 rounded-2xl mb-2 md:mb-3 ${i === 0 ? "bg-emerald-500 text-white" : "bg-gray-100 text-black"}`}>
-                    <span className="font-bold truncate flex items-center gap-2 text-sm md:text-base">
-                      {p.face && <img src={p.face} className="w-6 h-6 rounded-full" alt="" />} {p.name}
-                    </span>
-                    <span className="font-black text-xl md:text-2xl px-3 md:px-4 py-1 md:py-2 rounded-xl">{p.score}</span>
-                  </div>
-                ))}
-                <button onClick={() => setShowPoints(false)} className="w-full py-3 md:py-4 bg-gray-900 text-white rounded-2xl text-lg md:text-xl font-bold mt-4 md:mt-6 hover:bg-gray-800">CONTINUE</button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // GAME SCREEN
+  // LOBBY & GAME RENDER
   return (
-    <div className="min-h-screen text-white relative overflow-hidden">
-      <video className="fixed top-0 left-0 w-screen h-screen object-cover -z-10" src={bgTheme.file} autoPlay muted loop playsInline />
+    <div className="min-h-screen text-white relative flex flex-col items-center p-4">
+      <video className="fixed inset-0 w-full h-full object-cover -z-10" src={bgTheme.file} autoPlay muted loop playsInline />
       <ResultOverlay />
-      <div className="relative p-4 md:p-6 flex flex-col items-center gap-4 md:gap-6">
-        <div className="z-10 mt-2 mb-1 text-center">
-          <h1 className="text-2xl md:text-3xl font-black tracking-wide bg-gradient-to-r from-emerald-400 via-blue-400 to-purple-500 bg-clip-text text-transparent drop-shadow-2xl">CLOSE MASTER</h1>
+
+      {/* Header Info */}
+      <div className="w-full max-w-4xl flex justify-between items-center bg-black/60 backdrop-blur-md p-3 rounded-2xl border border-white/10 mb-4 z-10">
+        <div>
+          <p className="text-[10px] text-gray-400 font-bold">ROOM: {game?.roomId}</p>
+          <p className="text-emerald-400 font-black">Round {roundNum}</p>
         </div>
+        <div className="flex gap-2">
+          <button onClick={cycleTheme} className="px-3 py-1 bg-white/10 border border-white/20 rounded-lg text-xs font-bold uppercase">🎨 Theme</button>
+          <button onClick={() => window.location.reload()} className="px-3 py-1 bg-red-600/20 border border-red-500/50 rounded-lg text-xs font-bold uppercase text-red-200">Exit</button>
+        </div>
+      </div>
 
-        {started && (
-          <div className="z-10 w-full max-w-4xl p-2 md:p-3 bg-black/70 rounded-2xl border border-gray-700 flex justify-between items-center shadow-xl">
-            <div className="flex items-center gap-2 text-sm md:text-base">
-              {currentPlayer?.face && <img src={currentPlayer.face} className="w-8 h-8 rounded-full border border-yellow-400/30" alt="" />}
-              <div className="flex flex-col md:flex-row md:items-center md:gap-2">
-                <span className="text-[10px] md:text-xs text-gray-400 font-bold uppercase">Turn:</span>
-                <span className="text-base md:text-xl font-black text-yellow-400 leading-tight">{currentPlayer?.name || "Player"}</span>
-              </div>
-              {game?.youId === currentPlayer?.id && <span className={`ml-1 md:ml-3 px-2 py-0.5 rounded-full text-[10px] md:text-xs font-bold ${game?.hasDrawn ? "bg-emerald-500/30 text-emerald-200" : "bg-yellow-500/30 text-yellow-200"}`}>{game?.hasDrawn ? "Drew" : "Your Turn"}</span>}
+      {/* Players List */}
+      <div className="w-full max-w-4xl grid grid-cols-2 md:grid-cols-4 gap-2 mb-4 z-10">
+        {game?.players.map((p) => (
+          <div key={p.id} className={`p-2 rounded-xl border-2 flex flex-col items-center justify-center transition-all ${game?.players[game.currentIndex]?.id === p.id ? 'border-yellow-400 bg-yellow-400/10 shadow-[0_0_10px_rgba(250,204,21,0.5)] scale-105' : 'border-white/10 bg-black/40'}`}>
+            <p className="font-bold text-sm truncate max-w-full">{p.name} {p.id === game?.youId && "(You)"}</p>
+            <div className="flex gap-2 text-[10px] mt-1">
+              <span className="text-gray-400">{p.handSize} Cards</span>
+              <span className="text-amber-400 font-bold">{p.score} Pts</span>
             </div>
-            <div className="flex items-center gap-2">
-              <button onClick={cycleTheme} className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/10 border border-purple-400/60 rounded-xl text-[10px] md:text-xs font-black text-purple-200 active:scale-95 transition-transform"><span>🎨</span><span className="hidden sm:inline uppercase">Theme</span></button>
-              <button onClick={() => window.location.reload()} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600/20 border border-red-500/60 rounded-xl text-[10px] md:text-xs font-black text-red-200 active:scale-95 transition-transform"><span>🚪</span><span className="uppercase text-[10px]">Exit</span></button>
-            </div>
+            {game?.players[game.currentIndex]?.id === p.id && <div className="text-[10px] font-black text-yellow-400 mt-1 animate-pulse">TURN ({turnTimeLeft}s)</div>}
           </div>
-        )}
+        ))}
+      </div>
 
-        {started && (
-          <div className="z-10 text-center shrink-0 mb-1 mt-2">
-            {/* 🔥 UPDATED: ROUND INDICATOR BOX */}
-            <div className="mb-1">
-                <span className="px-3 py-1 bg-yellow-500/20 border border-yellow-500/50 rounded-full text-[10px] md:text-xs font-black text-yellow-200 uppercase tracking-widest shadow-[0_0_10px_rgba(234,179,8,0.3)]">
-                    Round {roundNum}
-                </span>
-            </div>
-            
-            <p className="text-[10px] mb-1 font-bold text-gray-400 uppercase tracking-tighter">Open Card</p>
-            {discardTop ? (
-              <button onClick={() => drawCard(true)} disabled={!myTurn || hasDrawn} className={["relative w-16 h-24 rounded-xl border-2 border-fuchsia-500/60 bg-black/80 shadow-[0_0_15px_rgba(236,72,153,0.5)] flex flex-col justify-between p-1.5 transition-all", myTurn && !hasDrawn ? "animate-neon-pulse scale-105 cursor-pointer" : "opacity-60 cursor-not-allowed"].join(" ")}>
-                <div className="pointer-events-none absolute inset-0 rounded-xl border border-white/20 shadow-[0_0_10px_rgba(248,250,252,0.3)]" />
-                <div className="relative text-[10px] font-black leading-none uppercase"><span className={cardTextColor(discardTop)}>{discardTop.rank === "JOKER" ? "JKR" : discardTop.rank}</span></div>
-                <div className="relative text-xl text-center leading-none"><span className={cardTextColor(discardTop)}>{discardTop.suit}</span></div>
-                <div className="relative text-[10px] font-black text-right leading-none uppercase"><span className={cardTextColor(discardTop)}>{discardTop.rank === "JOKER" ? "JKR" : discardTop.rank}</span></div>
-              </button>
+      {screen === "lobby" ? (
+        <div className="flex flex-col items-center justify-center flex-1 z-10">
+          <div className="bg-black/60 p-10 rounded-3xl border border-white/10 text-center backdrop-blur-md">
+            <h2 className="text-2xl font-black mb-6">Lobby</h2>
+            {isHost ? (
+              <button onClick={startRound} className="px-10 py-4 bg-emerald-600 text-white font-black text-xl rounded-2xl animate-bounce">START GAME</button>
             ) : (
-              <div className="w-16 h-24 bg-black/50 border border-white/10 rounded-xl flex items-center justify-center text-gray-500 text-[10px]">Empty</div>
+              <p className="text-gray-300 animate-pulse">Waiting for host to start...</p>
+            )}
+            <p className="mt-4 text-xs text-gray-400">{game?.players.length} Players joined</p>
+          </div>
+        </div>
+      ) : (
+        <div className="w-full max-w-4xl flex flex-col items-center flex-1 z-10">
+          {/* Open Card */}
+          <div className="mb-6 text-center">
+             <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Discard Pile</p>
+             <div onClick={() => drawCard(true)} className={`w-20 h-28 rounded-xl border-2 flex flex-col justify-between p-2 bg-black/80 transition-all ${myTurn && !me?.hasDrawn ? 'border-yellow-400 scale-110 cursor-pointer shadow-[0_0_20px_rgba(250,204,21,0.8)]' : 'border-white/20'}`}>
+                <span className={`text-xs font-bold ${cardTextColor(game?.discardTop)}`}>{game?.discardTop?.rank}</span>
+                <span className={`text-3xl text-center ${cardTextColor(game?.discardTop)}`}>{game?.discardTop?.suit}</span>
+                <span className={`text-xs font-bold text-right ${cardTextColor(game?.discardTop)}`}>{game?.discardTop?.rank}</span>
+             </div>
+          </div>
+
+          {/* Your Hand */}
+          <div className="mt-auto w-full">
+            <div className="flex flex-wrap justify-center gap-2 p-4 bg-black/40 rounded-3xl border border-white/10 mb-6">
+              {me?.hand.map((c) => (
+                <div 
+                  key={c.id} 
+                  onClick={() => setSelectedIds(prev => prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id])}
+                  className={`relative w-14 h-20 md:w-16 md:h-24 rounded-xl border-2 flex flex-col justify-between p-2 bg-black transition-all cursor-pointer ${selectedIds.includes(c.id) ? 'border-pink-500 -translate-y-4 shadow-[0_0_15px_rgba(236,72,153,0.8)]' : 'border-white/20'}`}
+                >
+                  <span className={`text-xs font-bold ${cardTextColor(c)}`}>{c.rank}</span>
+                  <span className={`text-2xl text-center ${cardTextColor(c)}`}>{c.suit}</span>
+                  <span className={`text-xs font-bold text-right ${cardTextColor(c)}`}>{c.rank}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Game Buttons */}
+            {myTurn && (
+              <div className="grid grid-cols-3 gap-3 w-full mb-4">
+                <button onClick={() => drawCard(false)} disabled={me?.hasDrawn} className={`py-4 rounded-2xl font-black text-lg border-2 ${me?.hasDrawn ? 'bg-gray-800 border-gray-700 opacity-50' : 'bg-sky-600 border-sky-400 shadow-[0_0_15px_rgba(2,132,199,0.5)]'}`}>DRAW</button>
+                <button onClick={dropCards} disabled={selectedIds.length === 0} className={`py-4 rounded-2xl font-black text-lg border-2 ${selectedIds.length === 0 ? 'bg-gray-800 border-gray-700 opacity-50' : 'bg-emerald-600 border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.5)]'}`}>DROP ({selectedIds.length})</button>
+                <button onClick={callClose} disabled={me?.hasDrawn || game?.discardTop?.rank === "7"} className={`py-4 rounded-2xl font-black text-lg border-2 ${me?.hasDrawn || game?.discardTop?.rank === "7" ? 'bg-gray-800 border-gray-700 opacity-50' : 'bg-pink-600 border-pink-400 shadow-[0_0_15px_rgba(219,39,119,0.5)]'}`}>CLOSE</button>
+              </div>
             )}
           </div>
-        )}
-
-        {started && (
-          <div className="z-10 w-full grid grid-cols-2 gap-3 px-3 shrink-0">
-            {players.map((p) => {
-              const isYou = p.id === youId;
-              const isTurn = currentPlayer?.id === p.id;
-              const activeGifId = activeReactions[p.id];
-              const activeGif = GIF_LIST.find((g) => g.id === activeGifId);
-              const isTimerCard = isTurn;
-              const playerClasses = ["relative p-2.5 rounded-2xl border-2 shadow-xl transition-all duration-300 min-h-[80px] flex flex-col justify-center"];
-              if (isTurn) {
-                playerClasses.push(isYou ? "border-fuchsia-400 bg-black/80 shadow-[0_0_20px_rgba(236,72,153,1)] scale-105 z-20" : "border-yellow-400 bg-black/80 shadow-[0_0_20px_rgba(250,204,21,1)] animate-pulse-turn scale-105 z-20");
-              } else if (isYou) {
-                playerClasses.push("border-emerald-400 bg-black/70 shadow-[0_0_12px_rgba(52,211,167,0.7)]");
-              } else {
-                playerClasses.push("border-gray-700 bg-black/60");
-              }
-
-              return (
-                <div key={p.id} className={playerClasses.join(" ")}>
-                  {/* ✅ KICK BUTTON REMOVED FROM HERE */}
-                  <div className="absolute top-1.5 left-2 right-2 flex items-center justify-between">
-                    <button type="button" onClick={() => handleGifClick(p.id)} className="text-[10px] px-2 py-0.5 rounded-full bg-black/40 border border-white/40 flex items-center gap-1 hover:bg-black/70"><span>🎭</span></button>
-                    {isTurn && (<div className="flex gap-1.5 text-[10px] text-yellow-300 font-bold bg-black/40 px-1 rounded"><span>D:{pendingDraw || 1}</span><span>S:{pendingSkips}</span></div>)}
-                    {isTimerCard && started && (<div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-[10px] font-black ${isTurn ? "border-red-400 text-red-200 shadow-[0_0_10px_rgba(248,113,113,1)] animate-ping-slow" : "border-gray-300 text-gray-200"}`}>{turnTimeLeft}</div>)}
-                  </div>
-                  {activeGif && (<div className="absolute -top-6 left-1/2 -translate-x-1/2 w-11 h-11 rounded-full overflow-hidden border-2 border-white shadow-lg bg-black/70 z-30"><img src={activeGif.file} alt={activeGif.name} className="w-full h-full object-cover" /></div>)}
-                  <div className="mt-4 flex flex-col items-center">
-                    <div className="flex items-center gap-2 mb-1">
-                      {p.face && <img src={p.face} className="w-7 h-7 rounded-full border border-white/20" alt="" />}
-                      <p className="font-bold text-center text-sm truncate max-w-[85px] text-white">{p.name}</p>
-                    </div>
-                    <div className="flex items-center gap-2 text-[10px] font-medium">
-                      <span className="text-gray-300">{p.handSize} Cards</span><span className="text-gray-500">|</span><span className="text-amber-400">{p.score} Pts</span>
-                    </div>
-                    {p.hasDrawn && <span className="mt-1 text-[9px] text-emerald-400 font-bold bg-emerald-900/30 px-1.5 rounded-full border border-emerald-500/20">Drew</span>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {showGifPickerFor && (
-          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/80 backdrop-blur-md">
-            <div className="bg-slate-950/95 border border-white/10 rounded-3xl w-[90%] max-w-sm p-4 md:p-6 shadow-2xl">
-              <p className="text-center text-base md:text-lg font-bold mb-1 text-white">Choose GIF</p>
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                {GIF_LIST.map((gif) => (
-                  <button key={gif.id} type="button" onClick={() => handleSelectGif(gif.id)} className="flex flex-col items-center gap-1 bg-gray-900/80 hover:bg-gray-800 rounded-2xl p-2">
-                    <img src={gif.file} alt={gif.name} className="w-20 h-20 md:w-24 md:h-24 object-cover rounded-xl" />
-                    <span className="text-xs md:text-sm text-gray-100">{gif.name}</span>
-                  </button>
-                ))}
-              </div>
-              <button type="button" onClick={() => setShowGifPickerFor(null)} className="w-full py-2.5 md:py-3 rounded-2xl bg-gray-800 hover:bg-gray-700 text-sm md:text-base font-semibold text-white">Cancel</button>
-            </div>
-          </div>
-        )}
-
-        {me && started && (
-          <div className="z-10 w-full max-w-5xl">
-            <div className="flex gap-2 md:gap-3 flex-wrap justify-center p-3 md:p-4 bg-black/60 rounded-3xl border border-white/10">
-              {me.hand.map((c) => {
-                const selected = selectedIds.includes(c.id);
-                const isOpenRankMatch = myTurn && discardTop && String(c.rank).trim() === String(discardTop.rank).trim();
-                return (
-                  <button key={c.id} onClick={() => toggleSelect(c.id)} disabled={!myTurn} className={["relative w-14 md:w-18 h-20 md:h-24 rounded-2xl bg-black/80 border-2 border-white/20 shadow-[0_0_25px_rgba(236,72,153,0.8)] flex flex-col justify-between p-1.5 md:p-2 transition-transform backdrop-blur-sm", selected ? "scale-115 border-4 shadow-none animate-neon-border-glow z-10" : isOpenRankMatch ? "scale-110 border-4 border-yellow-400 shadow-[0_0_35px_rgba(250,204,21,1)] animate-pulse" : myTurn ? "hover:scale-105 hover:shadow-[0_0_35px_rgba(236,72,153,1)]" : "opacity-60 cursor-not-allowed"].join(" ")}>
-                    {!isOpenRankMatch && !selected && <div className="pointer-events-none absolute inset-0 rounded-3xl border border-white/40 shadow-[0_0_20px_rgba(248,250,252,0.5)]" />}
-                    <div className="relative text-sm md:text-base font-bold uppercase"><span className={cardTextColor(c)}>{c.rank}</span></div>
-                    <div className="relative text-2xl md:text-3xl text-center"><span className={cardTextColor(c)}>{c.rank === "JOKER" ? c.suit : c.suit}</span></div>
-                    <div className="relative text-sm md:text-base font-bold text-right uppercase"><span className={cardTextColor(c)}>{c.rank}</span></div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {myTurn && started && (
-          <div className="z-10 flex flex-wrap gap-2 md:gap-4 justify-center max-w-4xl p-4 md:p-6 bg-black/70 backdrop-blur-xl rounded-3xl border border-white/20">
-            <button onClick={() => drawCard(false)} disabled={hasDrawn} className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl transition-all border-2 border-transparent ${hasDrawn ? "bg-gray-700/50 cursor-not-allowed opacity-50" : "bg-black/70 border-2 border-sky-400 text-sky-200 shadow-[0_0_20px_rgba(56,189,248,0.8)] hover:shadow-[0_0_30px_rgba(56,189,248,1)] hover:scale-[1.03]"}`}>DRAW</button>
-            <button onClick={dropCards} disabled={selectedIds.length === 0} className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl transition-all border-2 border-transparent ${selectedIds.length === 0 ? "bg-gray-700/50 cursor-not-allowed opacity-50 text-gray-400" : "bg-black/70 border-2 border-emerald-500 text-emerald-300 shadow-[0_0_20_rgba(16,185,129,0.8)] hover:shadow-[0_0_30px_rgba(16,185,129,1)] hover:scale-[1.03]"}`}>DROP ({selectedIds.length})</button>
-            <button onClick={callClose} disabled={closeDisabled} className={`px-4 md:px-8 py-3 md:py-4 rounded-2xl font-bold text-base md:text-xl shadow-2xl transition-all border-2 border-transparent ${closeDisabled ? "bg-gray-700/50 cursor-not-allowed opacity-50" : "bg-black/70 border-2 border-pink-500 text-pink-300 shadow-[0_0_20px_rgba(236,72,153,0.8)] hover:shadow-[0_0_30px_rgba(236,72,153,1)] hover:scale-[1.03]"}`}>CLOSE</button>
-          </div>
-        )}
-
-        <style jsx>{`
-          @keyframes firework-burst { 0% { transform: scale(0); opacity: 1; } 15% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1.8); opacity: 0; } }
-          .firework-burst { animation: firework-burst 0.7s ease-out infinite; }
-          @keyframes neon-pulse { 0%, 100% { box-shadow: 0 0 10px rgba(255, 0, 255, 0.4), 0 0 20px rgba(236,72,153,0.4); } 50% { box-shadow: 0 0 30px rgba(255, 0, 255, 1), 0 0 40px rgba(236,72,153,1); } }
-          .animate-neon-pulse { animation: neon-pulse 3s ease-in-out infinite; }
-          @keyframes pulse-turn { 0%, 100% { box-shadow: 0 0 5px currentColor; border-color: currentColor; } 50% { box-shadow: 0 0 20px currentColor; border-color: currentColor; } }
-          .animate-pulse-turn { animation: pulse-turn 1.5s infinite alternate; }
-          @keyframes neon-border-glow { 0% { border-color: #ff00ff; box-shadow: 0 0 15px #ff00ff; transform: scale(1.25); } 33% { border-color: #00ffff; box-shadow: 0 0 15px #00ffff; } 66% { border-color: #00ff00; box-shadow: 0 0 15px #00ff00; } 100% { border-color: #ff00ff; box-shadow: 0 0 15px #ff00ff; transform: scale(1.25); } }
-          .animate-neon-border-glow { animation: neon-border-glow 2.5s linear infinite; }
-          @keyframes ping-slow { 0% { transform: scale(1); opacity: 1; } 75% { transform: scale(1.15); opacity: 0.6; } 100% { transform: scale(1); opacity: 1; } }
-          .animate-ping-slow { animation: ping-slow 1.5s ease-in-out infinite; }
-        `}</style>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
