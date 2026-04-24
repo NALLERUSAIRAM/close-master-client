@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 
+// చివరన స్లాష్ ఉండకుండా చూసుకోండి
 const SERVER_URL = "https://site--close-master-server--t29zpf96vfqv.code.run";
+
 const BG_THEMES = [{ id: "t15", file: "/gifs/15.mp4" }, { id: "t16", file: "/gifs/16.mp4" }];
 
 const getCardStyle = (c) => {
@@ -33,30 +35,37 @@ export default function CloseMasterGame() {
 
   useEffect(() => {
     localStorage.setItem("cmp_id", playerId);
-    const s = io(SERVER_URL);
+    const s = io(SERVER_URL, { 
+      transports: ["polling", "websocket"],
+      reconnectionAttempts: 5 
+    });
+    
+    s.on("connect", () => console.log("Connected to Server"));
     s.on("game_state", setGame);
     s.on("close_result", () => setShowResult(true));
+    s.on("connect_error", (err) => console.log("Connection Error:", err.message));
+    
     setSocket(s);
     return () => s.disconnect();
-  }, []);
+  }, [playerId]);
 
   const me = game?.players.find(p => p.id === game.youId);
   const myTurn = game?.started && game?.turnId === game.youId;
 
   if (!game) return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-black text-white p-6">
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-black text-white p-6 font-sans">
       <h1 className="text-5xl font-black text-emerald-400 mb-10 italic">CLOSE MASTER</h1>
       <div className="w-full max-w-xs space-y-4">
-        <input className="w-full p-5 bg-gray-900 rounded-2xl border border-white/10 text-xl font-bold" placeholder="Name" value={playerName} onChange={e => setPlayerName(e.target.value)} />
-        <input className="w-full p-5 bg-gray-900 rounded-2xl border border-white/10 text-center uppercase tracking-widest text-2xl font-black" placeholder="ROOM ID" value={joinCode} onChange={e => setJoinCode(e.target.value)} />
-        <button onClick={() => socket.emit("create_room", { name: playerName, playerId })} className="w-full py-5 bg-emerald-600 rounded-2xl font-black text-2xl shadow-lg active:scale-95">CREATE</button>
-        <button onClick={() => socket.emit("join_room", { name: playerName, roomId: joinCode.toUpperCase(), playerId })} className="w-full py-5 bg-sky-600 rounded-2xl font-black text-2xl shadow-lg active:scale-95">JOIN</button>
+        <input className="w-full p-5 bg-gray-900 rounded-2xl border border-white/10 text-xl font-bold outline-none focus:border-emerald-500" placeholder="Your Name" value={playerName} onChange={e => setPlayerName(e.target.value)} />
+        <input className="w-full p-5 bg-gray-900 rounded-2xl border border-white/10 text-center uppercase tracking-widest text-2xl font-black outline-none focus:border-sky-500" placeholder="ROOM ID" value={joinCode} onChange={e => setJoinCode(e.target.value)} />
+        <button onClick={() => { if(playerName) socket.emit("create_room", { name: playerName, playerId }); }} className="w-full py-5 bg-emerald-600 rounded-2xl font-black text-2xl shadow-lg active:scale-95 transition-all">CREATE</button>
+        <button onClick={() => { if(playerName && joinCode) socket.emit("join_room", { name: playerName, roomId: joinCode.toUpperCase(), playerId }); }} className="w-full py-5 bg-sky-600 rounded-2xl font-black text-2xl shadow-lg active:scale-95 transition-all">JOIN</button>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen text-white flex flex-col items-center p-4 overflow-hidden select-none">
+    <div className="min-h-screen text-white flex flex-col items-center p-4 overflow-hidden select-none font-sans">
       <video className="fixed inset-0 w-full h-full object-cover -z-10 opacity-60" src={bg.file} autoPlay muted loop playsInline />
       
       <div className="w-full max-w-2xl flex justify-between items-center bg-black/70 p-4 rounded-3xl border border-white/10 mb-4 backdrop-blur-md">
@@ -76,11 +85,13 @@ export default function CloseMasterGame() {
         ))}
       </div>
 
-      <div className="my-6 flex flex-col items-center">
-        <p className="text-[10px] tracking-[0.4em] text-gray-500 mb-2 uppercase font-black">Middle Card</p>
-        <Card card={game.discardTop} isMiddle onClick={() => { if(myTurn && !me?.hasDrawn) socket.emit("action_draw", { roomId: game.roomId, fromDiscard: true }); }} />
-        {game.penaltyCount > 0 && <p className="mt-3 px-4 py-1 bg-red-600 rounded-full text-xs font-black animate-bounce shadow-lg">+{game.penaltyCount} CARDS PENDING</p>}
-      </div>
+      {game.started && (
+        <div className="my-6 flex flex-col items-center">
+          <p className="text-[10px] tracking-[0.4em] text-gray-500 mb-2 uppercase font-black">Middle Card</p>
+          <Card card={game.discardTop} isMiddle onClick={() => { if(myTurn && !me?.hasDrawn) socket.emit("action_draw", { roomId: game.roomId, fromDiscard: true }); }} />
+          {game.penaltyCount > 0 && <p className="mt-3 px-4 py-1 bg-red-600 rounded-full text-xs font-black animate-bounce shadow-lg">+{game.penaltyCount} CARDS PENDING</p>}
+        </div>
+      )}
 
       <div className="mt-auto w-full max-w-4xl pb-6">
         <div className="flex flex-wrap justify-center gap-2 mb-10 px-2">
@@ -98,7 +109,7 @@ export default function CloseMasterGame() {
       {showResult && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-xl p-6">
           <div className="w-full max-w-md text-center">
-            <h2 className="text-5xl font-black text-yellow-400 mb-8 italic drop-shadow-lg">ROUND OVER</h2>
+            <h2 className="text-5xl font-black text-yellow-400 mb-8 italic drop-shadow-lg uppercase">Round Over</h2>
             <div className="bg-white/5 rounded-[32px] p-8 border border-white/10 mb-10 shadow-2xl">
               {game.players.map(p => (
                 <div key={p.id} className="flex justify-between py-4 border-b border-white/5 last:border-0">
@@ -119,9 +130,9 @@ export default function CloseMasterGame() {
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead><tr className="border-b-2 border-white/10 text-gray-400 text-xs uppercase tracking-widest"><th className="pb-4">RD</th>{game.players.map(p => <th key={p.id} className="pb-4">{p.name}</th>)}</tr></thead>
-                <tbody className="text-xl font-bold">
+                <tbody className="text-xl font-bold italic">
                   {game.roundHistory.map((h, i) => (<tr key={i} className="border-b border-white/5"><td className="py-4 text-gray-500">#{h.round}</td>{game.players.map(p => <td key={p.id} className="py-4">{h.points[p.name]}</td>)}</tr>))}
-                  <tr className="text-amber-400 text-3xl"><td className="py-6 font-black uppercase">Total</td>{game.players.map(p => <td key={p.id} className="py-6 font-black">{p.score}</td>)}</tr>
+                  <tr className="text-amber-400 text-3xl font-black uppercase"><td className="py-6">Total</td>{game.players.map(p => <td key={p.id} className="py-6">{p.score}</td>)}</tr>
                 </tbody>
               </table>
             </div>
