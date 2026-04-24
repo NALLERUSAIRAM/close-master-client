@@ -6,18 +6,19 @@ const BG_THEMES = [{ id: "t15", file: "/gifs/15.mp4" }, { id: "t16", file: "/gif
 
 const getCardStyle = (c) => {
   if (!c) return "border-white/10 text-white";
-  if (c.rank === "JOKER") return "border-yellow-400 text-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.5)]";
+  if (c.rank === "JOKER") return "border-yellow-400 text-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.4)]";
   const isRed = c.suit === "♥" || c.suit === "♦";
-  return isRed ? "border-pink-500 text-pink-500 shadow-[0_0_15px_rgba(236,72,153,0.5)]" : "border-cyan-400 text-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.5)]";
+  return isRed ? "border-pink-500 text-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.4)]" : "border-cyan-400 text-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.4)]";
 };
 
+// కార్డుల సైజును గణనీయంగా తగ్గించాను (Mobile optimized)
 const Card = ({ card, isSelected, onClick, isMiddle }) => {
-  if (!card) return <div className={`bg-white/5 border-2 border-dashed border-white/10 rounded-xl ${isMiddle ? 'w-28 h-40' : 'w-20 h-32 md:w-24 md:h-36'}`} />;
+  if (!card) return <div className={`bg-white/5 border-2 border-dashed border-white/10 rounded-lg ${isMiddle ? 'w-20 h-28' : 'w-14 h-20'}`} />;
   return (
-    <div onClick={onClick} className={`relative bg-black/95 border-2 rounded-xl flex flex-col justify-between p-2 transition-all cursor-pointer select-none ${getCardStyle(card)} ${isMiddle ? 'w-28 h-40 shadow-2xl' : 'w-20 h-32 md:w-24 md:h-36'} ${isSelected ? '-translate-y-8 scale-110 z-20 !border-white shadow-[0_0_20px_white]' : ''}`}>
-      <div className="flex flex-col items-start leading-none font-black text-sm"><span>{card.rank}</span><span className="text-[10px]">{card.suit}</span></div>
-      <div className="text-4xl self-center">{card.rank === "JOKER" ? "🃏" : card.suit}</div>
-      <div className="flex flex-col items-end leading-none rotate-180 font-black text-sm"><span>{card.rank}</span><span className="text-[10px]">{card.suit}</span></div>
+    <div onClick={onClick} className={`relative bg-black/95 border-2 rounded-lg flex flex-col justify-between p-1 transition-all cursor-pointer select-none ${getCardStyle(card)} ${isMiddle ? 'w-20 h-28 shadow-xl' : 'w-14 h-20 md:w-20 md:h-28'} ${isSelected ? '-translate-y-4 scale-110 z-20 !border-white shadow-[0_0_15px_white]' : ''}`}>
+      <div className="flex flex-col items-start leading-none font-black text-[10px]"><span>{card.rank}</span><span className="text-[8px]">{card.suit}</span></div>
+      <div className="text-xl self-center">{card.rank === "JOKER" ? "🃏" : card.suit}</div>
+      <div className="flex flex-col items-end leading-none rotate-180 font-black text-[10px]"><span>{card.rank}</span><span className="text-[8px]">{card.suit}</span></div>
     </div>
   );
 };
@@ -48,85 +49,93 @@ export default function CloseMasterGame() {
 
   if (!game) return (
     <div className="fixed inset-0 flex flex-col items-center justify-center bg-black text-white p-6">
-      <h1 className="text-5xl font-black text-emerald-400 mb-10 italic">CLOSE MASTER</h1>
+      <h1 className="text-4xl font-black text-emerald-400 mb-8 italic text-center">CLOSE MASTER</h1>
       <div className="w-full max-w-xs space-y-4">
-        <input className="w-full p-5 bg-gray-900 rounded-2xl border border-white/10 text-xl font-bold" placeholder="Name" value={playerName} onChange={e => setPlayerName(e.target.value)} />
-        <input className="w-full p-5 bg-gray-900 rounded-2xl border border-white/10 text-center uppercase tracking-widest text-2xl font-black" placeholder="ROOM ID" value={joinCode} onChange={e => setJoinCode(e.target.value)} />
-        <button onClick={() => { if(playerName) socket.emit("create_room", { name: playerName, playerId }); }} className="w-full py-5 bg-emerald-600 rounded-2xl font-black text-2xl">CREATE</button>
-        <button onClick={() => { if(playerName && joinCode) socket.emit("join_room", { name: playerName, roomId: joinCode.toUpperCase(), playerId }); }} className="w-full py-5 bg-sky-600 rounded-2xl font-black text-2xl">JOIN</button>
+        <input className="w-full p-4 bg-gray-900 rounded-xl border border-white/10 text-lg font-bold" placeholder="Name" value={playerName} onChange={e => setPlayerName(e.target.value)} />
+        <input className="w-full p-4 bg-gray-900 rounded-xl border border-white/10 text-center uppercase tracking-widest text-xl font-black" placeholder="ROOM ID" value={joinCode} onChange={e => setJoinCode(e.target.value)} />
+        <button onClick={() => { if(playerName) socket.emit("create_room", { name: playerName, playerId }); }} className="w-full py-4 bg-emerald-600 rounded-xl font-black text-xl">CREATE</button>
+        <button onClick={() => { if(playerName && joinCode) socket.emit("join_room", { name: playerName, roomId: joinCode.toUpperCase(), playerId }); }} className="w-full py-4 bg-sky-600 rounded-xl font-black text-xl">JOIN</button>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen text-white flex flex-col items-center p-4 overflow-hidden select-none">
-      <video className="fixed inset-0 w-full h-full object-cover -z-10 opacity-60" src={bg.file} autoPlay muted loop playsInline />
+    <div className="h-screen w-full text-white flex flex-col items-center p-2 overflow-hidden select-none relative font-sans">
+      <video className="fixed inset-0 w-full h-full object-cover -z-10 opacity-50" src={bg.file} autoPlay muted loop playsInline />
       
-      <div className="w-full max-w-2xl flex justify-between items-center bg-black/70 p-4 rounded-3xl border border-white/10 mb-4 backdrop-blur-md">
-        <div><p className="text-[10px] text-gray-400 font-bold uppercase">Room: {game.roomId}</p><p className="text-xl font-black text-emerald-400 italic">Round {game.roundNumber}</p></div>
-        <div className="flex gap-3">
-          <button onClick={() => setShowHistory(true)} className="px-5 py-2 bg-amber-500 rounded-xl font-black text-xs">📊 POINTS</button>
-          <button onClick={() => setBg(BG_THEMES[bg.id === "t15" ? 1 : 0])} className="p-2 bg-white/10 rounded-xl text-xl">🎨</button>
+      {/* Header - Height reduced */}
+      <div className="w-full max-w-md flex justify-between items-center bg-black/70 p-2 rounded-2xl border border-white/10 mb-2 backdrop-blur-md">
+        <div><p className="text-[8px] text-gray-400 font-bold uppercase">ID: {game.roomId}</p><p className="text-sm font-black text-emerald-400 italic">Round {game.roundNumber}</p></div>
+        <div className="flex gap-2">
+          <button onClick={() => setShowHistory(true)} className="px-3 py-1 bg-amber-500 rounded-lg font-black text-[10px]">📊 POINTS</button>
+          <button onClick={() => setBg(BG_THEMES[bg.id === "t15" ? 1 : 0])} className="p-1 bg-white/10 rounded-lg text-lg">🎨</button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 w-full max-w-2xl mb-6">
+      {/* Players Grid - Compressed */}
+      <div className="grid grid-cols-2 gap-2 w-full max-w-md mb-2">
         {game.players.map(p => (
-          <div key={p.id} className={`p-4 rounded-2xl border-2 ${game.turnId === p.id ? 'border-yellow-400 bg-yellow-400/20 scale-105 shadow-xl' : 'border-white/5 bg-black/50'}`}>
-            <p className="font-black text-sm uppercase truncate">{p.name}</p>
-            <p className="text-amber-400 text-2xl font-black">{p.score} <span className="text-[10px] text-gray-500">PTS</span></p>
+          <div key={p.id} className={`p-2 rounded-xl border transition-all ${game.turnId === p.id ? 'border-yellow-400 bg-yellow-400/20 shadow-md' : 'border-white/5 bg-black/50'}`}>
+            <p className="font-black text-[10px] uppercase truncate">{p.name}</p>
+            <p className="text-amber-400 text-sm font-black">{p.score} <span className="text-[8px] text-gray-500">PTS</span></p>
           </div>
         ))}
       </div>
 
+      {/* Center Section - Reduced Margins */}
       {game.started && (
-        <div className="my-6 flex flex-col items-center">
-          <p className="text-[10px] tracking-[0.4em] text-gray-500 mb-2 uppercase font-black">Middle Card</p>
+        <div className="flex-1 flex flex-col items-center justify-center min-h-0">
+          <p className="text-[8px] tracking-[0.3em] text-gray-500 mb-1 uppercase font-black">Middle</p>
           <Card card={game.discardTop} isMiddle onClick={() => { if(myTurn && !me?.hasDrawn && game.discardTop) socket.emit("action_draw", { roomId: game.roomId, fromDiscard: true }); }} />
-          {game.penaltyCount > 0 && <p className="mt-3 px-4 py-1 bg-red-600 rounded-full text-xs font-black animate-bounce shadow-lg">+{game.penaltyCount} PENDING</p>}
+          {game.penaltyCount > 0 && <p className="mt-2 px-3 py-0.5 bg-red-600 rounded-full text-[10px] font-black animate-bounce shadow-lg">+{game.penaltyCount} PENDING</p>}
         </div>
       )}
 
-      <div className="mt-auto w-full max-w-4xl pb-6">
-        <div className="flex flex-wrap justify-center gap-2 mb-10 px-2 overflow-y-visible">
+      {/* Hand & Actions - Fixed at Bottom */}
+      <div className="w-full max-w-md pt-2 pb-4">
+        <div className="flex flex-wrap justify-center gap-1.5 mb-4">
           {me?.hand.map(c => <Card key={c.id} card={c} isSelected={selectedIds.includes(c.id)} onClick={() => setSelectedIds(p => p.includes(c.id) ? p.filter(x => x !== c.id) : [...p, c.id])} />)}
         </div>
+        
         {myTurn ? (
-          <div className="grid grid-cols-3 gap-3 px-2 max-w-lg mx-auto">
-            <button onClick={() => socket.emit("action_draw", { roomId: game.roomId, fromDiscard: false })} disabled={me.hasDrawn} className="py-5 bg-sky-600 rounded-2xl font-black text-xl shadow-xl disabled:opacity-20 uppercase tracking-tighter">Draw</button>
-            <button onClick={() => { socket.emit("action_drop", { roomId: game.roomId, selectedIds }); setSelectedIds([]); }} disabled={selectedIds.length === 0} className="py-5 bg-emerald-600 rounded-2xl font-black text-xl shadow-xl disabled:opacity-20 uppercase tracking-tighter">Drop</button>
-            <button onClick={() => { if(window.confirm("CLOSE?")) socket.emit("action_close", { roomId: game.roomId }); }} className="py-5 bg-pink-600 rounded-2xl font-black text-xl shadow-xl uppercase tracking-tighter text-white">Close</button>
+          <div className="grid grid-cols-3 gap-2 px-1">
+            <button onClick={() => socket.emit("action_draw", { roomId: game.roomId, fromDiscard: false })} disabled={me.hasDrawn} className="py-3 bg-sky-600 rounded-xl font-black text-sm shadow-md disabled:opacity-20 uppercase">Draw</button>
+            <button onClick={() => { socket.emit("action_drop", { roomId: game.roomId, selectedIds }); setSelectedIds([]); }} disabled={selectedIds.length === 0} className="py-3 bg-emerald-600 rounded-xl font-black text-sm shadow-md disabled:opacity-20 uppercase">Drop</button>
+            <button onClick={() => { if(window.confirm("CLOSE?")) socket.emit("action_close", { roomId: game.roomId }); }} className="py-3 bg-pink-600 rounded-xl font-black text-sm shadow-md uppercase">Close</button>
           </div>
-        ) : game.hostId === game.youId && !game.started && <button onClick={() => socket.emit("start_round", { roomId: game.roomId })} className="w-full py-6 bg-emerald-600 rounded-3xl font-black text-3xl shadow-2xl animate-pulse">START GAME</button>}
+        ) : game.hostId === game.youId && !game.started && (
+          <button onClick={() => socket.emit("start_round", { roomId: game.roomId })} className="w-full py-4 bg-emerald-600 rounded-2xl font-black text-xl shadow-lg">START GAME</button>
+        )}
       </div>
 
+      {/* Results & History Popups (Remained same with slight sizing tweaks) */}
       {showResult && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-xl p-6">
-          <div className="w-full max-w-md text-center">
-            <h2 className="text-5xl font-black text-yellow-400 mb-8 italic drop-shadow-lg uppercase">Round Over</h2>
-            <div className="bg-white/5 rounded-[32px] p-8 border border-white/10 mb-10 shadow-2xl">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-4">
+          <div className="w-full max-w-xs text-center">
+            <h2 className="text-3xl font-black text-yellow-400 mb-4 italic uppercase">Round Over</h2>
+            <div className="bg-white/5 rounded-2xl p-4 border border-white/10 mb-6">
               {game.players.map(p => (
-                <div key={p.id} className="flex justify-between py-4 border-b border-white/5 last:border-0 italic font-bold">
-                  <span className="text-2xl text-gray-300 uppercase">{p.name}</span>
-                  <span className="text-3xl text-emerald-400">+{p.lastRoundPoints}</span>
+                <div key={p.id} className="flex justify-between py-2 border-b border-white/5 last:border-0 font-bold">
+                  <span className="text-sm text-gray-300 uppercase">{p.name}</span>
+                  <span className="text-lg text-emerald-400">+{p.lastRoundPoints}</span>
                 </div>
               ))}
             </div>
-            <button onClick={() => { setShowResult(false); if(game.hostId === game.youId) socket.emit("start_round", { roomId: game.roomId }); }} className="w-full py-6 bg-emerald-600 rounded-2xl font-black text-2xl shadow-2xl active:scale-95 transition-all">NEXT ROUND</button>
+            <button onClick={() => { setShowResult(false); if(game.hostId === game.youId) socket.emit("start_round", { roomId: game.roomId }); }} className="w-full py-4 bg-emerald-600 rounded-xl font-black text-lg shadow-lg">NEXT ROUND</button>
           </div>
         </div>
       )}
 
       {showHistory && (
-        <div className="fixed inset-0 z-[110] bg-black/90 flex items-center justify-center p-4 backdrop-blur-md">
-          <div className="bg-gray-900 w-full max-w-lg rounded-[40px] border-4 border-amber-500/30 p-8 max-h-[80vh] overflow-y-auto shadow-2xl">
-            <div className="flex justify-between items-center mb-8"><h3 className="text-3xl font-black text-amber-500 italic uppercase">Score Board</h3><button onClick={() => setShowHistory(false)} className="text-5xl text-gray-500 hover:text-white transition-colors">&times;</button></div>
-            <div className="overflow-x-auto italic">
-              <table className="w-full text-left font-bold">
-                <thead><tr className="border-b-2 border-white/10 text-gray-400 text-xs uppercase tracking-widest"><th className="pb-4">RD</th>{game.players.map(p => <th key={p.id} className="pb-4">{p.name}</th>)}</tr></thead>
-                <tbody className="text-xl">
-                  {game.roundHistory.map((h, i) => (<tr key={i} className="border-b border-white/5"><td className="py-4 text-gray-500">#{h.round}</td>{game.players.map(p => <td key={p.id} className="py-4">{h.points[p.name]}</td>)}</tr>))}
-                  <tr className="text-amber-400 text-3xl font-black uppercase"><td className="py-6">Total</td>{game.players.map(p => <td key={p.id} className="py-6">{p.score}</td>)}</tr>
+        <div className="fixed inset-0 z-[110] bg-black/90 flex items-center justify-center p-2 backdrop-blur-md">
+          <div className="bg-gray-900 w-full max-w-sm rounded-3xl border-2 border-amber-500/30 p-4 max-h-[70vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4"><h3 className="text-xl font-black text-amber-500 italic uppercase">Score Board</h3><button onClick={() => setShowHistory(false)} className="text-3xl text-gray-500">&times;</button></div>
+            <div className="overflow-x-auto text-[12px]">
+              <table className="w-full text-left font-bold italic">
+                <thead><tr className="border-b border-white/10 text-gray-400 uppercase"><th className="pb-2">RD</th>{game.players.map(p => <th key={p.id} className="pb-2">{p.name}</th>)}</tr></thead>
+                <tbody>
+                  {game.roundHistory.map((h, i) => (<tr key={i} className="border-b border-white/5"><td className="py-2 text-gray-500">#{h.round}</td>{game.players.map(p => <td key={p.id} className="py-2">{h.points[p.name]}</td>)}</tr>))}
+                  <tr className="text-amber-400 text-lg font-black uppercase"><td className="pt-3">Total</td>{game.players.map(p => <td key={p.id} className="pt-3">{p.score}</td>)}</tr>
                 </tbody>
               </table>
             </div>
