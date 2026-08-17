@@ -19,25 +19,17 @@ const Card = ({ card, isSelected, onClick, isMiddle, showBack }) => {
   if (showBack) {
     return (
       <div className={`bg-gradient-to-br from-gray-900 via-slate-900 to-black border-2 border-amber-400/80 rounded-xl flex items-center justify-center shadow-xl select-none ${isMiddle ? 'w-16 h-24 sm:w-20 sm:h-28' : 'w-10 h-16 sm:w-12 sm:h-18'}`}>
-        <div className="w-[85%] h-[85%] border border-amber-400/30 rounded-lg flex items-center justify-center bg-gradient-to-tr from-sky-900 via-blue-950 to-sky-950 shadow-inner relative overflow-hidden">
+        <div className="w-[85%] h-[85%] border border-amber-400/30 rounded-lg flex items-center justify-center bg-gradient-to-tr from-sky-900 via-blue-950 to-sky-950">
           <span className="text-yellow-400 text-xs font-black">🎴</span>
         </div>
       </div>
     );
   }
-
-  if (!card) return <div className={`border-2 border-dashed border-white/20 rounded-xl ${isMiddle ? 'w-16 h-24 sm:w-20 sm:h-28' : 'w-14 h-22 sm:w-16 sm:h-24'}`} />;
+  if (!card) return <div className={`border-2 border-dashed border-white/20 rounded-xl ${isMiddle ? 'w-16 h-24 sm:w-20 sm:h-28' : 'w-12 h-20 sm:w-16 sm:h-24'}`} />;
 
   return (
-    <div
-      onClick={onClick}
-      className={`relative rounded-xl border-2 flex flex-col justify-between p-1 transition-all cursor-pointer select-none shadow-xl ${getCardBg(card)} 
-      ${isMiddle ? 'w-16 h-24 sm:w-20 sm:h-28' : 'w-12 h-20 sm:w-16 sm:h-24'} 
-      ${isSelected ? '-translate-y-4 z-30 ring-4 ring-yellow-300' : 'hover:-translate-y-1'}`}
-    >
-      <div className="flex flex-col items-start leading-none font-black text-[10px] sm:text-xs">
-        <span>{card.rank}</span><span>{card.suit}</span>
-      </div>
+    <div onClick={onClick} className={`relative rounded-xl border-2 flex flex-col justify-between p-1 transition-all cursor-pointer select-none shadow-xl ${getCardBg(card)} ${isMiddle ? 'w-16 h-24 sm:w-20 sm:h-28' : 'w-12 h-20 sm:w-16 sm:h-24'} ${isSelected ? '-translate-y-4 z-30 ring-4 ring-yellow-300' : 'hover:-translate-y-1'}`}>
+      <div className="flex flex-col items-start leading-none font-black text-[10px]"><span>{card.rank}</span><span>{card.suit}</span></div>
       <div className="self-center w-7 h-10 sm:w-10 sm:h-14 bg-white/90 rounded-full flex items-center justify-center shadow-md">
         <span className={`text-sm sm:text-lg font-black ${card.suit === '♥' || card.suit === '♦' ? 'text-red-600' : 'text-gray-900'}`}>{card.rank === "JOKER" ? "🃏" : card.rank}</span>
       </div>
@@ -73,41 +65,44 @@ export default function CardsShowGame({ playerName, roomAction, onExit }) {
   const myTurn = game?.started && game?.turnId === game.youId;
   const opponents = game?.players.filter(p => p.id !== game.youId) || [];
 
+  const sortCards = () => {
+    if (!me || !me.hand) return;
+    const rankOrder = { "A": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9, "10": 10, "J": 11, "Q": 12, "K": 13, "JOKER": 14 };
+    me.hand.sort((a, b) => (rankOrder[a.rank] || 0) - (rankOrder[b.rank] || 0));
+    setGame({ ...game }); // Trigger re-render
+  };
+
   if (!game) return <div className="h-full w-full flex items-center justify-center text-white"><div className="w-10 h-10 border-4 border-sky-400 border-t-transparent rounded-full animate-spin"></div></div>;
 
   return (
     <div className="h-full w-full text-white flex flex-col justify-between p-2 overflow-hidden select-none">
-      
-      {/* Header */}
       <div className="w-full flex justify-between items-center bg-black/40 backdrop-blur-md p-2 rounded-2xl border border-white/10 shadow-lg z-20">
         <div className="flex items-center gap-2">
           <span className="text-sky-400 font-black text-lg italic uppercase">Cards Show</span>
           <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded-full font-bold">ROOM: {game.roomId}</span>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={sortCards} className="px-3 py-1.5 bg-sky-600 rounded-xl font-black text-xs uppercase hover:scale-105">Sort 🔀</button>
           <button onClick={() => setShowHistory(true)} className="px-3 py-1.5 bg-amber-500 rounded-xl font-black text-xs uppercase hover:scale-105">Score</button>
           <button onClick={() => { if (window.confirm("Exit?")) { socket.emit("exit_room"); if (onExit) onExit(); } }} className="px-3 py-1.5 bg-red-600 rounded-xl font-black text-xs uppercase hover:scale-105">Exit</button>
         </div>
       </div>
 
-      {/* Error Message Toast */}
       {errorMsg && <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-red-600 text-white font-bold px-4 py-2 rounded-full z-50 shadow-xl border border-white animate-bounce">{errorMsg}</div>}
 
-      {/* Opponents */}
       <div className="flex justify-center gap-4 my-2 px-2">
         {opponents.map(p => (
           <div key={p.id} className={`flex flex-col items-center gap-1 p-2 rounded-2xl border transition-all shadow-lg ${game.turnId === p.id ? 'border-sky-400 bg-sky-400/20 ring-2' : 'border-white/10 bg-black/40'}`}>
-            <span className="font-bold text-[10px] truncate max-w-[80px] uppercase">{p.name} {p.isOffline && "🔴"}</span>
+            <span className="font-bold text-[10px] uppercase">{p.name}</span>
             <span className="text-[9px] text-amber-400 font-black">{p.score} PTS</span>
-            <div className="bg-sky-900 px-2 py-0.5 rounded text-[10px] font-black border border-sky-400">{p.handSize} Cards</div>
           </div>
         ))}
       </div>
 
-      {/* Table */}
       <div className="flex-1 flex flex-col items-center justify-center relative my-2">
         {game.started ? (
-          <div className="flex gap-8 bg-black/30 p-6 rounded-3xl border border-white/10 shadow-2xl">
+          <div className="flex gap-8 bg-black/30 p-6 rounded-3xl border border-white/10 shadow-2xl relative">
+            <div className="absolute top-2 right-4 text-xs font-black text-yellow-400">⏳ {game.turnTimeLeft}s</div>
             <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => { if (myTurn && !me?.hasDrawn) socket.emit("action_draw", { roomId: game.roomId, fromDiscard: false }); }}>
               <span className="text-[10px] font-black uppercase text-sky-400">DRAW</span>
               <Card showBack isMiddle />
@@ -122,7 +117,6 @@ export default function CardsShowGame({ playerName, roomAction, onExit }) {
         )}
       </div>
 
-      {/* Action Buttons */}
       <div className="w-full max-w-md mx-auto flex justify-center gap-2 mb-2 px-2">
         {myTurn ? (
           <>
@@ -131,11 +125,10 @@ export default function CardsShowGame({ playerName, roomAction, onExit }) {
             <button onClick={() => { if (window.confirm("13 Cards Unique Set Ready?")) socket.emit("action_show_cards", { roomId: game.roomId, selectedIds }); }} disabled={selectedIds.length !== 1 || !me?.hasDrawn} className="flex-1 py-3 bg-gradient-to-r from-yellow-500 to-amber-600 disabled:opacity-40 rounded-xl font-black text-sm uppercase shadow-lg border border-white">SHOW! 🏆</button>
           </>
         ) : (
-          <div className="w-full text-center py-2 bg-black/40 rounded-xl border border-white/10 italic text-[10px] font-black uppercase text-gray-400">Waiting for turn...</div>
+          <div className="w-full text-center py-2 bg-black/40 rounded-xl border border-white/10 italic text-[10px] font-black uppercase text-yellow-400">⏳ {game.turnTimeLeft}s : Waiting for turn...</div>
         )}
       </div>
 
-      {/* 13 Cards Player Hand (With slight overlap) */}
       <div className="w-full flex justify-center items-end pb-2 overflow-x-auto no-scrollbar px-4 pt-4">
         <div className="flex -space-x-3 sm:-space-x-2">
           {me?.hand.map(c => (
@@ -146,7 +139,6 @@ export default function CardsShowGame({ playerName, roomAction, onExit }) {
         </div>
       </div>
 
-      {/* Result & History Modals (Same logic as Close Master) */}
       {showResult && (
          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
             <div className="bg-gray-900 p-6 rounded-3xl border-2 border-sky-400 shadow-2xl w-full max-w-sm text-center">
@@ -158,7 +150,6 @@ export default function CardsShowGame({ playerName, roomAction, onExit }) {
             </div>
          </div>
       )}
-
     </div>
   );
 }
