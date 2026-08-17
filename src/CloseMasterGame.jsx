@@ -3,7 +3,6 @@ import { io } from "socket.io-client";
 
 const SERVER_URL = "https://site--close-master-server--t29zpf96vfqv.code.run";
 
-// Card colors helper - UNO style color mapping based on suit/rank
 const getCardBg = (card) => {
   if (!card) return "bg-gray-800 border-gray-600";
   if (card.rank === "JOKER") return "bg-gradient-to-tr from-yellow-400 via-red-500 to-blue-500 text-white border-yellow-300";
@@ -16,13 +15,12 @@ const getCardBg = (card) => {
   }
 };
 
-// UNO style Card Component
 const Card = ({ card, isSelected, onClick, isMiddle, showBack }) => {
   if (showBack) {
     return (
-      <div className="w-16 h-24 bg-gradient-to-br from-gray-900 to-black border-2 border-amber-400 rounded-xl flex items-center justify-center shadow-xl select-none transform hover:-translate-y-1 transition-transform">
-        <div className="w-10 h-16 border border-amber-400/40 rounded-lg flex items-center justify-center bg-red-700 font-black text-[10px] text-yellow-300 -rotate-12 shadow-inner">
-          CLOSE
+      <div className={`bg-gradient-to-br from-gray-900 to-black border-2 border-amber-400 rounded-xl flex items-center justify-center shadow-xl select-none ${isMiddle ? 'w-16 h-24 sm:w-20 sm:h-28' : 'w-10 h-16 sm:w-12 sm:h-18'}`}>
+        <div className="w-[80%] h-[70%] border border-amber-400/40 rounded-lg flex items-center justify-center bg-red-700 font-black text-[8px] sm:text-[10px] text-yellow-300 -rotate-12 shadow-inner">
+          UNO
         </div>
       </div>
     );
@@ -39,20 +37,17 @@ const Card = ({ card, isSelected, onClick, isMiddle, showBack }) => {
       ${isMiddle ? 'w-16 h-24 sm:w-20 sm:h-28' : 'w-14 h-22 sm:w-16 sm:h-24'} 
       ${isSelected ? '-translate-y-4 scale-110 z-30 ring-4 ring-yellow-300 shadow-[0_0_15px_rgba(253,224,71,0.8)]' : 'hover:-translate-y-1'}`}
     >
-      {/* Corner Top Left */}
       <div className="flex flex-col items-start leading-none font-black text-xs drop-shadow">
         <span>{card.rank}</span>
         <span className="text-[10px]">{card.suit}</span>
       </div>
 
-      {/* Center Oval graphic like UNO */}
       <div className="self-center w-9 h-14 sm:w-11 sm:h-16 bg-white/90 rounded-[50%] -rotate-[25deg] flex items-center justify-center shadow-md">
         <span className={`text-base sm:text-lg font-black italic rotate-[25deg] ${card.suit === '♥' || card.suit === '♦' ? 'text-red-600' : 'text-gray-900'}`}>
           {card.rank === "JOKER" ? "🃏" : card.rank}
         </span>
       </div>
 
-      {/* Corner Bottom Right */}
       <div className="flex flex-col items-end leading-none rotate-180 font-black text-xs drop-shadow">
         <span>{card.rank}</span>
         <span className="text-[10px]">{card.suit}</span>
@@ -92,7 +87,6 @@ export default function CloseMasterGame() {
     }
   };
 
-  // Login / Join Lobby View
   if (!game) return (
     <div className="fixed inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-indigo-950 via-purple-900 to-black text-white p-6 font-sans">
       <div className="text-center mb-8">
@@ -137,7 +131,7 @@ export default function CloseMasterGame() {
   return (
     <div className="h-[100dvh] w-full text-white flex flex-col justify-between p-3 overflow-hidden select-none relative font-sans bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900 via-indigo-950 to-black">
       
-      {/* Top Header & Navigation Bar */}
+      {/* Top Header */}
       <div className="w-full flex justify-between items-center bg-black/40 backdrop-blur-md p-2 rounded-2xl border border-white/10 shadow-lg z-20">
         <div className="flex items-center gap-2">
           <span className="text-yellow-400 font-black text-lg italic tracking-tighter">CLOSE MASTER</span>
@@ -145,42 +139,51 @@ export default function CloseMasterGame() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button onClick={() => setShowHistory(true)} className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-xl font-black text-xs shadow-md uppercase hover:scale-105 transition">Score Table</button>
+          <button onClick={() => setShowHistory(true)} className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-xl font-black text-xs shadow-md uppercase hover:scale-105 transition">Score</button>
           <button onClick={handleExit} className="px-3 py-1.5 bg-gradient-to-r from-red-600 to-pink-600 rounded-xl font-black text-xs shadow-md uppercase hover:scale-105 transition">Exit</button>
         </div>
       </div>
 
-      {/* Opponents Area (Top/Sides) */}
+      {/* Opponents Area */}
       <div className="w-full flex justify-center items-center gap-4 my-2 px-2 overflow-x-auto no-scrollbar">
         {opponents.map(p => (
-          <div key={p.id} className={`flex items-center gap-2 px-3 py-2 rounded-2xl border transition-all shadow-lg ${game.turnId === p.id ? 'border-yellow-400 bg-yellow-400/20 ring-2 ring-yellow-400' : 'border-white/10 bg-black/40'}`}>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center font-black text-xs border border-white">
-              {p.name.charAt(0).toUpperCase()}
+          <div key={p.id} className={`flex flex-col items-center gap-1 p-2 rounded-2xl border transition-all shadow-lg min-w-[80px] ${game.turnId === p.id ? 'border-yellow-400 bg-yellow-400/20 ring-2 ring-yellow-400' : 'border-white/10 bg-black/40'}`}>
+            <div className="flex flex-col items-center">
+              <span className="font-bold text-[10px] truncate max-w-[80px] uppercase text-gray-300">{p.name}</span>
+              <span className="text-[9px] text-amber-400 font-black">{p.score} PTS</span>
             </div>
-            <div className="flex flex-col">
-              <span className="font-bold text-xs truncate max-w-[80px]">{p.name}</span>
-              <span className="text-[10px] text-yellow-300 font-black">{p.score} PTS | 🎴 {p.handSize}</span>
-            </div>
+            
+            {game.started && (
+              <div className="relative flex -space-x-4 mt-2 mb-1">
+                 {Array.from({ length: Math.min(p.handSize, 5) }).map((_, i) => (
+                   <div key={i} className={`transform scale-75 origin-bottom ${i % 2 === 0 ? 'rotate-3' : '-rotate-3'}`}>
+                     <Card showBack />
+                   </div>
+                 ))}
+                 {p.handSize > 0 && (
+                    <div className="absolute -top-3 -right-3 bg-gradient-to-br from-yellow-300 to-amber-500 text-black rounded-full w-6 h-6 flex items-center justify-center text-[11px] font-black border-2 border-black shadow-lg z-10">
+                      {p.handSize}
+                    </div>
+                 )}
+              </div>
+            )}
           </div>
         ))}
       </div>
 
-      {/* Center Table Area (Deck & Discard Pile) */}
+      {/* Center Table */}
       <div className="flex-1 flex flex-col items-center justify-center relative my-2">
         {game.started ? (
           <div className="flex items-center justify-center gap-8 bg-black/30 p-6 rounded-3xl border border-white/10 backdrop-blur-sm shadow-2xl">
-            {/* Draw Deck Stack (Top-Left style) */}
             <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => { if (myTurn && !me?.hasDrawn) socket.emit("action_draw", { roomId: game.roomId, fromDiscard: false }); }}>
               <span className="text-[10px] font-black uppercase tracking-wider text-yellow-400">DRAW DECK</span>
               <div className="relative hover:scale-105 transition-transform">
-                <Card showBack />
-                {/* Visual stack depth */}
-                <div className="absolute top-1 left-1 -z-10"><Card showBack /></div>
-                <div className="absolute top-2 left-2 -z-20"><Card showBack /></div>
+                <Card showBack isMiddle />
+                <div className="absolute top-1 left-1 -z-10"><Card showBack isMiddle /></div>
+                <div className="absolute top-2 left-2 -z-20"><Card showBack isMiddle /></div>
               </div>
             </div>
 
-            {/* Discard Pile (Center) */}
             <div className="flex flex-col items-center gap-1">
               <span className="text-[10px] font-black uppercase tracking-wider text-pink-400">DISCARD PILE</span>
               <Card 
@@ -210,8 +213,8 @@ export default function CloseMasterGame() {
         )}
       </div>
 
-      {/* Bubbly UNO Style Action Buttons */}
-      <div className="w-full max-w-md mx-auto flex justify-center gap-3 mb-2">
+      {/* Action Buttons */}
+      <div className="w-full max-w-md mx-auto flex justify-center gap-3 mb-2 px-2">
         {myTurn ? (
           <>
             <button 
@@ -242,7 +245,7 @@ export default function CloseMasterGame() {
         )}
       </div>
 
-      {/* Player Hand (Bottom Area) */}
+      {/* Player Hand */}
       <div className="w-full flex justify-center items-end gap-1 sm:gap-2 pb-2 overflow-x-auto no-scrollbar min-h-[110px]">
         {me?.hand.map(c => (
           <Card 
@@ -254,7 +257,7 @@ export default function CloseMasterGame() {
         ))}
       </div>
 
-      {/* Round Result Modal */}
+      {/* Result Modal */}
       {showResult && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 backdrop-blur-lg">
           <div className="w-full max-w-sm text-center bg-gradient-to-b from-gray-900 to-black p-6 rounded-3xl border-2 border-yellow-400 shadow-2xl">
@@ -277,7 +280,7 @@ export default function CloseMasterGame() {
         </div>
       )}
 
-      {/* Score History Modal */}
+      {/* History Modal */}
       {showHistory && (
         <div className="fixed inset-0 z-[110] bg-black/95 flex items-center justify-center p-4 backdrop-blur-md">
           <div className="bg-gray-900 w-full max-w-xl rounded-3xl border border-yellow-500/40 p-6 flex flex-col h-[75vh]">
