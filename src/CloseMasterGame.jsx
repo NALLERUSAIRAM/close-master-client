@@ -18,9 +18,13 @@ const getCardBg = (card) => {
 const Card = ({ card, isSelected, onClick, isMiddle, showBack }) => {
   if (showBack) {
     return (
-      <div className={`bg-gradient-to-br from-gray-900 to-black border-2 border-amber-400 rounded-xl flex items-center justify-center shadow-xl select-none ${isMiddle ? 'w-16 h-24 sm:w-20 sm:h-28' : 'w-10 h-16 sm:w-12 sm:h-18'}`}>
-        <div className="w-[80%] h-[70%] border border-amber-400/40 rounded-lg flex items-center justify-center bg-red-700 font-black text-[8px] sm:text-[10px] text-yellow-300 -rotate-12 shadow-inner">
-          UNO
+      <div className={`bg-gradient-to-br from-gray-900 via-slate-900 to-black border-2 border-amber-400/80 rounded-xl flex items-center justify-center shadow-xl select-none ${isMiddle ? 'w-16 h-24 sm:w-20 sm:h-28' : 'w-10 h-16 sm:w-12 sm:h-18'}`}>
+        <div className="w-[85%] h-[85%] border border-amber-400/30 rounded-lg flex items-center justify-center bg-gradient-to-tr from-red-900 via-amber-950 to-red-950 shadow-inner relative overflow-hidden">
+          <div className="w-8 h-12 border border-yellow-400/40 rounded-full rotate-45 flex items-center justify-center bg-black/40">
+            <div className="w-5 h-8 border border-yellow-400/60 rounded-full -rotate-45 flex items-center justify-center">
+              <span className="text-yellow-400 text-[10px] sm:text-xs font-black">✦</span>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -81,7 +85,7 @@ export default function CloseMasterGame() {
   const opponents = game?.players.filter(p => p.id !== game.youId) || [];
 
   const handleExit = () => {
-    if (window.confirm("Game nunchi exit avvalani anukuntunnara?")) {
+    if (window.confirm("Exit game?")) {
       socket.emit("exit_room");
       window.location.reload();
     }
@@ -93,13 +97,12 @@ export default function CloseMasterGame() {
         <h1 className="text-5xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500 tracking-wider uppercase italic drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)]">
           CLOSE MASTER
         </h1>
-        <p className="text-xs uppercase tracking-widest text-yellow-300 font-bold mt-2">UNO Style Multiplayer Experience</p>
       </div>
 
       <div className="w-full max-w-sm bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/20 shadow-2xl flex flex-col gap-4">
         <input 
           className="p-4 bg-black/60 rounded-2xl border border-yellow-400/40 text-lg font-bold outline-none text-center focus:border-yellow-400 transition" 
-          placeholder="Nee Name Type Cheyyi" 
+          placeholder="Enter Your Name" 
           value={playerName} 
           onChange={e => setPlayerName(e.target.value)} 
         />
@@ -232,7 +235,7 @@ export default function CloseMasterGame() {
               DROP ⬇️
             </button>
             <button 
-              onClick={() => { if (window.confirm("CLOSE / SHOW chesthara?")) socket.emit("action_close", { roomId: game.roomId }); }} 
+              onClick={() => { if (window.confirm("CLOSE / SHOW?")) socket.emit("action_close", { roomId: game.roomId }); }} 
               className="flex-1 py-3 bg-gradient-to-b from-pink-500 to-rose-600 rounded-2xl font-black text-sm uppercase shadow-xl border-2 border-white/40 active:scale-95 transition"
             >
               CLOSE 🔥
