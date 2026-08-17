@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import CloseMasterGame from "./CloseMasterGame"; 
-import CardsShowGame from "./CardsShowGame"; // Idi add cheyali!
+import CardsShowGame from "./CardsShowGame"; 
+import SetShowGame from "./SetShowGame"; // Idi add cheyali!
 
 export default function App() {
   const [step, setStep] = useState("welcome"); 
@@ -12,7 +13,7 @@ export default function App() {
   const games = [
     { id: "close_master", name: "Close Master", desc: "UNO Style Drop & Show", color: "from-emerald-400 to-teal-600", shadow: "shadow-emerald-500/50" },
     { id: "cards_show", name: "Cards Show", desc: "13 Unique Cards Challenge", color: "from-sky-400 to-blue-600", shadow: "shadow-blue-500/50" },
-    { id: "set_show", name: "Set Show", desc: "Classic Sequence & Sets", color: "from-pink-500 to-rose-600", shadow: "shadow-rose-500/50" }
+    { id: "set_show", name: "Set Show", desc: "3x3 & 1x4 Sets with Secret Bonus", color: "from-pink-500 to-rose-600", shadow: "shadow-rose-500/50" }
   ];
 
   const handleNameSubmit = (e) => {
@@ -163,14 +164,16 @@ export default function App() {
         </div>
       );
     }
+
+    if (selectedGame.id === "set_show") {
+      return (
+        <div className="h-[100dvh] w-full relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-pink-900 via-rose-950 to-black">
+          <SetShowGame playerName={playerName} roomAction={roomAction} onExit={handleBack} />
+        </div>
+      );
+    }
     
-    return (
-      <div className="h-[100dvh] w-full flex flex-col items-center justify-center text-white bg-gray-900">
-        <h1 className={`text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r ${selectedGame.color}`}>{selectedGame.name} Loading...</h1>
-        <p className="mt-4 text-gray-400">Game coming soon!</p>
-        <button onClick={handleBack} className="mt-8 px-6 py-3 bg-white/10 rounded-xl border border-white/20">Back to Hub</button>
-      </div>
-    );
+    return null;
   }
 
   return null;
