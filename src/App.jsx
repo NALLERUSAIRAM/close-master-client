@@ -6,6 +6,7 @@ export default function App() {
   const [playerName, setPlayerName] = useState("");
   const [selectedGame, setSelectedGame] = useState(null);
   const [joinCode, setJoinCode] = useState("");
+  const [roomAction, setRoomAction] = useState({ type: "", code: "" }); // Kotha state
 
   const games = [
     { id: "close_master", name: "Close Master", desc: "UNO Style Drop & Show", color: "from-emerald-400 to-teal-600", shadow: "shadow-emerald-500/50" },
@@ -20,12 +21,7 @@ export default function App() {
 
   const handleGameSelect = (gameId) => {
     setSelectedGame(games.find(g => g.id === gameId));
-    if (gameId === "close_master") {
-       // Close Master ki already daani own login/lobby undi kabatti direct ga game ki pampisthunnam
-       setStep("playing");
-    } else {
-       setStep("lobby");
-    }
+    setStep("lobby"); // Anni games ki mundu lobby ke velthundi
   };
 
   const handleBack = () => {
@@ -119,7 +115,10 @@ export default function App() {
           <p className="text-sm uppercase tracking-widest text-gray-400 font-bold mt-2">{selectedGame.desc}</p>
         </div>
         <div className="w-full max-w-sm bg-white/10 backdrop-blur-md p-8 rounded-3xl border border-white/20 shadow-2xl flex flex-col gap-6">
-          <button onClick={() => setStep("playing")} className={`w-full py-5 bg-gradient-to-r ${selectedGame.color} rounded-2xl font-black text-xl uppercase shadow-lg hover:brightness-110 active:scale-95 transition border border-white/20`}>
+          <button 
+            onClick={() => { setRoomAction({ type: "create", code: "" }); setStep("playing"); }} 
+            className={`w-full py-5 bg-gradient-to-r ${selectedGame.color} rounded-2xl font-black text-xl uppercase shadow-lg hover:brightness-110 active:scale-95 transition border border-white/20`}
+          >
             Create Room
           </button>
           <div className="relative flex items-center justify-center my-2">
@@ -127,8 +126,18 @@ export default function App() {
             <span className="absolute bg-[#1a1c29] px-4 text-xs font-bold text-gray-400 uppercase tracking-widest">OR</span>
           </div>
           <div className="flex flex-col gap-3">
-            <input className="p-4 bg-black/60 rounded-2xl border border-white/20 text-center uppercase tracking-widest text-xl font-black outline-none focus:border-white transition" placeholder="ENTER ROOM CODE" value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase())} maxLength={6} />
-            <button onClick={() => setStep("playing")} disabled={!joinCode.trim()} className="w-full py-4 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-2xl font-black text-lg uppercase transition border border-white/10">
+            <input 
+              className="p-4 bg-black/60 rounded-2xl border border-white/20 text-center uppercase tracking-widest text-xl font-black outline-none focus:border-white transition" 
+              placeholder="ENTER ROOM CODE" 
+              value={joinCode} 
+              onChange={e => setJoinCode(e.target.value.toUpperCase())} 
+              maxLength={6} 
+            />
+            <button 
+              onClick={() => { setRoomAction({ type: "join", code: joinCode }); setStep("playing"); }} 
+              disabled={!joinCode.trim()} 
+              className="w-full py-4 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-2xl font-black text-lg uppercase transition border border-white/10"
+            >
               Join Room
             </button>
           </div>
@@ -140,9 +149,9 @@ export default function App() {
   if (step === "playing") {
     if (selectedGame.id === "close_master") {
       return (
-        <div className="h-[100dvh] w-full relative">
-          <button onClick={handleBack} className="absolute top-4 left-4 z-[100] text-white font-bold px-3 py-1.5 bg-black/50 hover:bg-black/80 rounded-xl border border-white/20 transition text-xs">⬅ BACK TO HUB</button>
-          <CloseMasterGame />
+        <div className="h-[100dvh] w-full relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900 via-indigo-950 to-black">
+          {/* Props pass chesthunnam ikkada */}
+          <CloseMasterGame playerName={playerName} roomAction={roomAction} onExit={handleBack} />
         </div>
       );
     }
