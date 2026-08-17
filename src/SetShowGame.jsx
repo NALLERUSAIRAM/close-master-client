@@ -26,7 +26,7 @@ const Card = ({ card, isSelected, onClick, isMiddle, showBack }) => {
     );
   }
 
-  if (!card) return <div className={`border-2 border-dashed border-white/20 rounded-xl ${isMiddle ? 'w-16 h-24 sm:w-20 sm:h-28' : 'w-14 h-22 sm:w-16 sm:h-24'}`} />;
+  if (!card) return <div className={`border-2 border-dashed border-white/20 rounded-xl ${isMiddle ? 'w-16 h-24 sm:w-20 sm:h-28' : 'w-12 h-20 sm:w-16 sm:h-24'}`} />;
 
   return (
     <div
@@ -73,6 +73,13 @@ export default function SetShowGame({ playerName, roomAction, onExit }) {
   const myTurn = game?.started && game?.turnId === game.youId;
   const opponents = game?.players.filter(p => p.id !== game.youId) || [];
 
+  const sortCards = () => {
+    if (!me || !me.hand) return;
+    const rankOrder = { "A": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9, "10": 10, "J": 11, "Q": 12, "K": 13, "JOKER": 14 };
+    me.hand.sort((a, b) => (rankOrder[a.rank] || 0) - (rankOrder[b.rank] || 0));
+    setGame({ ...game });
+  };
+
   if (!game) return <div className="h-full w-full flex items-center justify-center text-white"><div className="w-10 h-10 border-4 border-pink-400 border-t-transparent rounded-full animate-spin"></div></div>;
 
   return (
@@ -85,6 +92,7 @@ export default function SetShowGame({ playerName, roomAction, onExit }) {
           <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded-full font-bold">ROOM: {game.roomId}</span>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={sortCards} className="px-3 py-1.5 bg-pink-600 rounded-xl font-black text-xs uppercase hover:scale-105">Sort 🔀</button>
           <button onClick={() => setShowHistory(true)} className="px-3 py-1.5 bg-amber-500 rounded-xl font-black text-xs uppercase hover:scale-105">Score</button>
           <button onClick={() => { if (window.confirm("Exit?")) { socket.emit("exit_room"); if (onExit) onExit(); } }} className="px-3 py-1.5 bg-red-600 rounded-xl font-black text-xs uppercase hover:scale-105">Exit</button>
         </div>
@@ -122,7 +130,8 @@ export default function SetShowGame({ playerName, roomAction, onExit }) {
                </div>
              )}
 
-             <div className="flex gap-8 bg-black/30 p-6 rounded-3xl border border-white/10 shadow-2xl">
+             <div className="flex gap-8 bg-black/30 p-6 rounded-3xl border border-white/10 shadow-2xl relative">
+               <div className="absolute top-2 right-4 text-xs font-black text-yellow-400">⏳ {game.turnTimeLeft}s</div>
                <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => { if (myTurn && !me?.hasDrawn) socket.emit("action_draw", { roomId: game.roomId, fromDiscard: false }); }}>
                  <span className="text-[10px] font-black uppercase text-pink-400">DRAW</span>
                  <Card showBack isMiddle />
@@ -147,7 +156,7 @@ export default function SetShowGame({ playerName, roomAction, onExit }) {
             <button onClick={() => { if (window.confirm("Sets Ready for Show?")) socket.emit("action_show_set", { roomId: game.roomId, selectedIds }); }} disabled={selectedIds.length !== 1 || !me?.hasDrawn} className="flex-1 py-3 bg-gradient-to-r from-yellow-500 to-amber-600 disabled:opacity-40 rounded-xl font-black text-sm uppercase shadow-lg border border-white">SHOW! 🏆</button>
           </>
         ) : (
-          <div className="w-full text-center py-2 bg-black/40 rounded-xl border border-white/10 italic text-[10px] font-black uppercase text-gray-400">Waiting for turn...</div>
+          <div className="w-full text-center py-2 bg-black/40 rounded-xl border border-white/10 italic text-[10px] font-black uppercase text-yellow-400">⏳ {game.turnTimeLeft}s : Waiting for turn...</div>
         )}
       </div>
 
