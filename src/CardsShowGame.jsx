@@ -94,7 +94,6 @@ export default function CardsShowGame({ playerName, roomAction, onExit }) {
 
   return (
     <div className="h-full w-full text-white flex flex-col justify-between p-2 overflow-hidden select-none relative">
-      
       <VoiceChatBar socket={socket} roomId={game?.roomId} />
 
       <div className="w-full flex justify-between items-center bg-black/40 backdrop-blur-md p-2 rounded-2xl border border-white/10 shadow-lg z-20">
