@@ -51,6 +51,7 @@ export default function SetShowGame({ playerName, roomAction, onExit }) {
   const [selectedIds, setSelectedIds] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [showResult, setShowResult] = useState(false);
+  const [showBonusModal, setShowBonusModal] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
   const playerId = useRef(localStorage.getItem("cmp_id") || Math.random().toString(36).slice(2)).current;
@@ -93,6 +94,12 @@ export default function SetShowGame({ playerName, roomAction, onExit }) {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={sortCards} className="px-3 py-1.5 bg-pink-600 rounded-xl font-black text-xs uppercase hover:scale-105">Sort 🔀</button>
+          
+          {/* Dedicated Bonus Button (Visible when unlocked) */}
+          {me?.bonusUnlocked && (
+            <button onClick={() => setShowBonusModal(true)} className="px-3 py-1.5 bg-gradient-to-r from-yellow-500 to-amber-600 animate-pulse rounded-xl font-black text-xs uppercase text-black shadow-lg">Bonus 🃏</button>
+          )}
+
           <button onClick={() => setShowHistory(true)} className="px-3 py-1.5 bg-amber-500 rounded-xl font-black text-xs uppercase hover:scale-105">Score</button>
           <button onClick={() => { if (window.confirm("Exit?")) { socket.emit("exit_room"); if (onExit) onExit(); } }} className="px-3 py-1.5 bg-red-600 rounded-xl font-black text-xs uppercase hover:scale-105">Exit</button>
         </div>
@@ -101,7 +108,7 @@ export default function SetShowGame({ playerName, roomAction, onExit }) {
       {/* Error Message Toast */}
       {errorMsg && <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-red-600 text-white font-bold px-4 py-2 rounded-full z-50 shadow-xl border border-white animate-bounce">{errorMsg}</div>}
 
-      {/* Opponents & Bonus Card Indicator */}
+      {/* Opponents Indicators */}
       <div className="flex justify-center gap-3 my-2 px-2 flex-wrap">
         {opponents.map(p => (
           <div key={p.id} className={`flex items-center gap-2 p-2 rounded-2xl border transition-all shadow-lg ${game.turnId === p.id ? 'border-pink-400 bg-pink-400/20 ring-2' : 'border-white/10 bg-black/40'}`}>
@@ -122,14 +129,6 @@ export default function SetShowGame({ playerName, roomAction, onExit }) {
       <div className="flex-1 flex flex-col items-center justify-center relative my-2">
         {game.started ? (
           <div className="flex flex-col items-center gap-4">
-             {/* Secret Bonus Card Display for Me */}
-             {me?.bonusUnlocked && me?.bonusCard && (
-               <div className="flex flex-col items-center bg-black/60 px-4 py-2 rounded-2xl border border-pink-500 animate-pulse">
-                  <span className="text-[10px] font-black text-pink-400 uppercase">Secret Bonus Card Unlocked!</span>
-                  <div className="mt-1"><Card card={me.bonusCard} /></div>
-               </div>
-             )}
-
              <div className="flex gap-8 bg-black/30 p-6 rounded-3xl border border-white/10 shadow-2xl relative">
                <div className="absolute top-2 right-4 text-xs font-black text-yellow-400">⏳ {game.turnTimeLeft}s</div>
                <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => { if (myTurn && !me?.hasDrawn) socket.emit("action_draw", { roomId: game.roomId, fromDiscard: false }); }}>
@@ -170,6 +169,24 @@ export default function SetShowGame({ playerName, roomAction, onExit }) {
           ))}
         </div>
       </div>
+
+      {/* Bonus Card Popup Modal */}
+      {showBonusModal && me?.bonusUnlocked && me?.bonusCard && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-gradient-to-b from-gray-900 to-black p-6 rounded-3xl border-2 border-yellow-400 shadow-[0_0_50px_rgba(250,204,21,0.3)] w-full max-w-xs text-center flex flex-col items-center">
+            <span className="text-yellow-400 font-black text-xs uppercase tracking-widest mb-2">Secret Bonus Card</span>
+            <p className="text-[11px] text-gray-400 mb-6">4-card set unlock ayinappudu vachina bonus card idi!</p>
+            
+            <div className="scale-125 my-4">
+              <Card card={me.bonusCard} />
+            </div>
+
+            <button onClick={() => setShowBonusModal(false)} className="w-full mt-6 py-3 bg-yellow-500 text-black rounded-xl font-black uppercase text-xs tracking-wider hover:bg-yellow-400 transition">
+              Close
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Result Modal */}
       {showResult && (
