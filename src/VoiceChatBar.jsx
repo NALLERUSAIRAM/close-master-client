@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 
-export default function VoiceChatBar({ socket, roomId }) {
+export default function VoiceChatBar({ socket, activeSockets }) {
   const [stream, setStream] = useState(null);
   const [micMuted, setMicMuted] = useState(false);
   const [soundMuted, setSoundMuted] = useState(false);
@@ -17,11 +17,6 @@ export default function VoiceChatBar({ socket, roomId }) {
     navigator.mediaDevices.getUserMedia({ audio: true, video: false })
       .then((currentStream) => {
         setStream(currentStream);
-
-        // Listen for other users joining the room
-        socket.on("room_users", (users) => {
-          // Users list sync
-        });
 
         socket.on("voice_signal", async ({ from, signal }) => {
           let pc = peersRef.current[from];
@@ -42,7 +37,7 @@ export default function VoiceChatBar({ socket, roomId }) {
         });
 
       })
-      .catch((err) => console.log("Microphone error:", err));
+      .catch((err) => console.log("Microphone permission denied:", err));
 
     return () => {
       if (stream) {
@@ -51,11 +46,21 @@ export default function VoiceChatBar({ socket, roomId }) {
     };
   }, [socket]);
 
-  const createPeerConnection = (targetSocketId, stream, isInitiator) => {
+  useEffect(() => {
+    if (!activeSockets || !socket || !stream) return;
+
+    activeSockets.forEach(targetSocketId => {
+      if (targetSocketId !== socket.id && !peersRef.current[targetSocketId]) {
+        createPeerConnection(targetSocketId, stream, true);
+      }
+    });
+  }, [activeSockets, socket, stream]);
+
+  const createPeerConnection = (targetSocketId, currentStream, isInitiator) => {
     const pc = new RTCPeerConnection(configuration);
     peersRef.current[targetSocketId] = pc;
 
-    stream.getTracks().forEach(track => pc.addTrack(track, stream));
+    currentStream.getTracks().forEach(track => pc.addTrack(track, currentStream));
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
@@ -82,7 +87,7 @@ export default function VoiceChatBar({ socket, roomId }) {
       pc.createOffer().then(offer => {
         pc.setLocalDescription(offer);
         socket.emit("voice_signal", { to: targetSocketId, signal: offer });
-      });
+      }).catch(err => console.log("Offer error:", err));
     }
 
     return pc;
