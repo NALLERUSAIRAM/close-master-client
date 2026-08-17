@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
+import VoiceChatBar from "./VoiceChatBar";
 
 const SERVER_URL = "https://site--close-master-server--t29zpf96vfqv.code.run";
 
@@ -84,9 +85,11 @@ export default function SetShowGame({ playerName, roomAction, onExit }) {
   if (!game) return <div className="h-full w-full flex items-center justify-center text-white"><div className="w-10 h-10 border-4 border-pink-400 border-t-transparent rounded-full animate-spin"></div></div>;
 
   return (
-    <div className="h-full w-full text-white flex flex-col justify-between p-2 overflow-hidden select-none">
+    <div className="h-full w-full text-white flex flex-col justify-between p-2 overflow-hidden select-none relative">
       
-      {/* Header */}
+      {/* Voice Chat Bar */}
+      <VoiceChatBar socket={socket} roomId={game?.roomId} />
+
       <div className="w-full flex justify-between items-center bg-black/40 backdrop-blur-md p-2 rounded-2xl border border-white/10 shadow-lg z-20">
         <div className="flex items-center gap-2">
           <span className="text-pink-400 font-black text-lg italic uppercase">Set Show</span>
@@ -95,7 +98,6 @@ export default function SetShowGame({ playerName, roomAction, onExit }) {
         <div className="flex items-center gap-2">
           <button onClick={sortCards} className="px-3 py-1.5 bg-pink-600 rounded-xl font-black text-xs uppercase hover:scale-105">Sort 🔀</button>
           
-          {/* Dedicated Bonus Button (Visible when unlocked) */}
           {me?.bonusUnlocked && (
             <button onClick={() => setShowBonusModal(true)} className="px-3 py-1.5 bg-gradient-to-r from-yellow-500 to-amber-600 animate-pulse rounded-xl font-black text-xs uppercase text-black shadow-lg">Bonus 🃏</button>
           )}
@@ -105,10 +107,8 @@ export default function SetShowGame({ playerName, roomAction, onExit }) {
         </div>
       </div>
 
-      {/* Error Message Toast */}
       {errorMsg && <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-red-600 text-white font-bold px-4 py-2 rounded-full z-50 shadow-xl border border-white animate-bounce">{errorMsg}</div>}
 
-      {/* Opponents Indicators */}
       <div className="flex justify-center gap-3 my-2 px-2 flex-wrap">
         {opponents.map(p => (
           <div key={p.id} className={`flex items-center gap-2 p-2 rounded-2xl border transition-all shadow-lg ${game.turnId === p.id ? 'border-pink-400 bg-pink-400/20 ring-2' : 'border-white/10 bg-black/40'}`}>
@@ -125,7 +125,6 @@ export default function SetShowGame({ playerName, roomAction, onExit }) {
         ))}
       </div>
 
-      {/* Table Center */}
       <div className="flex-1 flex flex-col items-center justify-center relative my-2">
         {game.started ? (
           <div className="flex flex-col items-center gap-4">
@@ -146,7 +145,6 @@ export default function SetShowGame({ playerName, roomAction, onExit }) {
         )}
       </div>
 
-      {/* Action Buttons */}
       <div className="w-full max-w-md mx-auto flex justify-center gap-2 mb-2 px-2">
         {myTurn ? (
           <>
@@ -159,7 +157,6 @@ export default function SetShowGame({ playerName, roomAction, onExit }) {
         )}
       </div>
 
-      {/* Player Hand (13 Cards) */}
       <div className="w-full flex justify-center items-end pb-2 overflow-x-auto no-scrollbar px-4 pt-4">
         <div className="flex -space-x-3 sm:-space-x-2">
           {me?.hand.map(c => (
@@ -170,7 +167,6 @@ export default function SetShowGame({ playerName, roomAction, onExit }) {
         </div>
       </div>
 
-      {/* Bonus Card Popup Modal */}
       {showBonusModal && me?.bonusUnlocked && me?.bonusCard && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
           <div className="bg-gradient-to-b from-gray-900 to-black p-6 rounded-3xl border-2 border-yellow-400 shadow-[0_0_50px_rgba(250,204,21,0.3)] w-full max-w-xs text-center flex flex-col items-center">
@@ -188,7 +184,6 @@ export default function SetShowGame({ playerName, roomAction, onExit }) {
         </div>
       )}
 
-      {/* Result Modal */}
       {showResult && (
          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
             <div className="bg-gray-900 p-6 rounded-3xl border-2 border-pink-400 shadow-2xl w-full max-w-sm text-center">
