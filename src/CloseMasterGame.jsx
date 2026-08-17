@@ -60,11 +60,10 @@ const Card = ({ card, isSelected, onClick, isMiddle, showBack }) => {
   );
 };
 
-export default function CloseMasterGame() {
+// Ikkada props receive cheskuntunnam (playerName, roomAction, onExit)
+export default function CloseMasterGame({ playerName, roomAction, onExit }) {
   const [socket, setSocket] = useState(null);
   const [game, setGame] = useState(null);
-  const [playerName, setPlayerName] = useState("");
-  const [joinCode, setJoinCode] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [showResult, setShowResult] = useState(false);
@@ -74,11 +73,20 @@ export default function CloseMasterGame() {
   useEffect(() => {
     localStorage.setItem("cmp_id", playerId);
     const s = io(SERVER_URL, { transports: ["polling", "websocket"] });
+    
     s.on("game_state", setGame);
     s.on("close_result", () => setShowResult(true));
+    
+    // Auto Connect using Hub Data
+    if (roomAction?.type === "create") {
+      s.emit("create_room", { name: playerName, playerId });
+    } else if (roomAction?.type === "join" && roomAction?.code) {
+      s.emit("join_room", { name: playerName, roomId: roomAction.code, playerId });
+    }
+
     setSocket(s);
     return () => s.disconnect();
-  }, [playerId]);
+  }, [playerId, playerName, roomAction]);
 
   const me = game?.players.find(p => p.id === game.youId);
   const myTurn = game?.started && game?.turnId === game.youId;
@@ -87,52 +95,20 @@ export default function CloseMasterGame() {
   const handleExit = () => {
     if (window.confirm("Exit game?")) {
       socket.emit("exit_room");
-      window.location.reload();
+      if (onExit) onExit(); // App.jsx lo unna Hub ki back velthundi
     }
   };
 
+  // Login form theesesi, just connecting screen pettesam
   if (!game) return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-indigo-950 via-purple-900 to-black text-white p-6 font-sans">
-      <div className="text-center mb-8">
-        <h1 className="text-5xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500 tracking-wider uppercase italic drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)]">
-          CLOSE MASTER
-        </h1>
-      </div>
-
-      <div className="w-full max-w-sm bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/20 shadow-2xl flex flex-col gap-4">
-        <input 
-          className="p-4 bg-black/60 rounded-2xl border border-yellow-400/40 text-lg font-bold outline-none text-center focus:border-yellow-400 transition" 
-          placeholder="Enter Your Name" 
-          value={playerName} 
-          onChange={e => setPlayerName(e.target.value)} 
-        />
-        <input 
-          className="p-4 bg-black/60 rounded-2xl border border-yellow-400/40 text-center uppercase tracking-widest text-xl font-black outline-none focus:border-yellow-400 transition" 
-          placeholder="ROOM CODE" 
-          value={joinCode} 
-          onChange={e => setJoinCode(e.target.value)} 
-        />
-        
-        <div className="grid grid-cols-2 gap-3 mt-2">
-          <button 
-            onClick={() => playerName && socket.emit("create_room", { name: playerName, playerId })} 
-            className="py-4 bg-gradient-to-b from-emerald-400 to-emerald-600 rounded-2xl font-black text-lg uppercase shadow-lg hover:brightness-110 active:scale-95 transition"
-          >
-            Create
-          </button>
-          <button 
-            onClick={() => playerName && joinCode && socket.emit("join_room", { name: playerName, roomId: joinCode.toUpperCase(), playerId })} 
-            className="py-4 bg-gradient-to-b from-sky-400 to-sky-600 rounded-2xl font-black text-lg uppercase shadow-lg hover:brightness-110 active:scale-95 transition"
-          >
-            Join
-          </button>
-        </div>
-      </div>
+    <div className="h-full w-full flex flex-col items-center justify-center text-white">
+       <div className="w-16 h-16 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mb-4"></div>
+       <h2 className="text-2xl font-black italic text-gray-300 uppercase tracking-widest">Entering Room...</h2>
     </div>
   );
 
   return (
-    <div className="h-[100dvh] w-full text-white flex flex-col justify-between p-3 overflow-hidden select-none relative font-sans bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900 via-indigo-950 to-black">
+    <div className="h-full w-full text-white flex flex-col justify-between p-3 overflow-hidden select-none relative font-sans">
       
       {/* Top Header */}
       <div className="w-full flex justify-between items-center bg-black/40 backdrop-blur-md p-2 rounded-2xl border border-white/10 shadow-lg z-20">
@@ -152,7 +128,9 @@ export default function CloseMasterGame() {
         {opponents.map(p => (
           <div key={p.id} className={`flex flex-col items-center gap-1 p-2 rounded-2xl border transition-all shadow-lg min-w-[80px] ${game.turnId === p.id ? 'border-yellow-400 bg-yellow-400/20 ring-2 ring-yellow-400' : 'border-white/10 bg-black/40'}`}>
             <div className="flex flex-col items-center">
-              <span className="font-bold text-[10px] truncate max-w-[80px] uppercase text-gray-300">{p.name}</span>
+              <span className="font-bold text-[10px] truncate max-w-[80px] uppercase text-gray-300">
+                {p.name} {p.isOffline && "🔴"}
+              </span>
               <span className="text-[9px] text-amber-400 font-black">{p.score} PTS</span>
             </div>
             
@@ -220,30 +198,13 @@ export default function CloseMasterGame() {
       <div className="w-full max-w-md mx-auto flex justify-center gap-3 mb-2 px-2">
         {myTurn ? (
           <>
-            <button 
-              onClick={() => socket.emit("action_draw", { roomId: game.roomId, fromDiscard: false })} 
-              disabled={me?.hasDrawn} 
-              className="flex-1 py-3 bg-gradient-to-b from-sky-400 to-sky-600 disabled:opacity-40 rounded-2xl font-black text-sm uppercase shadow-xl border-2 border-white/40 active:scale-95 transition"
-            >
-              DRAW 🎴
-            </button>
-            <button 
-              onClick={() => { socket.emit("action_drop", { roomId: game.roomId, selectedIds }); setSelectedIds([]); }} 
-              disabled={selectedIds.length === 0} 
-              className="flex-1 py-3 bg-gradient-to-b from-emerald-400 to-emerald-600 disabled:opacity-40 rounded-2xl font-black text-sm uppercase shadow-xl border-2 border-white/40 active:scale-95 transition"
-            >
-              DROP ⬇️
-            </button>
-            <button 
-              onClick={() => { if (window.confirm("CLOSE / SHOW?")) socket.emit("action_close", { roomId: game.roomId }); }} 
-              className="flex-1 py-3 bg-gradient-to-b from-pink-500 to-rose-600 rounded-2xl font-black text-sm uppercase shadow-xl border-2 border-white/40 active:scale-95 transition"
-            >
-              CLOSE 🔥
-            </button>
+            <button onClick={() => socket.emit("action_draw", { roomId: game.roomId, fromDiscard: false })} disabled={me?.hasDrawn} className="flex-1 py-3 bg-gradient-to-b from-sky-400 to-sky-600 disabled:opacity-40 rounded-2xl font-black text-sm uppercase shadow-xl border-2 border-white/40 active:scale-95 transition">DRAW 🎴</button>
+            <button onClick={() => { socket.emit("action_drop", { roomId: game.roomId, selectedIds }); setSelectedIds([]); }} disabled={selectedIds.length === 0} className="flex-1 py-3 bg-gradient-to-b from-emerald-400 to-emerald-600 disabled:opacity-40 rounded-2xl font-black text-sm uppercase shadow-xl border-2 border-white/40 active:scale-95 transition">DROP ⬇️</button>
+            <button onClick={() => { if (window.confirm("CLOSE / SHOW?")) socket.emit("action_close", { roomId: game.roomId }); }} className="flex-1 py-3 bg-gradient-to-b from-pink-500 to-rose-600 rounded-2xl font-black text-sm uppercase shadow-xl border-2 border-white/40 active:scale-95 transition">CLOSE 🔥</button>
           </>
         ) : (
-          <div className="w-full text-center py-2.5 bg-black/40 rounded-2xl border border-white/10 italic text-xs font-black uppercase text-yellow-400/70 tracking-widest animate-pulse">
-            Waiting for player turn...
+          <div className="w-full flex items-center justify-center py-2.5 bg-black/40 rounded-2xl border border-white/10 italic text-xs font-black uppercase text-yellow-400/70 tracking-widest animate-pulse">
+            <span className="mr-2">⏳</span> {game.turnTimeLeft}s : Waiting for turn
           </div>
         )}
       </div>
@@ -251,12 +212,7 @@ export default function CloseMasterGame() {
       {/* Player Hand */}
       <div className="w-full flex justify-center items-end gap-1 sm:gap-2 pb-2 overflow-x-auto no-scrollbar min-h-[110px]">
         {me?.hand.map(c => (
-          <Card 
-            key={c.id} 
-            card={c} 
-            isSelected={selectedIds.includes(c.id)} 
-            onClick={() => setSelectedIds(p => p.includes(c.id) ? p.filter(x => x !== c.id) : [...p, c.id])} 
-          />
+          <Card key={c.id} card={c} isSelected={selectedIds.includes(c.id)} onClick={() => setSelectedIds(p => p.includes(c.id) ? p.filter(x => x !== c.id) : [...p, c.id])} />
         ))}
       </div>
 
@@ -273,12 +229,7 @@ export default function CloseMasterGame() {
                 </div>
               ))}
             </div>
-            <button 
-              onClick={() => { setShowResult(false); if (game.hostId === game.youId) socket.emit("start_round", { roomId: game.roomId }); }} 
-              className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl font-black text-lg shadow-xl uppercase italic hover:scale-105 transition"
-            >
-              Next Round ➡️
-            </button>
+            <button onClick={() => { setShowResult(false); if (game.hostId === game.youId) socket.emit("start_round", { roomId: game.roomId }); }} className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl font-black text-lg shadow-xl uppercase italic hover:scale-105 transition">Next Round ➡️</button>
           </div>
         </div>
       )}
