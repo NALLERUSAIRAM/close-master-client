@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import CloseMasterGame from "./CloseMasterGame"; 
 import CardsShowGame from "./CardsShowGame"; 
-import SetShowGame from "./SetShowGame"; // Idi add cheyali!
+import SetShowGame from "./SetShowGame"; 
 
 export default function App() {
   const [step, setStep] = useState("welcome"); 
@@ -32,47 +32,70 @@ export default function App() {
     if (step === "playing") setStep("select_game");
   };
 
+  // 1. CINEMATIC WELCOME SCREEN
   if (step === "welcome") {
     return (
-      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-900 via-gray-900 to-black text-white p-6 font-sans">
-        <div className="text-center mb-10 animate-fade-in-down">
-          <h1 className="text-6xl sm:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500 tracking-wider uppercase italic drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)]">
+      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-950 via-gray-950 to-black text-white p-6 font-sans relative overflow-hidden">
+        
+        {/* Background Cinematic Glows */}
+        <div className="absolute -top-32 -left-32 w-96 h-96 bg-yellow-500/10 rounded-full blur-[120px] pointer-events-none"></div>
+        <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-red-500/10 rounded-full blur-[120px] pointer-events-none"></div>
+
+        {/* Title Container */}
+        <div className="text-center mb-10 z-10 animate-fade-in">
+          <div className="inline-block px-4 py-1.5 mb-3 rounded-full bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 text-xs font-black uppercase tracking-[0.3em] shadow-[0_0_15px_rgba(250,204,21,0.2)]">
+            ♠️ Premium Multiplayer Experience ♦️
+          </div>
+          <h1 className="text-6xl sm:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-red-500 to-pink-500 tracking-wider uppercase italic drop-shadow-[0_10px_20px_rgba(0,0,0,0.9)] hover:scale-105 transition-transform duration-500">
             GULLY CARDS
           </h1>
-          <p className="text-sm uppercase tracking-[0.3em] text-yellow-300 font-bold mt-3">The Ultimate Multiplayer Hub</p>
+          <p className="text-xs sm:text-sm uppercase tracking-[0.4em] text-gray-300 font-bold mt-4 drop-shadow">
+            Step Into The Arena
+          </p>
         </div>
 
-        <form onSubmit={handleNameSubmit} className="w-full max-w-sm bg-white/10 backdrop-blur-md p-8 rounded-3xl border border-white/20 shadow-2xl flex flex-col gap-6">
-          <div className="flex flex-col gap-2 text-center">
-            <label className="text-xs uppercase tracking-widest text-gray-300 font-bold">Player Name</label>
+        {/* Cinematic Input Box Form */}
+        <form onSubmit={handleNameSubmit} className="w-full max-w-sm z-10 bg-black/40 backdrop-blur-xl p-8 rounded-[32px] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex flex-col gap-6 relative group">
+          
+          <div className="absolute inset-0 rounded-[32px] bg-gradient-to-tr from-yellow-500/10 via-transparent to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+
+          <div className="flex flex-col gap-2 text-center relative z-10">
+            <label className="text-[11px] uppercase tracking-[0.25em] text-yellow-400/90 font-black">Enter Your Battle Name</label>
             <input 
-              className="p-4 bg-black/60 rounded-2xl border-2 border-yellow-400/40 text-xl font-black outline-none text-center focus:border-yellow-400 transition text-white uppercase" 
-              placeholder="ENTER YOUR NAME" 
+              className="p-4 bg-black/70 rounded-2xl border-2 border-white/10 text-xl font-black outline-none text-center focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/20 transition-all text-white uppercase tracking-wider placeholder:text-gray-600 shadow-inner" 
+              placeholder="PLAYER NAME" 
               value={playerName} 
               onChange={e => setPlayerName(e.target.value.toUpperCase())} 
               maxLength={15}
               autoFocus
             />
           </div>
+
           <button 
             type="submit"
             disabled={!playerName.trim()}
-            className="py-4 bg-gradient-to-r from-yellow-500 to-amber-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-2xl font-black text-lg uppercase shadow-[0_0_15px_rgba(245,158,11,0.5)] hover:scale-105 active:scale-95 transition"
+            className="relative z-10 py-4 bg-gradient-to-r from-yellow-500 via-amber-500 to-orange-600 disabled:opacity-40 disabled:cursor-not-allowed rounded-2xl font-black text-lg uppercase shadow-[0_0_25px_rgba(245,158,11,0.4)] hover:shadow-[0_0_35px_rgba(245,158,11,0.7)] hover:scale-[1.02] active:scale-95 transition-all text-black tracking-wider"
           >
             Enter Hub 🚀
           </button>
         </form>
+
+        {/* Footer info */}
+        <div className="absolute bottom-6 text-center text-[10px] text-gray-500 uppercase tracking-widest">
+          Close Master • Cards Show • Set Show
+        </div>
       </div>
     );
   }
 
+  // 2. GAME SELECTION (3 DECKS)
   if (step === "select_game") {
     return (
-      <div className="h-[100dvh] w-full flex flex-col items-center justify-start bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-900 via-gray-900 to-black text-white p-4 sm:p-8 font-sans overflow-y-auto">
+      <div className="h-[100dvh] w-full flex flex-col items-center justify-start bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-950 via-gray-950 to-black text-white p-4 sm:p-8 font-sans overflow-y-auto">
         <div className="w-full max-w-4xl flex justify-between items-center mb-8 bg-black/40 p-4 rounded-2xl border border-white/10 shadow-lg">
           <button onClick={handleBack} className="text-gray-400 hover:text-white font-bold px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl transition">⬅ BACK</button>
           <div className="text-center flex-1">
-            <span className="text-yellow-400 font-black text-2xl italic tracking-tighter uppercase">Gully Cards</span>
+            <span className="text-yellow-400 font-black text-2xl italic tracking-tighter uppercase">Gully Cards Hub</span>
           </div>
           <div className="flex items-center gap-2 bg-black/60 px-4 py-2 rounded-xl border border-yellow-400/30">
             <span className="text-[10px] text-gray-400 uppercase font-bold">Player</span>
@@ -104,9 +127,10 @@ export default function App() {
     );
   }
 
+  // 3. ROOM LOBBY
   if (step === "lobby") {
     return (
-      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-900 via-gray-900 to-black text-white p-6 font-sans relative">
+      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-950 via-gray-950 to-black text-white p-6 font-sans relative">
         <div className="absolute top-6 left-6">
           <button onClick={handleBack} className="text-gray-400 hover:text-white font-bold px-4 py-2 bg-white/5 rounded-xl border border-white/10 transition">⬅ DECKS</button>
         </div>
@@ -148,10 +172,11 @@ export default function App() {
     );
   }
 
+  // 4. PLAYING AREA (GAMES ROUTING)
   if (step === "playing") {
     if (selectedGame.id === "close_master") {
       return (
-        <div className="h-[100dvh] w-full relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900 via-indigo-950 to-black">
+        <div className="h-[100dvh] w-full relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-950 via-indigo-950 to-black">
           <CloseMasterGame playerName={playerName} roomAction={roomAction} onExit={handleBack} />
         </div>
       );
@@ -159,7 +184,7 @@ export default function App() {
     
     if (selectedGame.id === "cards_show") {
       return (
-        <div className="h-[100dvh] w-full relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-sky-900 via-blue-950 to-black">
+        <div className="h-[100dvh] w-full relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-sky-950 via-blue-950 to-black">
           <CardsShowGame playerName={playerName} roomAction={roomAction} onExit={handleBack} />
         </div>
       );
@@ -167,7 +192,7 @@ export default function App() {
 
     if (selectedGame.id === "set_show") {
       return (
-        <div className="h-[100dvh] w-full relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-pink-900 via-rose-950 to-black">
+        <div className="h-[100dvh] w-full relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-pink-950 via-rose-950 to-black">
           <SetShowGame playerName={playerName} roomAction={roomAction} onExit={handleBack} />
         </div>
       );
