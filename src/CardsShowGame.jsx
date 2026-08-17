@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
+import VoiceChatBar from "./VoiceChatBar";
 
 const SERVER_URL = "https://site--close-master-server--t29zpf96vfqv.code.run";
 
@@ -69,13 +70,17 @@ export default function CardsShowGame({ playerName, roomAction, onExit }) {
     if (!me || !me.hand) return;
     const rankOrder = { "A": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9, "10": 10, "J": 11, "Q": 12, "K": 13, "JOKER": 14 };
     me.hand.sort((a, b) => (rankOrder[a.rank] || 0) - (rankOrder[b.rank] || 0));
-    setGame({ ...game }); // Trigger re-render
+    setGame({ ...game });
   };
 
   if (!game) return <div className="h-full w-full flex items-center justify-center text-white"><div className="w-10 h-10 border-4 border-sky-400 border-t-transparent rounded-full animate-spin"></div></div>;
 
   return (
-    <div className="h-full w-full text-white flex flex-col justify-between p-2 overflow-hidden select-none">
+    <div className="h-full w-full text-white flex flex-col justify-between p-2 overflow-hidden select-none relative">
+      
+      {/* Voice Chat Bar */}
+      <VoiceChatBar socket={socket} roomId={game?.roomId} />
+
       <div className="w-full flex justify-between items-center bg-black/40 backdrop-blur-md p-2 rounded-2xl border border-white/10 shadow-lg z-20">
         <div className="flex items-center gap-2">
           <span className="text-sky-400 font-black text-lg italic uppercase">Cards Show</span>
