@@ -30,9 +30,14 @@ const Card = ({ card, isSelected, onClick, isMiddle, showBack }) => {
 
   return (
     <div onClick={onClick} className={`relative rounded-xl border-2 flex flex-col justify-between p-1 transition-all cursor-pointer select-none shadow-xl ${getCardBg(card)} ${isMiddle ? 'w-16 h-24 sm:w-20 sm:h-28' : 'w-12 h-20 sm:w-16 sm:h-24'} ${isSelected ? '-translate-y-4 z-30 ring-4 ring-emerald-300' : 'hover:-translate-y-1'}`}>
-      <div className="flex flex-col items-start leading-none font-black text-[10px]"><span>{card.rank}</span><span>{card.suit}</span></div>
+      <div className="flex flex-col items-start leading-none font-black text-[10px]">
+        <span>{card.rank}</span>
+        <span>{card.suit}</span>
+      </div>
       <div className="self-center w-7 h-10 sm:w-10 sm:h-14 bg-white/90 rounded-full flex items-center justify-center shadow-md">
-        <span className={`text-sm sm:text-lg font-black ${card.suit === '♥' || card.suit === '♦' ? 'text-red-600' : 'text-gray-900'}`}>{card.rank === "JOKER" ? "🃏" : card.rank}</span>
+        <span className={`text-sm sm:text-lg font-black ${card.suit === '♥' || card.suit === '♦' ? 'text-red-600' : 'text-gray-900'}`}>
+          {card.rank === "JOKER" ? "🃏" : card.rank}
+        </span>
       </div>
     </div>
   );
@@ -53,10 +58,16 @@ export default function CloseMasterGame({ playerName, roomAction, onExit }) {
     const s = io(SERVER_URL, { transports: ["polling", "websocket"] });
     s.on("game_state", setGame);
     s.on("close_result", () => setShowResult(true));
-    s.on("show_error", (msg) => { setErrorMsg(msg); setTimeout(() => setErrorMsg(""), 3000); });
+    s.on("show_error", (msg) => { 
+      setErrorMsg(msg); 
+      setTimeout(() => setErrorMsg(""), 3000); 
+    });
     
-    if (roomAction?.type === "create") s.emit("create_room", { name: playerName, playerId, gameType: "close_master" });
-    else if (roomAction?.type === "join") s.emit("join_room", { name: playerName, roomId: roomAction.code, playerId, gameType: "close_master" });
+    if (roomAction?.type === "create") {
+      s.emit("create_room", { name: playerName, playerId, gameType: "close_master" });
+    } else if (roomAction?.type === "join") {
+      s.emit("join_room", { name: playerName, roomId: roomAction.code, playerId, gameType: "close_master" });
+    }
 
     setSocket(s);
     return () => s.disconnect();
@@ -66,16 +77,23 @@ export default function CloseMasterGame({ playerName, roomAction, onExit }) {
   const myTurn = game?.started && game?.turnId === game.youId;
   const opponents = game?.players.filter(p => p.id !== game.youId) || [];
 
+  if (!game) {
+    return (
+      <div className="h-full w-full flex items-center justify-center text-white">
+        <div className="w-10 h-10 border-4 border-emerald-400 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full w-full text-white flex flex-col justify-between p-2 overflow-hidden select-none relative">
       
-      {/* Voice Chat Bar */}
       <VoiceChatBar socket={socket} roomId={game?.roomId} />
 
       <div className="w-full flex justify-between items-center bg-black/40 backdrop-blur-md p-2 rounded-2xl border border-white/10 shadow-lg z-20">
         <div className="flex items-center gap-2">
           <span className="text-emerald-400 font-black text-lg italic uppercase">Close Master</span>
-          <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded-full font-bold">ROOM: {game?.roomId}</span>
+          <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded-full font-bold">ROOM: {game.roomId}</span>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setShowHistory(true)} className="px-3 py-1.5 bg-amber-500 rounded-xl font-black text-xs uppercase hover:scale-105">Score</button>
@@ -83,11 +101,15 @@ export default function CloseMasterGame({ playerName, roomAction, onExit }) {
         </div>
       </div>
 
-      {errorMsg && <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-red-600 text-white font-bold px-4 py-2 rounded-full z-50 shadow-xl border border-white animate-bounce">{errorMsg}</div>}
+      {errorMsg && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-red-600 text-white font-bold px-4 py-2 rounded-full z-50 shadow-xl border border-white animate-bounce">
+          {errorMsg}
+        </div>
+      )}
 
       <div className="flex justify-center gap-4 my-2 px-2">
         {opponents.map(p => (
-          <div key={p.id} className={`flex flex-col items-center gap-1 p-2 rounded-2xl border transition-all shadow-lg ${game?.turnId === p.id ? 'border-emerald-400 bg-emerald-400/20 ring-2' : 'border-white/10 bg-black/40'}`}>
+          <div key={p.id} className={`flex flex-col items-center gap-1 p-2 rounded-2xl border transition-all shadow-lg ${game.turnId === p.id ? 'border-emerald-400 bg-emerald-400/20 ring-2' : 'border-white/10 bg-black/40'}`}>
             <span className="font-bold text-[10px] uppercase">{p.name}</span>
             <span className="text-[9px] text-amber-400 font-black">{p.score} PTS</span>
           </div>
@@ -95,7 +117,7 @@ export default function CloseMasterGame({ playerName, roomAction, onExit }) {
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center relative my-2">
-        {game?.started ? (
+        {game.started ? (
           <div className="flex gap-8 bg-black/30 p-6 rounded-3xl border border-white/10 shadow-2xl relative">
             <div className="absolute top-2 right-4 text-xs font-black text-yellow-400">⏳ {game.turnTimeLeft}s</div>
             <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => { if (myTurn && !me?.hasDrawn) socket.emit("action_draw", { roomId: game.roomId, fromDiscard: false }); }}>
@@ -108,19 +130,25 @@ export default function CloseMasterGame({ playerName, roomAction, onExit }) {
             </div>
           </div>
         ) : (
-          game?.hostId === game?.youId && <button onClick={() => socket.emit("start_round", { roomId: game.roomId })} className="px-10 py-4 bg-gradient-to-r from-emerald-400 to-teal-600 rounded-3xl font-black text-2xl uppercase shadow-2xl animate-pulse border-2 border-white">Start Game</button>
+          game.hostId === game.youId && (
+            <button onClick={() => socket.emit("start_round", { roomId: game.roomId })} className="px-10 py-4 bg-gradient-to-r from-emerald-400 to-teal-600 rounded-3xl font-black text-2xl uppercase shadow-2xl animate-pulse border-2 border-white">
+              Start Game
+            </button>
+          )
         )}
       </div>
 
       <div className="w-full max-w-md mx-auto flex justify-center gap-2 mb-2 px-2">
         {myTurn ? (
           <>
-            <button onClick={() => socket.emit("action_draw", { roomId: game?.roomId, fromDiscard: false })} disabled={me?.hasDrawn} className="flex-1 py-3 bg-emerald-600 disabled:opacity-40 rounded-xl font-black text-sm uppercase shadow-lg">DRAW</button>
-            <button onClick={() => { socket.emit("action_drop", { roomId: game?.roomId, selectedIds }); setSelectedIds([]); }} disabled={selectedIds.length !== 1 || !me?.hasDrawn} className="flex-1 py-3 bg-blue-600 disabled:opacity-40 rounded-xl font-black text-sm uppercase shadow-lg">DROP 1</button>
-            <button onClick={() => { if (window.confirm("Close Match?")) socket.emit("action_close", { roomId: game?.roomId, selectedIds }); }} disabled={selectedIds.length !== 1 || !me?.hasDrawn} className="flex-1 py-3 bg-gradient-to-r from-yellow-500 to-amber-600 disabled:opacity-40 rounded-xl font-black text-sm uppercase shadow-lg border border-white">CLOSE! 🏆</button>
+            <button onClick={() => socket.emit("action_draw", { roomId: game.roomId, fromDiscard: false })} disabled={me?.hasDrawn} className="flex-1 py-3 bg-emerald-600 disabled:opacity-40 rounded-xl font-black text-sm uppercase shadow-lg">DRAW</button>
+            <button onClick={() => { socket.emit("action_drop", { roomId: game.roomId, selectedIds }); setSelectedIds([]); }} disabled={selectedIds.length !== 1 || !me?.hasDrawn} className="flex-1 py-3 bg-blue-600 disabled:opacity-40 rounded-xl font-black text-sm uppercase shadow-lg">DROP 1</button>
+            <button onClick={() => { if (window.confirm("Close Match?")) socket.emit("action_close", { roomId: game.roomId, selectedIds }); }} disabled={selectedIds.length !== 1 || !me?.hasDrawn} className="flex-1 py-3 bg-gradient-to-r from-yellow-500 to-amber-600 disabled:opacity-40 rounded-xl font-black text-sm uppercase shadow-lg border border-white">CLOSE! 🏆</button>
           </>
         ) : (
-          <div className="w-full text-center py-2 bg-black/40 rounded-xl border border-white/10 italic text-[10px] font-black uppercase text-yellow-400">⏳ {game?.turnTimeLeft}s : Waiting for turn...</div>
+          <div className="w-full text-center py-2 bg-black/40 rounded-xl border border-white/10 italic text-[10px] font-black uppercase text-yellow-400">
+            ⏳ {game.turnTimeLeft}s : Waiting for turn...
+          </div>
         )}
       </div>
 
@@ -134,14 +162,36 @@ export default function CloseMasterGame({ playerName, roomAction, onExit }) {
         </div>
       </div>
 
+      {showHistory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-gray-900 p-6 rounded-3xl border-2 border-emerald-400 shadow-2xl w-full max-w-sm text-center">
+            <h2 className="text-2xl font-black text-emerald-400 mb-4 uppercase">Score Board</h2>
+            <div className="space-y-2 mb-6 max-h-60 overflow-y-auto">
+              {game.players.map(p => (
+                <div key={p.id} className="flex justify-between py-2 border-b border-white/10">
+                  <span className="uppercase font-bold">{p.name}</span>
+                  <span className="text-yellow-400 font-black">{p.score} PTS</span>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setShowHistory(false)} className="w-full py-3 bg-emerald-500 rounded-xl font-black uppercase text-white">Close</button>
+          </div>
+        </div>
+      )}
+
       {showResult && (
          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
             <div className="bg-gray-900 p-6 rounded-3xl border-2 border-emerald-400 shadow-2xl w-full max-w-sm text-center">
               <h2 className="text-3xl font-black text-emerald-400 mb-4 uppercase">Round Over</h2>
-              {game?.players.map(p => (
-                <div key={p.id} className="flex justify-between py-2 border-b border-white/10"><span className="uppercase">{p.name}</span><span className="text-red-400">+{p.lastRoundPoints} Penalty</span></div>
+              {game.players.map(p => (
+                <div key={p.id} className="flex justify-between py-2 border-b border-white/10">
+                  <span className="uppercase">{p.name}</span>
+                  <span className="text-red-400">+{p.lastRoundPoints} Penalty</span>
+                </div>
               ))}
-              <button onClick={() => { setShowResult(false); if (game?.hostId === game?.youId) socket.emit("start_round", { roomId: game.roomId }); }} className="w-full mt-4 py-3 bg-emerald-500 rounded-xl font-black uppercase text-white">Next Round</button>
+              <button onClick={() => { setShowResult(false); if (game.hostId === game.youId) socket.emit("start_round", { roomId: game.roomId }); }} className="w-full mt-4 py-3 bg-emerald-500 rounded-xl font-black uppercase text-white">
+                Next Round
+              </button>
             </div>
          </div>
       )}
