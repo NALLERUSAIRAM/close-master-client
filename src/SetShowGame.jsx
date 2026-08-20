@@ -67,8 +67,6 @@ export default function SetShowGame({ playerName, roomAction, onExit }) {
 
   useEffect(() => {
     localStorage.setItem("cmp_id", playerId);
-    if (window.screen && window.screen.orientation) window.screen.orientation.lock('landscape').catch(() => {});
-    
     const s = io(SERVER_URL, { transports: ["polling", "websocket"] });
     
     s.on("game_state", (g) => {
@@ -100,7 +98,6 @@ export default function SetShowGame({ playerName, roomAction, onExit }) {
   const myTurn = game?.started && game?.turnId === game.youId;
   const opponents = game?.players.filter(p => p.id !== game.youId) || [];
 
-  // Auto trigger Bonus Modal when user gets 4 cards and it unlocks
   useEffect(() => {
     if (me?.bonusUnlocked) {
       setShowBonusModal(true);
@@ -109,15 +106,15 @@ export default function SetShowGame({ playerName, roomAction, onExit }) {
 
   if (!game) {
     return (
-      <div className="h-full w-full flex items-center justify-center text-white">
+      <div className="h-full w-full flex items-center justify-center text-white bg-transparent">
         <div className="w-10 h-10 border-4 border-pink-400 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <div className="h-full w-full text-white flex flex-col justify-between p-2 overflow-hidden select-none relative">
-      <div className="w-full flex justify-between items-center bg-black/40 backdrop-blur-md p-2 rounded-2xl border border-white/10 shadow-lg z-20">
+    <div className="h-full w-full text-white flex flex-col justify-between p-2 overflow-hidden select-none relative bg-transparent">
+      <div className="w-full flex justify-between items-center bg-black/60 backdrop-blur-md p-2 rounded-2xl border border-white/10 shadow-lg z-20">
         <div className="flex items-center gap-2">
           <span className="text-pink-400 font-black text-lg italic uppercase">Set Show</span>
           <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded-full font-bold">ROOM: {game.roomId}</span>
@@ -126,6 +123,7 @@ export default function SetShowGame({ playerName, roomAction, onExit }) {
           {me?.bonusUnlocked && (
             <button onClick={() => setShowBonusModal(true)} className="px-3 py-1.5 bg-gradient-to-r from-yellow-500 to-amber-600 animate-pulse rounded-xl font-black text-xs uppercase text-black shadow-lg">Bonus 🃏</button>
           )}
+
           <button onClick={() => setShowHistory(true)} className="px-3 py-1.5 bg-amber-500 rounded-xl font-black text-xs uppercase hover:scale-105">Score</button>
           <button onClick={() => { if (window.confirm("Exit?")) { socket.emit("exit_room"); if (onExit) onExit(); } }} className="px-3 py-1.5 bg-red-600 rounded-xl font-black text-xs uppercase hover:scale-105">Exit</button>
         </div>
@@ -139,7 +137,7 @@ export default function SetShowGame({ playerName, roomAction, onExit }) {
 
       <div className="flex justify-center gap-3 my-2 px-2 flex-wrap">
         {opponents.map(p => (
-          <div key={p.id} className={`flex items-center gap-2 p-2 rounded-2xl border transition-all shadow-lg ${game.turnId === p.id ? 'border-pink-400 bg-pink-400/20 ring-2' : 'border-white/10 bg-black/40'}`}>
+          <div key={p.id} className={`flex items-center gap-2 p-2 rounded-2xl border transition-all shadow-lg ${game.turnId === p.id ? 'border-pink-400 bg-pink-400/20 ring-2' : 'border-white/10 bg-black/50'}`}>
             <div className="flex flex-col">
               <span className="font-bold text-[10px] truncate max-w-[70px] uppercase">{p.name}</span>
               <span className="text-[9px] text-amber-400 font-black">{p.score} PTS</span>
@@ -156,7 +154,7 @@ export default function SetShowGame({ playerName, roomAction, onExit }) {
       <div className="flex-1 flex flex-col items-center justify-center relative my-2">
         {game.started ? (
           <div className="flex flex-col items-center gap-4">
-             <div className="flex gap-8 bg-black/30 p-6 rounded-3xl border border-white/10 shadow-2xl relative">
+             <div className="flex gap-8 bg-black/50 backdrop-blur-sm p-6 rounded-3xl border border-white/10 shadow-2xl relative">
                <div className="absolute top-2 right-4 text-xs font-black text-yellow-400">⏳ {game.turnTimeLeft}s</div>
                <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => { if (myTurn && !me?.hasDrawn) socket.emit("action_draw", { roomId: game.roomId, fromDiscard: false }); }}>
                  <span className="text-[10px] font-black uppercase text-pink-400">DRAW</span>
@@ -185,7 +183,7 @@ export default function SetShowGame({ playerName, roomAction, onExit }) {
             <button onClick={() => { if (window.confirm("Sets Ready for Show?")) socket.emit("action_show_set", { roomId: game.roomId, selectedIds }); }} disabled={selectedIds.length !== 1 || !me?.hasDrawn} className="flex-1 py-3 bg-gradient-to-r from-yellow-500 to-amber-600 disabled:opacity-40 rounded-xl font-black text-sm uppercase shadow-lg border border-white">SHOW! 🏆</button>
           </>
         ) : (
-          <div className="w-full text-center py-2 bg-black/40 rounded-xl border border-white/10 italic text-[10px] font-black uppercase text-yellow-400">
+          <div className="w-full text-center py-2 bg-black/60 backdrop-blur-sm rounded-xl border border-white/10 italic text-[10px] font-black uppercase text-yellow-400">
             ⏳ {game.turnTimeLeft}s : Waiting for turn...
           </div>
         )}
