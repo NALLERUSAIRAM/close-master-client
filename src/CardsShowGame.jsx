@@ -93,14 +93,24 @@ export default function CardsShowGame({ playerName, roomAction, onExit }) {
 
   if (!game) {
     return (
-      <div className="h-full w-full flex items-center justify-center text-white bg-transparent">
-        <div className="w-10 h-10 border-4 border-sky-400 border-t-transparent rounded-full animate-spin"></div>
+      <div className="h-full w-full flex items-center justify-center text-white relative overflow-hidden">
+        <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover z-0 opacity-80">
+          <source src="/gifs/16.mp4" type="video/mp4" />
+        </video>
+        <div className="w-10 h-10 border-4 border-sky-400 border-t-transparent rounded-full animate-spin z-10"></div>
       </div>
     );
   }
 
   return (
-    <div className="h-full w-full text-white flex flex-col justify-between p-2 overflow-hidden select-none relative bg-transparent">
+    <div className="h-full w-full text-white flex flex-col justify-between p-2 overflow-hidden select-none relative">
+      {/* Background Video (16.mp4) */}
+      <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover z-0">
+        <source src="/gifs/16.mp4" type="video/mp4" />
+      </video>
+      <div className="absolute inset-0 bg-black/40 z-0"></div>
+
+      {/* Header (No Sort & No Sound/Mix Buttons) */}
       <div className="w-full flex justify-between items-center bg-black/60 backdrop-blur-md p-2 rounded-2xl border border-white/10 shadow-lg z-20">
         <div className="flex items-center gap-2">
           <span className="text-sky-400 font-black text-lg italic uppercase">Cards Show</span>
@@ -118,7 +128,7 @@ export default function CardsShowGame({ playerName, roomAction, onExit }) {
         </div>
       )}
 
-      <div className="flex justify-center gap-4 my-2 px-2">
+      <div className="flex justify-center gap-4 my-2 px-2 z-10">
         {opponents.map(p => (
           <div key={p.id} className={`flex flex-col items-center gap-1 p-2 rounded-2xl border transition-all shadow-lg ${game.turnId === p.id ? 'border-sky-400 bg-sky-400/20 ring-2' : 'border-white/10 bg-black/50'}`}>
             <span className="font-bold text-[10px] uppercase">{p.name}</span>
@@ -127,7 +137,7 @@ export default function CardsShowGame({ playerName, roomAction, onExit }) {
         ))}
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center relative my-2">
+      <div className="flex-1 flex flex-col items-center justify-center relative my-2 z-10">
         {game.started ? (
           <div className="flex gap-8 bg-black/50 backdrop-blur-sm p-6 rounded-3xl border border-white/10 shadow-2xl relative">
             <div className="absolute top-2 right-4 text-xs font-black text-yellow-400">⏳ {game.turnTimeLeft}s</div>
@@ -149,7 +159,7 @@ export default function CardsShowGame({ playerName, roomAction, onExit }) {
         )}
       </div>
 
-      <div className="w-full max-w-md mx-auto flex justify-center gap-2 mb-2 px-2">
+      <div className="w-full max-w-md mx-auto flex justify-center gap-2 mb-2 px-2 z-10">
         {myTurn ? (
           <>
             <button onClick={() => socket.emit("action_draw", { roomId: game.roomId, fromDiscard: false })} disabled={me?.hasDrawn} className="flex-1 py-3 bg-sky-600 disabled:opacity-40 rounded-xl font-black text-sm uppercase shadow-lg">DRAW</button>
@@ -157,13 +167,13 @@ export default function CardsShowGame({ playerName, roomAction, onExit }) {
             <button onClick={() => { if (window.confirm("13 Cards Unique Set Ready?")) socket.emit("action_show_cards", { roomId: game.roomId, selectedIds }); }} disabled={selectedIds.length !== 1 || !me?.hasDrawn} className="flex-1 py-3 bg-gradient-to-r from-yellow-500 to-amber-600 disabled:opacity-40 rounded-xl font-black text-sm uppercase shadow-lg border border-white">SHOW! 🏆</button>
           </>
         ) : (
-          <div className="w-full text-center py-2 bg-black/60 backdrop-blur-sm rounded-xl border border-white/10 italic text-[10px] font-black uppercase text-yellow-400">
+          <div className="w-full text-center py-2 bg-black/50 rounded-xl border border-white/10 italic text-[10px] font-black uppercase text-yellow-400">
             ⏳ {game.turnTimeLeft}s : Waiting for turn...
           </div>
         )}
       </div>
 
-      <div className="w-full flex justify-center items-end pb-2 overflow-x-auto no-scrollbar px-4 pt-4">
+      <div className="w-full flex justify-center items-end pb-2 overflow-x-auto no-scrollbar px-4 pt-4 z-10">
         <div className="flex -space-x-3 sm:-space-x-2">
           {me?.hand.map(c => (
             <div key={c.id} className="relative transition-transform hover:-translate-y-6 hover:z-40">
