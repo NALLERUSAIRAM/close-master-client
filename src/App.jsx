@@ -35,11 +35,13 @@ export default function App() {
   // 1. CINEMATIC WELCOME SCREEN
   if (step === "welcome") {
     return (
-      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-950 via-gray-950 to-black text-white p-6 font-sans relative overflow-hidden">
+      <div className="h-[100dvh] w-full flex flex-col items-center justify-center text-white p-6 font-sans relative overflow-hidden">
         
-        {/* Background Cinematic Glows */}
-        <div className="absolute -top-32 -left-32 w-96 h-96 bg-yellow-500/10 rounded-full blur-[120px] pointer-events-none"></div>
-        <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-red-500/10 rounded-full blur-[120px] pointer-events-none"></div>
+        {/* Galaxy Video Background (16.mp4) */}
+        <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover z-0">
+          <source src="/gifs/16.mp4" type="video/mp4" />
+        </video>
+        <div className="absolute inset-0 bg-black/50 z-0"></div>
 
         {/* Title Container */}
         <div className="text-center mb-10 z-10 animate-fade-in">
@@ -55,10 +57,8 @@ export default function App() {
         </div>
 
         {/* Cinematic Input Box Form */}
-        <form onSubmit={handleNameSubmit} className="w-full max-w-sm z-10 bg-black/40 backdrop-blur-xl p-8 rounded-[32px] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex flex-col gap-6 relative group">
+        <form onSubmit={handleNameSubmit} className="w-full max-w-sm z-10 bg-black/60 backdrop-blur-xl p-8 rounded-[32px] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex flex-col gap-6 relative group">
           
-          <div className="absolute inset-0 rounded-[32px] bg-gradient-to-tr from-yellow-500/10 via-transparent to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
-
           <div className="flex flex-col gap-2 text-center relative z-10">
             <label className="text-[11px] uppercase tracking-[0.25em] text-yellow-400/90 font-black">Enter Your Battle Name</label>
             <input 
@@ -81,7 +81,7 @@ export default function App() {
         </form>
 
         {/* Footer info */}
-        <div className="absolute bottom-6 text-center text-[10px] text-gray-500 uppercase tracking-widest">
+        <div className="absolute bottom-6 z-10 text-center text-[10px] text-gray-400 uppercase tracking-widest">
           Close Master • Cards Show • Set Show
         </div>
       </div>
@@ -91,8 +91,14 @@ export default function App() {
   // 2. GAME SELECTION (3 DECKS)
   if (step === "select_game") {
     return (
-      <div className="h-[100dvh] w-full flex flex-col items-center justify-start bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-950 via-gray-950 to-black text-white p-4 sm:p-8 font-sans overflow-y-auto">
-        <div className="w-full max-w-4xl flex justify-between items-center mb-8 bg-black/40 p-4 rounded-2xl border border-white/10 shadow-lg">
+      <div className="h-[100dvh] w-full flex flex-col items-center justify-start text-white p-4 sm:p-8 font-sans overflow-y-auto relative">
+        {/* Galaxy Video Background (16.mp4) */}
+        <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover z-0">
+          <source src="/gifs/16.mp4" type="video/mp4" />
+        </video>
+        <div className="absolute inset-0 bg-black/50 z-0"></div>
+
+        <div className="w-full max-w-4xl flex justify-between items-center mb-8 bg-black/60 backdrop-blur-md p-4 rounded-2xl border border-white/10 shadow-lg z-10">
           <button onClick={handleBack} className="text-gray-400 hover:text-white font-bold px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl transition">⬅ BACK</button>
           <div className="text-center flex-1">
             <span className="text-yellow-400 font-black text-2xl italic tracking-tighter uppercase">Gully Cards Hub</span>
@@ -103,16 +109,16 @@ export default function App() {
           </div>
         </div>
 
-        <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-widest mb-8 text-gray-200">Select Your Deck</h2>
+        <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-widest mb-8 text-gray-200 z-10">Select Your Deck</h2>
 
-        <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 px-4">
+        <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 px-4 z-10">
           {games.map((game) => (
             <div 
               key={game.id}
               onClick={() => handleGameSelect(game.id)}
               className={`relative group cursor-pointer flex flex-col items-center bg-gradient-to-b ${game.color} p-1 rounded-3xl transition-all duration-300 hover:-translate-y-4 hover:scale-105 shadow-xl hover:${game.shadow}`}
             >
-              <div className="w-full h-full bg-gray-900/90 backdrop-blur-sm rounded-[22px] p-6 flex flex-col items-center text-center border border-white/10">
+              <div className="w-full h-full bg-gray-950/90 backdrop-blur-sm rounded-[22px] p-6 flex flex-col items-center text-center border border-white/10">
                 <div className="w-24 h-32 mb-6 bg-black rounded-xl border-2 border-white/20 flex items-center justify-center shadow-inner relative overflow-hidden group-hover:border-yellow-400 transition-colors">
                    <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent"></div>
                    <span className="text-4xl">{game.id === "close_master" ? "🃏" : game.id === "cards_show" ? "🎴" : "♠️"}</span>
@@ -130,17 +136,23 @@ export default function App() {
   // 3. ROOM LOBBY
   if (step === "lobby") {
     return (
-      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-950 via-gray-950 to-black text-white p-6 font-sans relative">
-        <div className="absolute top-6 left-6">
-          <button onClick={handleBack} className="text-gray-400 hover:text-white font-bold px-4 py-2 bg-white/5 rounded-xl border border-white/10 transition">⬅ DECKS</button>
+      <div className="h-[100dvh] w-full flex flex-col items-center justify-center text-white p-6 font-sans relative">
+        {/* Galaxy Video Background (16.mp4) */}
+        <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover z-0">
+          <source src="/gifs/16.mp4" type="video/mp4" />
+        </video>
+        <div className="absolute inset-0 bg-black/50 z-0"></div>
+
+        <div className="absolute top-6 left-6 z-10">
+          <button onClick={handleBack} className="text-gray-400 hover:text-white font-bold px-4 py-2 bg-black/60 rounded-xl border border-white/10 transition">⬅ DECKS</button>
         </div>
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 z-10">
           <h2 className={`text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r ${selectedGame.color} uppercase italic drop-shadow-lg`}>
             {selectedGame.name}
           </h2>
-          <p className="text-sm uppercase tracking-widest text-gray-400 font-bold mt-2">{selectedGame.desc}</p>
+          <p className="text-sm uppercase tracking-widest text-gray-300 font-bold mt-2">{selectedGame.desc}</p>
         </div>
-        <div className="w-full max-w-sm bg-white/10 backdrop-blur-md p-8 rounded-3xl border border-white/20 shadow-2xl flex flex-col gap-6">
+        <div className="w-full max-w-sm bg-black/60 backdrop-blur-md p-8 rounded-3xl border border-white/20 shadow-2xl flex flex-col gap-6 z-10">
           <button 
             onClick={() => { setRoomAction({ type: "create", code: "" }); setStep("playing"); }} 
             className={`w-full py-5 bg-gradient-to-r ${selectedGame.color} rounded-2xl font-black text-xl uppercase shadow-lg hover:brightness-110 active:scale-95 transition border border-white/20`}
@@ -149,11 +161,11 @@ export default function App() {
           </button>
           <div className="relative flex items-center justify-center my-2">
             <div className="border-t border-white/20 w-full"></div>
-            <span className="absolute bg-[#1a1c29] px-4 text-xs font-bold text-gray-400 uppercase tracking-widest">OR</span>
+            <span className="absolute bg-[#12141f] px-4 text-xs font-bold text-gray-400 uppercase tracking-widest">OR</span>
           </div>
           <div className="flex flex-col gap-3">
             <input 
-              className="p-4 bg-black/60 rounded-2xl border border-white/20 text-center uppercase tracking-widest text-xl font-black outline-none focus:border-white transition" 
+              className="p-4 bg-black/80 rounded-2xl border border-white/20 text-center uppercase tracking-widest text-xl font-black outline-none focus:border-white transition" 
               placeholder="ENTER ROOM CODE" 
               value={joinCode} 
               onChange={e => setJoinCode(e.target.value.toUpperCase())} 
@@ -176,7 +188,7 @@ export default function App() {
   if (step === "playing") {
     if (selectedGame.id === "close_master") {
       return (
-        <div className="h-[100dvh] w-full relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-950 via-indigo-950 to-black">
+        <div className="h-[100dvh] w-full relative">
           <CloseMasterGame playerName={playerName} roomAction={roomAction} onExit={handleBack} />
         </div>
       );
@@ -184,7 +196,7 @@ export default function App() {
     
     if (selectedGame.id === "cards_show") {
       return (
-        <div className="h-[100dvh] w-full relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-sky-950 via-blue-950 to-black">
+        <div className="h-[100dvh] w-full relative">
           <CardsShowGame playerName={playerName} roomAction={roomAction} onExit={handleBack} />
         </div>
       );
@@ -192,7 +204,7 @@ export default function App() {
 
     if (selectedGame.id === "set_show") {
       return (
-        <div className="h-[100dvh] w-full relative bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-pink-950 via-rose-950 to-black">
+        <div className="h-[100dvh] w-full relative">
           <SetShowGame playerName={playerName} roomAction={roomAction} onExit={handleBack} />
         </div>
       );
