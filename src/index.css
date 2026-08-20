@@ -2,41 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
-*, ::before, ::after {
-  box-sizing: border-box;
-}
-
 body, html {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100vh;
-  background-color: #030712 !important;
-  background-image: radial-gradient(circle at 50% 30%, #111827 0%, #030712 60%, #000000 100%) !important;
-  background-attachment: fixed !important;
+  background-color: #000000 !important;
+  background-image: none !important;
   overflow: hidden;
-  font-family: ui-sans-serif, system-ui, sans-serif;
   color: #ffffff;
+  font-family: ui-sans-serif, system-ui, sans-serif;
 }
 
-/* క్యాసినో గ్లో బ్యాక్‌గ్రౌండ్ */
+/* మనం ఇందాక అనుకున్న రిచ్ గ్లో అండ్ లైటింగ్ ఎఫెక్ట్ */
 .casino-bg-glow {
   position: fixed;
   inset: 0;
   background-image: 
-    radial-gradient(circle at 20% 20%, rgba(234, 179, 8, 0.08) 0%, transparent 40%),
-    radial-gradient(circle at 80% 80%, rgba(225, 29, 72, 0.08) 0%, transparent 40%);
-  z-index: -1;
+    radial-gradient(circle at 20% 20%, rgba(250, 204, 21, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(244, 63, 94, 0.08) 0%, transparent 40%);
+  z-index: 0;
   pointer-events: none;
-}
-
-/* గ్లాస్‌కార్డ్ ఎఫెక్ట్ */
-.glass-card-effect {
-  background: rgba(10, 10, 15, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(250, 204, 21, 0.25);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 30px rgba(250, 204, 21, 0.1);
 }
 
 .no-scrollbar::-webkit-scrollbar {
