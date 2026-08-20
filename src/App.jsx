@@ -39,7 +39,7 @@ export default function App() {
         
         {/* Galaxy Video Background (16.mp4) */}
         <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover z-0">
-          <source src="/gifs/16.mp4" type="video/mp4" />
+          <source src="gifs/16.mp4" type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-black/50 z-0"></div>
 
