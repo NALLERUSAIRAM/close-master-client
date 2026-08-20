@@ -7,19 +7,38 @@ body, html {
   padding: 0;
   width: 100%;
   height: 100vh;
-  background: radial-gradient(circle at center, #2c2c2c 0%, #000000 100%) !important;
+  /* రాయల్ క్యాసినో డార్క్ వెల్వెట్ రేడియంట్ బ్యాక్‌గ్రౌండ్ */
+  background: radial-gradient(circle at 50% 30%, #111827 0%, #030712 60%, #000000 100%) !important;
   background-attachment: fixed !important;
   overflow: hidden;
   font-family: ui-sans-serif, system-ui, sans-serif;
 }
 
-.video-bg-layer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+/* బ్యాక్‌గ్రౌండ్‌లో లగ్జరీ కార్డ్ సింబల్స్ వాటర్‌మార్క్ & గ్లో ఎఫెక్ట్ */
+.casino-bg-glow {
+  position: fixed;
+  inset: 0;
+  background-image: 
+    radial-gradient(circle at 20% 20%, rgba(234, 179, 8, 0.07) 0%, transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(225, 29, 72, 0.07) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.05) 0%, transparent 50%);
   z-index: -1;
-  background: rgba(0, 0, 0, 0.6);
   pointer-events: none;
+}
+
+/* గ్లాస్‌కార్డ్ ఎఫెక్ట్ - టెక్స్ట్ క్లియర్ కట్ గా కనబడటానికి */
+.glass-card-effect {
+  background: rgba(10, 10, 15, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(250, 204, 21, 0.2);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(250, 204, 21, 0.1);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
