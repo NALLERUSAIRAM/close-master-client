@@ -3,7 +3,7 @@ import CloseMasterGame from "./CloseMasterGame";
 import CardsShowGame from "./CardsShowGame"; 
 import SetShowGame from "./SetShowGame"; 
 
-const BG_THEMES = [{ id: "t15", file: "/gifs/15.mp4" }, { id: "t16", file: "/gifs/16.mp4" }];
+const BG_THEMES = [{ id: "t15", file: "gifs/15.mp4" }, { id: "t16", file: "gifs/16.mp4" }];
 
 export default function App() {
   const [step, setStep] = useState("welcome"); 
@@ -39,7 +39,7 @@ export default function App() {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center text-white p-6 font-sans relative overflow-hidden">
         
-        {/* Galaxy Video Background using BG_THEMES (t16) */}
+        {/* Galaxy Video Background (16.mp4) */}
         <video autoPlay loop muted playsInline preload="auto" className="absolute inset-0 w-full h-full object-cover z-0">
           <source src={BG_THEMES[1].file} type="video/mp4" />
         </video>
@@ -50,7 +50,7 @@ export default function App() {
           <div className="inline-block px-4 py-1.5 mb-3 rounded-full bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 text-xs font-black uppercase tracking-[0.3em] shadow-[0_0_15px_rgba(250,204,21,0.2)]">
             ♠️ Premium Multiplayer Experience ♦️
           </div>
-          <h1 className="text-6xl sm:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-red-500 to-pink-500 tracking-wider uppercase italic drop-shadow-[0_10px_20px_rgba(0,0,0,0.9)] hover:scale-105 transition-transform duration-500">
+          <h1 className="text-6xl sm:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-red-500 to-pink-500 tracking-wider uppercase italic drop-shadow-[0_10px_20px_rgba(0,0,0,0.9)]">
             GULLY CARDS
           </h1>
           <p className="text-xs sm:text-sm uppercase tracking-[0.4em] text-gray-300 font-bold mt-4 drop-shadow">
