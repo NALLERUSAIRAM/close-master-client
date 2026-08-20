@@ -39,10 +39,11 @@ export default function App() {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center text-white p-6 font-sans relative overflow-hidden">
         
-        {/* Galaxy Video Background (16.mp4) */}
+        {/* Galaxy Video Background & Layer */}
         <video autoPlay loop muted playsInline preload="auto" className="absolute inset-0 w-full h-full object-cover z-0">
           <source src={BG_THEMES[1].file} type="video/mp4" />
         </video>
+        <div className="video-bg-layer" />
         <div className="absolute inset-0 bg-black/50 z-0"></div>
 
         {/* Title Container */}
@@ -97,6 +98,7 @@ export default function App() {
         <video autoPlay loop muted playsInline preload="auto" className="absolute inset-0 w-full h-full object-cover z-0">
           <source src={BG_THEMES[1].file} type="video/mp4" />
         </video>
+        <div className="video-bg-layer" />
         <div className="absolute inset-0 bg-black/50 z-0"></div>
 
         <div className="w-full max-w-4xl flex justify-between items-center mb-8 bg-black/60 backdrop-blur-md p-4 rounded-2xl border border-white/10 shadow-lg z-10">
@@ -141,6 +143,7 @@ export default function App() {
         <video autoPlay loop muted playsInline preload="auto" className="absolute inset-0 w-full h-full object-cover z-0">
           <source src={BG_THEMES[1].file} type="video/mp4" />
         </video>
+        <div className="video-bg-layer" />
         <div className="absolute inset-0 bg-black/50 z-0"></div>
 
         <div className="absolute top-6 left-6 z-10">
