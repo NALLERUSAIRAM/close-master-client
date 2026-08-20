@@ -3,6 +3,8 @@ import CloseMasterGame from "./CloseMasterGame";
 import CardsShowGame from "./CardsShowGame"; 
 import SetShowGame from "./SetShowGame"; 
 
+const BG_THEMES = [{ id: "t15", file: "/gifs/15.mp4" }, { id: "t16", file: "/gifs/16.mp4" }];
+
 export default function App() {
   const [step, setStep] = useState("welcome"); 
   const [playerName, setPlayerName] = useState("");
@@ -37,9 +39,9 @@ export default function App() {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center text-white p-6 font-sans relative overflow-hidden">
         
-        {/* Galaxy Video Background (16.mp4) */}
-        <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover z-0">
-          <source src="gifs/16.mp4" type="video/mp4" />
+        {/* Galaxy Video Background using BG_THEMES (t16) */}
+        <video autoPlay loop muted playsInline preload="auto" className="absolute inset-0 w-full h-full object-cover z-0">
+          <source src={BG_THEMES[1].file} type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-black/50 z-0"></div>
 
@@ -92,9 +94,8 @@ export default function App() {
   if (step === "select_game") {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-start text-white p-4 sm:p-8 font-sans overflow-y-auto relative">
-        {/* Galaxy Video Background (16.mp4) */}
-        <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover z-0">
-          <source src="/gifs/16.mp4" type="video/mp4" />
+        <video autoPlay loop muted playsInline preload="auto" className="absolute inset-0 w-full h-full object-cover z-0">
+          <source src={BG_THEMES[1].file} type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-black/50 z-0"></div>
 
@@ -137,9 +138,8 @@ export default function App() {
   if (step === "lobby") {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center text-white p-6 font-sans relative">
-        {/* Galaxy Video Background (16.mp4) */}
-        <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover z-0">
-          <source src="/gifs/16.mp4" type="video/mp4" />
+        <video autoPlay loop muted playsInline preload="auto" className="absolute inset-0 w-full h-full object-cover z-0">
+          <source src={BG_THEMES[1].file} type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-black/50 z-0"></div>
 
