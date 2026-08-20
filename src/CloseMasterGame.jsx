@@ -60,6 +60,8 @@ export default function CloseMasterGame({ playerName, roomAction, onExit }) {
 
   useEffect(() => {
     localStorage.setItem("cmp_id", playerId);
+    if (window.screen && window.screen.orientation) window.screen.orientation.lock('landscape').catch(() => {});
+    
     const s = io(SERVER_URL, { transports: ["polling", "websocket"] });
     
     s.on("game_state", (g) => {
