@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { StatusBar } from "@capacitor/status-bar";
 import CloseMasterGame from "./CloseMasterGame"; 
 import CardsShowGame from "./CardsShowGame"; 
 import SetShowGame from "./SetShowGame"; 
@@ -12,14 +11,14 @@ export default function App() {
   const [roomAction, setRoomAction] = useState({ type: "", code: "" });
 
   useEffect(() => {
-    const hideStatusBar = async () => {
-      try {
-        await StatusBar.hide();
-      } catch (e) {
-        console.log("Status bar not available on web browser");
-      }
-    };
-    hideStatusBar();
+    // క్యాపాసిటర్ స్టేటస్ బార్‌ సేఫ్‌గా రన్ కావడానికి ట్రిక్
+    try {
+      import("@capacitor/status-bar").then(({ StatusBar }) => {
+        StatusBar.hide().catch(() => {});
+      });
+    } catch (e) {
+      console.log("Web mode");
+    }
   }, []);
 
   const games = [
