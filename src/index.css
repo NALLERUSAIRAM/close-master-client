@@ -7,17 +7,20 @@ body, html {
   padding: 0;
   width: 100%;
   height: 100vh;
-  background-color: #000000 !important;
-  background-image: none !important;
+  /* ఇది ప్రీమియం డార్క్ గ్రేడియంట్ లుక్ */
+  background: radial-gradient(circle at center, #2c2c2c 0%, #000000 100%) !important;
+  background-attachment: fixed !important;
   overflow: hidden;
-  color: #ffffff;
   font-family: ui-sans-serif, system-ui, sans-serif;
 }
 
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+/* ఆ వీడియో సింబల్ చుట్టూ కొంచెం గ్లో ఎఫెక్ట్ రావడానికి */
+.video-bg-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  background: rgba(0, 0, 0, 0.6); /* వీడియో సింబల్ పైన కొంచెం షేడ్ */
 }
