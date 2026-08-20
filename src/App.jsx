@@ -5,7 +5,7 @@ import CardsShowGame from "./CardsShowGame";
 import SetShowGame from "./SetShowGame";
 
 // Single background video
-const BG_VIDEO = "/gifs/16.mp4";
+const BG_VIDEO = "/gifs/15.mp4";
 
 export default function App() {
   const [step, setStep] = useState("welcome");
