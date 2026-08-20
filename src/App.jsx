@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { StatusBar } from "@capacitor/status-bar";
 import CloseMasterGame from "./CloseMasterGame"; 
 import CardsShowGame from "./CardsShowGame"; 
 import SetShowGame from "./SetShowGame"; 
@@ -11,6 +12,18 @@ export default function App() {
   const [selectedGame, setSelectedGame] = useState(null);
   const [joinCode, setJoinCode] = useState("");
   const [roomAction, setRoomAction] = useState({ type: "", code: "" });
+
+  // App open avvagane status bar ni hide cheyadaniki idi use avthundi
+  useEffect(() => {
+    const hideStatusBar = async () => {
+      try {
+        await StatusBar.hide();
+      } catch (e) {
+        console.log("Status bar not available on web browser");
+      }
+    };
+    hideStatusBar();
+  }, []);
 
   const games = [
     { id: "close_master", name: "Close Master", desc: "UNO Style Drop & Show", color: "from-emerald-400 to-teal-600", shadow: "shadow-emerald-500/50" },
@@ -39,14 +52,12 @@ export default function App() {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center text-white p-6 font-sans relative overflow-hidden">
         
-        {/* Galaxy Video Background & Layer */}
         <video autoPlay loop muted playsInline preload="auto" className="absolute inset-0 w-full h-full object-cover z-0">
           <source src={BG_THEMES[1].file} type="video/mp4" />
         </video>
         <div className="video-bg-layer" />
         <div className="absolute inset-0 bg-black/50 z-0"></div>
 
-        {/* Title Container */}
         <div className="text-center mb-10 z-10 animate-fade-in">
           <div className="inline-block px-4 py-1.5 mb-3 rounded-full bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 text-xs font-black uppercase tracking-[0.3em] shadow-[0_0_15px_rgba(250,204,21,0.2)]">
             ♠️ Premium Multiplayer Experience ♦️
@@ -59,9 +70,7 @@ export default function App() {
           </p>
         </div>
 
-        {/* Cinematic Input Box Form */}
         <form onSubmit={handleNameSubmit} className="w-full max-w-sm z-10 bg-black/60 backdrop-blur-xl p-8 rounded-[32px] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex flex-col gap-6 relative group">
-          
           <div className="flex flex-col gap-2 text-center relative z-10">
             <label className="text-[11px] uppercase tracking-[0.25em] text-yellow-400/90 font-black">Enter Your Battle Name</label>
             <input 
@@ -83,7 +92,6 @@ export default function App() {
           </button>
         </form>
 
-        {/* Footer info */}
         <div className="absolute bottom-6 z-10 text-center text-[10px] text-gray-400 uppercase tracking-widest">
           Close Master • Cards Show • Set Show
         </div>
