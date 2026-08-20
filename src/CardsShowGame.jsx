@@ -1,8 +1,13 @@
 import React, { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
-import VoiceChatBar from "./VoiceChatBar";
 
 const SERVER_URL = "https://site--close-master-server--t29zpf96vfqv.code.run";
+
+const sortHand = (hand) => {
+  if (!hand) return [];
+  const rankOrder = { "A": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9, "10": 10, "J": 11, "Q": 12, "K": 13, "JOKER": 14 };
+  return [...hand].sort((a, b) => (rankOrder[a.rank] || 0) - (rankOrder[b.rank] || 0));
+};
 
 const getCardBg = (card) => {
   if (!card) return "bg-gray-800 border-gray-600";
@@ -56,7 +61,16 @@ export default function CardsShowGame({ playerName, roomAction, onExit }) {
   useEffect(() => {
     localStorage.setItem("cmp_id", playerId);
     const s = io(SERVER_URL, { transports: ["polling", "websocket"] });
-    s.on("game_state", setGame);
+    
+    s.on("game_state", (g) => {
+      if (g && g.players) {
+        g.players.forEach(p => {
+          if (p.hand) p.hand = sortHand(p.hand);
+        });
+      }
+      setGame(g);
+    });
+
     s.on("close_result", () => setShowResult(true));
     s.on("show_error", (msg) => { 
       setErrorMsg(msg); 
@@ -77,13 +91,6 @@ export default function CardsShowGame({ playerName, roomAction, onExit }) {
   const myTurn = game?.started && game?.turnId === game.youId;
   const opponents = game?.players.filter(p => p.id !== game.youId) || [];
 
-  const sortCards = () => {
-    if (!me || !me.hand) return;
-    const rankOrder = { "A": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9, "10": 10, "J": 11, "Q": 12, "K": 13, "JOKER": 14 };
-    me.hand.sort((a, b) => (rankOrder[a.rank] || 0) - (rankOrder[b.rank] || 0));
-    setGame({ ...game });
-  };
-
   if (!game) {
     return (
       <div className="h-full w-full flex items-center justify-center text-white">
@@ -94,15 +101,12 @@ export default function CardsShowGame({ playerName, roomAction, onExit }) {
 
   return (
     <div className="h-full w-full text-white flex flex-col justify-between p-2 overflow-hidden select-none relative">
-      <VoiceChatBar socket={socket} roomId={game?.roomId} />
-
       <div className="w-full flex justify-between items-center bg-black/40 backdrop-blur-md p-2 rounded-2xl border border-white/10 shadow-lg z-20">
         <div className="flex items-center gap-2">
           <span className="text-sky-400 font-black text-lg italic uppercase">Cards Show</span>
           <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded-full font-bold">ROOM: {game.roomId}</span>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={sortCards} className="px-3 py-1.5 bg-sky-600 rounded-xl font-black text-xs uppercase hover:scale-105">Sort 🔀</button>
           <button onClick={() => setShowHistory(true)} className="px-3 py-1.5 bg-amber-500 rounded-xl font-black text-xs uppercase hover:scale-105">Score</button>
           <button onClick={() => { if (window.confirm("Exit?")) { socket.emit("exit_room"); if (onExit) onExit(); } }} className="px-3 py-1.5 bg-red-600 rounded-xl font-black text-xs uppercase hover:scale-105">Exit</button>
         </div>
