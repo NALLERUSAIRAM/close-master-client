@@ -106,7 +106,7 @@ export default function CardsShowGame({ playerName, roomAction, onExit }) {
     <div className="h-full w-full text-white flex flex-col justify-between p-2 overflow-hidden select-none relative">
       {/* Background Video (16.mp4) */}
       <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover z-0">
-        <source src="/gifs/16.mp4" type="video/mp4" />
+        <source src="/gifs/15.mp4" type="video/mp4" />
       </video>
       <div className="absolute inset-0 bg-black/40 z-0"></div>
 
