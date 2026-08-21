@@ -102,7 +102,7 @@ export default function SetShowGame({ playerName, roomAction, onExit }) {
     return (
       <div className="h-full w-full flex items-center justify-center text-white relative overflow-hidden">
         <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover z-0 opacity-80">
-          <source src="/gifs/16.mp4" type="video/mp4" />
+          <source src="/gifs/15.mp4" type="video/mp4" />
         </video>
         <div className="w-10 h-10 border-4 border-pink-400 border-t-transparent rounded-full animate-spin z-10"></div>
       </div>
